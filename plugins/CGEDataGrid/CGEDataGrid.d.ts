@@ -48,6 +48,12 @@ export interface CGEDataGridUIConfig {
 }
 
 export interface CGEDataGridTranslations {
+  loading?: string;
+  prev?: string;
+  next?: string;
+  'go-to-page'?: string;
+  jump?: string;
+  pagination?: string;
   'view-grid'?: string;
   'view-list'?: string;
   'search-placeholder'?: string;

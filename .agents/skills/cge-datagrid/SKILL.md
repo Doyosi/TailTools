@@ -127,3 +127,10 @@ In Blade template:
 - New requests abort the previous request; stale responses cannot render or clear loading. Destroy cancels requests, timers, frames and listeners, restores original DOM, and permits recreation. Update all four plugin docs and verify browser regressions after maintenance.
 - Removal methods are local view operations; persist deletions with your own backend endpoint or CGEActionButton. A restore success must not remove the card/row. CGEActionButton.init() takes a selector string; global delegation covers future rows, so do not pass an HTMLElement.
 - CGEAlert methods take positional title/message/options and return an object with `isConfirmed`; dismissal is not confirmation. Grid deleteSelected returns a Promise<number>; Table deleteSelected returns the table and its toolbar asks first.
+
+## Responsive pagination and loading
+
+- Keep both compact and desktop pagination layouts in the DOM, selected with Tailwind sm:hidden / hidden sm:flex. Do not choose markup once with window.innerWidth; viewport changes should switch the layout without fetching again.
+- Compact controls include previous/current/next and numeric page jump + Go; desktop shows numbered pages and jump when lastPage > 5. Buttons have type=button, navigation has an accessible label, numbered active pages use aria-current, and Enter prevents default form submission.
+- Loading preserves cards and uses a 200 ms fade/backdrop with role=status and aria-busy. Cancel prior fade timers/frames when loading changes; destroy releases them. A fading-out overlay must not block interaction. Reduced-motion CSS disables transition/spinner.
+- Use translations loading, prev, next, go-to-page, jump and pagination. Existing pagination/jump/loading UI slots remain configurable. The Cloud Clusters demo uses a scoped mock AJAX endpoint, serverSide:true and 500 ms delay. Verify 320/390/639/640/1024 px layouts, page jumps and repeated loading transitions.

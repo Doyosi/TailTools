@@ -47,6 +47,7 @@ export function delayCollection(owner, callback, duration = 250) {
     if (!owner._destroyed) callback();
   }, duration);
   owner._timers.add(timer);
+  return timer;
 }
 
 export function frameCollection(owner, callback) {
@@ -55,6 +56,7 @@ export function frameCollection(owner, callback) {
     if (!owner._destroyed) callback();
   });
   owner._frames.add(frame);
+  return frame;
 }
 
 export async function fetchCollection(options, params, signal, html = false) {

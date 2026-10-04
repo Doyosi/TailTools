@@ -168,3 +168,22 @@ collection.destroy();
 ```
 
 Supply a stable `id` in each API record. Persist deletion in your endpoint before removing an item from this local view; bulk removal has no built-in backend DELETE request.
+
+## Laravel paginator with mobile navigation and loading
+
+```javascript
+const grid = new CGEDataGrid("#clusters-grid", {
+  source: "ajax", url: "/api/clusters", driver: "fetch", serverSide: true, perPage: 6,
+  translations: { loading: "Veriler yükleniyor...", prev: "Önceki", next: "Sonraki",
+    "go-to-page": "Sayfaya git", jump: "Git", pagination: "Sayfalama" },
+  cardRenderer: item => {
+    const card = document.createElement("article");
+    card.className = "p-4 border border-slate-200 rounded-sm";
+    card.textContent = item.title;
+    return card;
+  }
+});
+// A refresh button can call grid.fetch() to reload the current page.
+```
+
+Return `{ data, current_page, last_page, total, per_page }` from the endpoint. Mobile page jumps, page-size changes and search automatically request the next result; loading is managed by the plugin. Import the Grid stylesheet alongside Tailwind to include reduced-motion and loading interaction styles.

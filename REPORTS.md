@@ -2,6 +2,26 @@
 
 **Tarih:** 4 Ekim 2026
 
+## Grid pagination ve loading uyumu — tamamlandı
+
+Kullanıcının Table'ın “Simulated Laravel Ajax Pagination” örneğine yönelik isteği uygulandı. Grid'in mevcut API'si, card/list render yapısı ve radius/tema ayarları korundu.
+
+- **Pagination:** Table ile aynı compact/desktop yaklaşımı kullanılır. Mobilde önceki/sonraki + current/total + numeric jump ve Go; sm ve üzerinde numaralı sayfalar gösterilir. Layout CSS breakpoint ile değişir, resize için fetch gerekmez. Dar ekranda kontroller sarılır. Desktop jump, Table gibi beşten fazla sayfada görünür. Enter ve buton aynı clamp/navigation akışını kullanır.
+- **Erişilebilirlik/i18n:** Aktif numarada aria-current, navigation label, disabled sınırlar, localized prev/next/go-to-page/jump/pagination ve status loading etiketi bulunur.
+- **Loading:** Eski kartlar korunarak Table'daki backdrop/fade yaklaşımı Grid'e taşındı. 200 ms opacity geçişi, role=status ve aria-busy kullanılır. Yeni loading önceki fade timer/RAF'ını iptal eder; destroy hepsini temizler. Fade-out sırasında overlay tıklamaları engellemez. Reduced-motion'da geçiş/spinner animasyonu kapatılır.
+- **Gerçek simülasyon:** Cloud Clusters demosu local JSON yerine yalnızca /mock-api/clusters yolunu yakalayan, iptal destekli 500 ms gecikmeli Fetch simülasyonuyla çalışır. Paginator metadata, page/per-page/All/search/sort desteklenir. Reload current page butonu eklendi. Diğer istekler önceki Fetch'e iletilir.
+- **Belgeler:** Grid README/usage/examples/api, declaration çeviri alanları, canonical skill, plan/checklist ve test rehberi eşitlendi. Ortak internal timer/frame helper'larının dönüş değerleri Grid tarafından takip edilir; Table davranışı korunur.
+
+### Son doğrulama
+
+- **27/27 Node testi**, strict NodeNext/Bundler tip kontrolü, library/demo build ve gerçek npm arşivi kontrolleri geçti.
+- **86/86 Chrome regresyonu** geçti. Mobil/local ve server page jump, translated labels, loading fade/re-entry ve destroy iptali için dört senaryo eklendi.
+- **320, 390, 639, 640, 1024 px** görünüm kontrolü: doğru compact/desktop layout, yatay taşma yok, resize sırasında görünüm otomatik değişiyor. Gerçek mobil Go click, reduced-motion ve desktop/mobile/loading ekran görüntüleri doğrulandı.
+- Ana demoda AJAX total=60, lastPage=10, ikinci sayfa, All ve yeniden 6 kayıt seçimi geçti. **ESM ve UMD** yükleme/collection render kontrolleri hatasız.
+- git diff --check temiz; commit/push yapılmadı.
+
+Görsel testi yeniden çalıştırmak için: node tests/run-browser.mjs --serve --demo --bundle --grid-ui --compact (test rehberindeki Playwright ortamı ile).
+
 ## CGEDataGrid ve CGEDataTable ek incelemesi — tamamlandı
 
 Kullanıcının eklediği iki plugin; çekirdek sınıfları, yedi standalone modül, JS/type barrel'ları, package exports, stiller, mevcut demo, docs ve iki canonical skill ile birlikte incelendi. AGENTS.md ve üç rules belgesi uygulandı; mevcut plan/checklist dosyalarına bakım fazı eklendi. Mimari, public metot isimleri, tema ve Laravel/Tailwind kullanım biçimi korundu.

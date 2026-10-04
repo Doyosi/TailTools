@@ -241,4 +241,53 @@ export async function collectionRegressions({ check, mount, track, assert, wait,
     const data = kind === 'Grid' ? instance.data : instance.rawRows;
     assert(data.length === 2 && data.some(item => item.id === 2) && !data.some(item => item.id === 0), 'Dialog deleted a later selection');
   });
+  await check('Grid: responsive pagination jump works locally with translated controls', () => {
+    const instance = create('Grid', { data: Array.from({ length: 60 }, (_, id) => ({ id, name: `Item ${id}` })), perPage: 6,
+      translations: { prev: 'Önceki', next: 'Sonraki', 'go-to-page': 'Sayfaya git', jump: 'Git', pagination: 'Sayfalama' } });
+    const compact = instance.paginationEl.querySelector('.cge-pagination-compact');
+    const desktop = instance.paginationEl.querySelector('.cge-pagination-desktop');
+    assert(compact && desktop && instance.paginationEl.getAttribute('aria-label') === 'Sayfalama', 'Responsive layouts/label missing');
+    assert(compact.querySelector('[data-cge-page-action="prev"]').disabled, 'Previous boundary enabled');
+    const input = compact.querySelector('[data-cge-jump-input]'); input.value = '8';
+    compact.querySelector('[data-cge-jump-btn]').click();
+    assert(instance.pagination.page === 8 && instance.cardsContainer.querySelector('.cge-card').dataset.cgeId === '42', 'Mobile jump failed');
+    const desktopInput = instance.paginationEl.querySelector('.cge-pagination-desktop input'); desktopInput.value = '999';
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }); desktopInput.dispatchEvent(enter);
+    assert(enter.defaultPrevented && instance.pagination.page === 10, 'Enter jump/clamp failed');
+    assert(instance.paginationEl.querySelector('[aria-current="page"]').textContent === '10', 'Active page not announced');
+    assert(instance.paginationEl.querySelector('.cge-pagination-compact [data-cge-page-action="next"]').disabled, 'Last-page boundary enabled');
+  });
+  await check('Grid: mobile jump requests the correct server page', async () => {
+    const instance = create('Grid', { url: '/collection', driver: 'fetch', serverSide: true, perPage: 6 });
+    instance.options.source = 'ajax'; let requestedPage;
+    window.fetch = async url => {
+      requestedPage = Number(new URL(url).searchParams.get('page'));
+      return response({ data: [{ id: requestedPage, name: `Page ${requestedPage}` }], total: 60, current_page: requestedPage, per_page: 6 });
+    };
+    await instance.fetch();
+    const compact = instance.paginationEl.querySelector('.cge-pagination-compact');
+    compact.querySelector('input').value = '4'; compact.querySelector('[data-cge-jump-btn]').click();
+    await wait(20);
+    assert(requestedPage === 4 && instance.pagination.page === 4 && instance.cardsContainer.textContent.includes('Page 4'), 'Server jump failed');
+  });
+  await check('Grid: fading loading preserves cards and cancels an old hide timer', async () => {
+    const instance = create('Grid', { data: rows, translations: { loading: 'Loading <items>' } });
+    const card = instance.cardsContainer.querySelector('.cge-card');
+    instance.setLoading(true); await wait(30);
+    assert(instance.loadingEl.getAttribute('role') === 'status' && instance.loadingEl.textContent.includes('Loading <items>'), 'Loading status/translation missing');
+    assert(!instance.loadingEl.classList.contains('hidden') && !instance.loadingEl.classList.contains('opacity-0'), 'Overlay did not fade in');
+    assert(instance.cardsContainer.contains(card) && instance.cardsContainer.getAttribute('aria-busy') === 'true', 'Loading replaced cards');
+    instance.setLoading(false); await wait(50); instance.setLoading(true); await wait(220);
+    assert(!instance.loadingEl.classList.contains('hidden') && instance.loading, 'Old fade timer hid new loading');
+    instance.setLoading(false);
+    assert(getComputedStyle(instance.loadingEl).pointerEvents === 'none', 'Fading overlay blocks completed page');
+    await wait(220); assert(instance.loadingEl.classList.contains('hidden'), 'Overlay did not finish fade out');
+  });
+  await check('Grid: destroy cancels pending loading frame and fade cleanup', async () => {
+    const instance = create('Grid', { data: rows });
+    instance.setLoading(true); instance.setLoading(false);
+    const overlay = instance.loadingEl; const classes = overlay.className;
+    instance.destroy(); await wait(220);
+    assert(overlay.className === classes && instance._frames.size === 0 && instance._timers.size === 0, 'Loading work ran after destroy');
+  });
 }

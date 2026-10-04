@@ -23,3 +23,5 @@ Baseline comparison runs the original regression group and skips extended mainte
 These checks do not certify screen reader behavior, all real touch gestures, every browser engine, or a live Laravel server.
 
 --bundle loads generated ESM and UMD artifacts in Chrome and checks exports, declarative initialization and FormData. The runner serves UMD as JavaScript. npm run test:package checks the actual archive/declarations; its temporary archive remains in the OS temp directory for inspection.
+
+Add `--grid-ui` to verify the Grid footer at 320, 390, 639, 640 and 1024 px, a real mobile page-jump click, overflow boundaries and reduced-motion loading. The runner saves desktop/mobile/loading screenshots in an OS temporary directory and prints its path. `--demo` also waits for the delayed Cloud Clusters AJAX demo and verifies its paginator metadata.

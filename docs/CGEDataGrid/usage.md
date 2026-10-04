@@ -121,3 +121,11 @@ Grid `layoutMode: 'grid' | 'list'` fixes the allowed view; `both` permits switch
 | `headers` | `Record<string, string>` | `{}` |
 
 The `fetch-error` DOM event is `cge:datagrid:fetch-error` with `{ error, instance }`. View buttons have `aria-pressed`, paging boundaries are disabled and loading sets `aria-busy`.
+
+## Responsive footer and loading feedback
+
+Both footer layouts exist in the DOM. Tailwind `sm:hidden` / `hidden sm:flex` select the visible layout automatically after resizing, without a refetch. The mobile layout includes previous/next, current/total, numeric page jump and a Go button; it wraps on narrow screens. Desktop shows numbered pages and a jump control when there are more than five pages. Button and Enter jumps clamp to valid page bounds and use the local or server-side pipeline.
+
+`setLoading(true)` retains existing cards, marks the root/cards container `aria-busy` and fades in a backdrop with an accessible status. `setLoading(false)` fades out for 200 ms; the transparent overlay immediately stops intercepting clicks. Re-entering loading cancels a pending hide timer. Destroy cancels both timers and animation frames. Reduced-motion styles disable the overlay transition/spinner.
+
+Translations: `loading`, `prev`, `next`, `go-to-page`, `jump` and `pagination`. Style slots remain `paginationWrapper`, `pageButton`, `pageButtonActive`, `pageButtonDisabled`, `jumpWrapper`, `jumpInput`, `jumpButton` and `loadingOverlay`. The default animation duration is 200 ms.

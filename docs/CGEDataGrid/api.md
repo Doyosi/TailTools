@@ -53,6 +53,12 @@ export interface CGEDataGridUIConfig {
 }
 
 export interface CGEDataGridTranslations {
+  loading?: string;
+  prev?: string;
+  next?: string;
+  'go-to-page'?: string;
+  jump?: string;
+  pagination?: string;
   'view-grid'?: string;
   'view-list'?: string;
   'search-placeholder'?: string;
@@ -323,3 +329,5 @@ export default CGESort;
 ```
 
 Lifecycle and DOM contracts are documented in [usage](usage.md#data-ownership-and-lifecycle).
+
+The footer navigation exposes `aria-current="page"` on the active numbered page and an accessible pagination label. The mobile jump accepts button clicks and Enter. Loading uses a `role="status"` element, `aria-live="polite"`, `aria-hidden` and container `aria-busy`; no new public method is needed. See [responsive footer/loading contracts](usage.md#responsive-footer-and-loading-feedback).

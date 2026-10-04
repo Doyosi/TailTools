@@ -268,3 +268,14 @@ DOM/listener/timer temizliği düzeltilecek. Tipler, dört doküman, skill ve
 tarayıcı/paket testleri aynı bakım kapsamında doğrulanacak.
 
 Bakım tamamlandı: Node 27/27, Chrome 82/82, strict NodeNext/Bundler, build ve paket kontrolleri geçti. Ayrıntılar: [REPORTS.md](../../REPORTS.md).
+
+## Grid pagination/loading uyumu — 2026-10-04
+
+Table'ın Laravel AJAX demosundaki CSS breakpoint ile değişen compact/desktop
+pagination Grid'e taşınacak. Mobil jump input + Go, erişilebilir sayfa durumu,
+local/server navigation ve resize sonrası doğru görünüm korunacak. Grid loading,
+Table ile aynı fade + backdrop feedback yaklaşımını kullanacak; eski kartlar
+korunacak ve timer/RAF'lar destroy veya yeni loading aşamasında iptal edilecek.
+Demo, docs, tipler ve skill eşitlenip mobil/desktop görsel kontrol yapılacak.
+
+Tamamlandı: 27/27 Node, 86/86 Chrome, 5 viewport görsel kontrolü, demo AJAX/All, strict tipler, build, npm pack ve ESM/UMD doğrulaması geçti. [REPORTS.md](../../REPORTS.md) güncellendi.

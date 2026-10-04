@@ -1,4 +1,4 @@
-import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, fetchCollection } from '../shared/collection.js';
+import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection } from '../shared/collection.js';
 /**
  * CGEDataGrid - Modern Reactive Card Grid & List Engine
  * TailTools Plugin Library
@@ -82,12 +82,12 @@ export class CGEDataGrid {
 
       // Feedback states
       emptyState: 'cge-datagrid-empty py-16 text-center text-xs text-slate-400 dark:text-slate-500 italic',
-      loadingOverlay: 'absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-20 transition-opacity',
+      loadingOverlay: 'absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-20 transition-opacity duration-200',
 
       // Footer
       footerWrapper: 'cge-datagrid-footer flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 dark:text-slate-400',
       infoWrapper: 'text-xs text-slate-500 dark:text-slate-400',
-      paginationWrapper: 'flex items-center gap-1',
+      paginationWrapper: 'w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 flex-wrap',
       pageButton: 'inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-medium rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition select-none',
       pageButtonActive: '!bg-indigo-600 !border-indigo-600 !text-white font-semibold shadow-xs',
       pageButtonDisabled: 'opacity-40 cursor-not-allowed pointer-events-none',
@@ -104,6 +104,12 @@ export class CGEDataGrid {
       'per-page': 'Show :count items',
       info: 'Showing :from to :to of :total items',
       'no-data': 'No matching records found',
+      loading: 'Loading data...',
+      prev: 'Previous',
+      next: 'Next',
+      'go-to-page': 'Go to page',
+      jump: 'Go',
+      pagination: 'Pagination',
       'selected-count': ':count selected',
       'select-all': 'Select All',
       'clear-selection': 'Clear',
@@ -407,19 +413,22 @@ export class CGEDataGrid {
     if (!loadingEl) {
       loadingEl = document.createElement('div');
       loadingEl.className = `${this.options.ui.loadingOverlay} cge-datagrid-loading`;
-      loadingEl.style.display = 'none';
+      loadingEl.classList.add('hidden', 'opacity-0');
       loadingEl.innerHTML = `
         <div class="flex items-center gap-2.5 px-4 py-2 rounded-sm bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300">
-          <svg class="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none">
+          <svg aria-hidden="true" class="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span>Loading...</span>
+          <span>${escapeHTML(this.options.translations.loading)}</span>
         </div>
       `;
       this.cardsContainer.appendChild(loadingEl);
     }
     this.loadingEl = loadingEl;
+    this.loadingEl.setAttribute('role', 'status');
+    this.loadingEl.setAttribute('aria-live', 'polite');
+    this.loadingEl.setAttribute('aria-hidden', 'true');
 
     // 5. Footer Toolbar (Info + Pagination)
     let footerEl = this.root.querySelector('.cge-datagrid-footer');
@@ -795,120 +804,101 @@ export class CGEDataGrid {
    */
   _renderFooter() {
     if (!this.footerEl) return;
-
-    // Info counter
-    if (this.infoEl) {
-      this.infoEl.textContent = this.pagination.formatInfo();
-    }
-
-    // Pagination buttons
-    if (this.paginationEl) {
-      this.paginationEl.innerHTML = '';
-      const totalPages = this.pagination.lastPage;
-
-      if (totalPages <= 1) return;
-
-      // Responsive Compact Mode (Mobile): < current / total > + jump
-      const isMobile = window.innerWidth < 640;
-      if (isMobile) {
-        this._renderCompactPagination();
-        return;
-      }
-
-      // Desktop Mode: Sliding numerical window
-      const prevBtn = document.createElement('button');
-      prevBtn.type = 'button';
-      prevBtn.className = `${this.options.ui.pageButton} ${this.pagination.page <= 1 ? this.options.ui.pageButtonDisabled : ''}`;
-      prevBtn.innerHTML = '&lsaquo;';
-      prevBtn.title = 'Previous';
-      prevBtn.disabled = this.pagination.page <= 1;
-      prevBtn.setAttribute('aria-label', 'Previous page');
-      prevBtn.onclick = () => this.pagination.prevPage();
-      this.paginationEl.appendChild(prevBtn);
-
-      const win = this.pagination.getWindow();
-      win.forEach((p) => {
-        if (p === '...') {
-          const dots = document.createElement('span');
-          dots.className = 'px-1.5 py-1 text-slate-400 select-none';
-          dots.textContent = '...';
-          this.paginationEl.appendChild(dots);
-        } else {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          const isActive = p === this.pagination.page;
-          btn.className = `${this.options.ui.pageButton} ${isActive ? this.options.ui.pageButtonActive : ''}`;
-          btn.textContent = String(p);
-          btn.onclick = () => this.pagination.goToPage(p);
-          this.paginationEl.appendChild(btn);
-        }
-      });
-
-      const nextBtn = document.createElement('button');
-      nextBtn.type = 'button';
-      nextBtn.className = `${this.options.ui.pageButton} ${this.pagination.page >= totalPages ? this.options.ui.pageButtonDisabled : ''}`;
-      nextBtn.innerHTML = '&rsaquo;';
-      nextBtn.title = 'Next';
-      nextBtn.disabled = this.pagination.page >= totalPages;
-      nextBtn.setAttribute('aria-label', 'Next page');
-      nextBtn.onclick = () => this.pagination.nextPage();
-      this.paginationEl.appendChild(nextBtn);
-
-      // Jump to page input
-      const jumpWrap = document.createElement('div');
-      jumpWrap.className = this.options.ui.jumpWrapper;
-      jumpWrap.innerHTML = `
-        <span class="text-slate-400">Go:</span>
-        <input type="number" min="1" max="${totalPages}" value="${this.pagination.page}" class="${this.options.ui.jumpInput}" />
-      `;
-      const jumpInput = jumpWrap.querySelector('input');
-      if (jumpInput) {
-        jumpInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            this.pagination.goToPage(jumpInput.value);
-          }
-        });
-      }
-      this.paginationEl.appendChild(jumpWrap);
-    }
+    if (this.infoEl) this.infoEl.textContent = this.pagination.formatInfo();
+    if (!this.paginationEl) return;
+    this.paginationEl.replaceChildren();
+    this.paginationEl.setAttribute('role', 'navigation');
+    this.paginationEl.setAttribute('aria-label', this.options.translations.pagination);
+    if (this.pagination.lastPage <= 1) return;
+    this._renderCompactPagination();
+    this._renderDesktopPagination();
   }
 
-  /**
-   * Renders compact pagination for mobile viewports.
-   * @private
-   */
-  _renderCompactPagination() {
-    const totalPages = this.pagination.lastPage;
+  _paginationButton(label, action, { disabled = false, active = false } = {}) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = [this.options.ui.pageButton,
+      disabled ? this.options.ui.pageButtonDisabled : '', active ? this.options.ui.pageButtonActive : ''].join(' ');
+    button.textContent = label;
+    button.disabled = disabled;
+    if (active) button.setAttribute('aria-current', 'page');
+    button.addEventListener('click', action);
+    return button;
+  }
 
-    const prevBtn = document.createElement('button');
-    prevBtn.type = 'button';
-    prevBtn.className = `${this.options.ui.pageButton} ${this.pagination.page <= 1 ? this.options.ui.pageButtonDisabled : ''}`;
-    prevBtn.innerHTML = '&lsaquo;';
-    prevBtn.disabled = this.pagination.page <= 1;
-    prevBtn.setAttribute('aria-label', 'Previous page');
-    prevBtn.onclick = () => this.pagination.prevPage();
-    this.paginationEl.appendChild(prevBtn);
+  _navigationButton(direction, compact = false) {
+    const previous = direction === 'prev';
+    const label = this.options.translations[direction];
+    const button = this._paginationButton(label,
+      () => previous ? this.pagination.prevPage() : this.pagination.nextPage(),
+      { disabled: previous ? this.pagination.page <= 1 : this.pagination.page >= this.pagination.lastPage });
+    button.setAttribute('data-cge-page-action', direction);
+    button.setAttribute('aria-label', label);
+    if (compact) {
+      button.innerHTML = previous
+        ? '<svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M12 5 7 10l5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="m8 5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    return button;
+  }
 
+  _renderJumpControls(compact = false) {
+    const wrapper = document.createElement('div');
+    wrapper.className = compact ? 'flex items-center gap-1.5' : this.options.ui.jumpWrapper;
     const label = document.createElement('span');
-    label.className = 'px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none';
-    label.textContent = `${this.pagination.page} / ${totalPages}`;
-    this.paginationEl.appendChild(label);
-
-    const nextBtn = document.createElement('button');
-    nextBtn.type = 'button';
-    nextBtn.className = `${this.options.ui.pageButton} ${this.pagination.page >= totalPages ? this.options.ui.pageButtonDisabled : ''}`;
-    nextBtn.innerHTML = '&rsaquo;';
-    nextBtn.disabled = this.pagination.page >= totalPages;
-    nextBtn.setAttribute('aria-label', 'Next page');
-    nextBtn.onclick = () => this.pagination.nextPage();
-    this.paginationEl.appendChild(nextBtn);
+    label.className = 'text-slate-400 text-[11px]';
+    label.textContent = this.options.translations['go-to-page'] + ':';
+    const input = document.createElement('input');
+    input.type = 'number'; input.min = '1'; input.max = String(this.pagination.lastPage);
+    input.value = String(this.pagination.page);
+    input.className = this.options.ui.jumpInput + (compact ? ' w-11 h-7' : '');
+    input.setAttribute('data-cge-jump-input', '');
+    input.setAttribute('aria-label', this.options.translations['go-to-page']);
+    const jump = () => this.pagination.goToPage(input.value);
+    const button = this._paginationButton(this.options.translations.jump, jump);
+    button.className = this.options.ui.jumpButton;
+    button.setAttribute('data-cge-jump-btn', '');
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); jump(); }
+    });
+    wrapper.append(label, input, button);
+    return wrapper;
   }
 
-  /**
-   * Switches view mode between 'grid' and 'list'.
-   * @param {'grid' | 'list'} mode
-   * @returns {this}
-   */
+  _renderCompactPagination() {
+    const compact = document.createElement('div');
+    compact.className = 'cge-pagination-compact flex sm:hidden items-center justify-between w-full gap-2 flex-wrap py-1';
+    const navigation = document.createElement('div');
+    navigation.className = 'flex items-center gap-1';
+    const label = document.createElement('span');
+    label.className = 'inline-flex items-center justify-center px-2.5 h-7 text-xs font-semibold rounded-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 select-none';
+    label.textContent = this.pagination.page + ' / ' + this.pagination.lastPage;
+    label.setAttribute('aria-live', 'polite');
+    navigation.append(this._navigationButton('prev', true), label, this._navigationButton('next', true));
+    compact.append(navigation, this._renderJumpControls(true));
+    this.paginationEl.append(compact);
+  }
+
+  _renderDesktopPagination() {
+    const desktop = document.createElement('div');
+    desktop.className = 'cge-pagination-desktop hidden sm:flex items-center gap-1 flex-wrap';
+    desktop.append(this._navigationButton('prev'));
+    for (const page of this.pagination.getWindow()) {
+      if (page === '...') {
+        const dots = document.createElement('span');
+        dots.className = 'px-1 text-slate-400 select-none'; dots.textContent = '...'; desktop.append(dots);
+      } else {
+        const button = this._paginationButton(String(page), () => this.pagination.goToPage(page),
+          { active: page === this.pagination.page });
+        button.setAttribute('data-cge-page', String(page)); desktop.append(button);
+      }
+    }
+    desktop.append(this._navigationButton('next'));
+    if (this.pagination.lastPage > 5) desktop.append(this._renderJumpControls());
+    this.paginationEl.append(desktop);
+  }
+
+  /** Switches the active card view without refetching a loaded server page. */
   setViewMode(mode) {
     if (this._destroyed || (mode !== 'grid' && mode !== 'list') || (this.layoutMode !== 'both' && mode !== this.layoutMode)) return this;
     if (this.viewMode === mode) return this;
@@ -1116,10 +1106,33 @@ export class CGEDataGrid {
    * @returns {this}
    */
   setLoading(isLoading) {
+    if (this._destroyed) return this;
     this.loading = Boolean(isLoading);
     this.root.setAttribute('aria-busy', String(this.loading));
-    if (this.loadingEl) {
-      this.loadingEl.style.display = this.loading ? 'flex' : 'none';
+    this.cardsContainer.setAttribute('aria-busy', String(this.loading));
+    if (!this.loadingEl) return this;
+    if (this._loadingTimer != null) {
+      clearTimeout(this._loadingTimer); this._timers.delete(this._loadingTimer); this._loadingTimer = null;
+    }
+    if (this._loadingFrame != null) {
+      cancelAnimationFrame(this._loadingFrame); this._frames.delete(this._loadingFrame); this._loadingFrame = null;
+    }
+    this.loadingEl.setAttribute('aria-hidden', String(!this.loading));
+    this.loadingEl.style.removeProperty('display');
+    if (this.loading) {
+      this.loadingEl.classList.remove('hidden');
+      this._loadingFrame = frameCollection(this, () => {
+        this._loadingFrame = null;
+        if (this.loading) this.loadingEl.classList.remove('opacity-0');
+      });
+    } else {
+      this.loadingEl.classList.add('opacity-0');
+      if (!this.loadingEl.classList.contains('hidden')) {
+        this._loadingTimer = delayCollection(this, () => {
+          this._loadingTimer = null;
+          if (!this.loading) this.loadingEl.classList.add('hidden');
+        }, 200);
+      }
     }
     return this;
   }

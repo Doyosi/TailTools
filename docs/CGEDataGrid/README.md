@@ -98,3 +98,7 @@ In your Blade view:
 ## Maintenance contracts
 
 Use stable unique IDs for remote data and enable `serverSide: true` for paginated endpoints. Removal methods update the local view. Cancellation, recreation and selection behavior are detailed in the [usage guide](usage.md#data-ownership-and-lifecycle). Regression checks run at [the browser test page](../../tests/regressions.html).
+
+## Responsive pagination and loading
+
+Like DataTable, the Grid footer switches at the Tailwind `sm` breakpoint: compact previous/current/next plus page jump on phones, numbered pages on larger screens. The loading overlay fades over existing cards while the next remote page loads. Try the 60-item simulated Laravel AJAX example and its Reload button in the demo.

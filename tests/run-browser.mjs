@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module';
 import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
+import { verifyGridUI } from './grid-ui.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.TAILTOOLS_PLAYWRIGHT_MODULE || 'playwright');
 const baseline = process.argv.includes('--baseline');
@@ -46,9 +47,25 @@ try {
     await demo.goto(testUrl, { waitUntil: 'domcontentloaded' });
     await demo.waitForFunction(() => window.TailTools?.CGESelect);
     const plugins = await demo.evaluate(() => Object.keys(window.TailTools).filter(name => name.startsWith('CGE')));
+    await demo.evaluate(() => window.switchTab('datagrid'));
+    await demo.waitForFunction(() => window.demoClustersGridInstance?.data.length === 6 && !window.demoClustersGridInstance.loading);
+    const ajaxGrid = await demo.evaluate(() => ({ source: window.demoClustersGridInstance.options.source,
+      total: window.demoClustersGridInstance.pagination.total, lastPage: window.demoClustersGridInstance.pagination.lastPage }));
+    if (ajaxGrid.source !== 'ajax' || ajaxGrid.total !== 60 || ajaxGrid.lastPage !== 10) process.exitCode = 1;
+    await demo.locator('#demo-clusters-grid .cge-pagination-desktop [data-cge-page-action="next"]').click();
+    await demo.waitForFunction(() => !window.demoClustersGridInstance.loading
+      && window.demoClustersGridInstance.pagination.page === 2
+      && window.demoClustersGridInstance.data[0]?.id === 'CLS-1007');
+    await demo.locator('#demo-clusters-grid .cge-datagrid-perpage').selectOption('All');
+    await demo.waitForFunction(() => !window.demoClustersGridInstance.loading && window.demoClustersGridInstance.data.length === 60
+      && window.demoClustersGridInstance.pagination.lastPage === 1);
+    await demo.locator('#demo-clusters-grid .cge-datagrid-perpage').selectOption('6');
+    await demo.waitForFunction(() => !window.demoClustersGridInstance.loading && window.demoClustersGridInstance.data.length === 6);
+    console.log(JSON.stringify({ ajaxGrid }));
     console.log(JSON.stringify({ demoPlugins: plugins, demoErrors }, null, 2));
     if (demoErrors.length || JSON.stringify(plugins.sort()) !== JSON.stringify(expectedExports)) process.exitCode = 1;
   }
+  if (process.argv.includes('--grid-ui')) console.log(JSON.stringify({ gridUI: await verifyGridUI(browser, testUrl) }, null, 2));
   if (process.argv.includes('--bundle')) {
     for (const format of ['esm', 'umd']) {
       const bundled = await browser.newPage();
