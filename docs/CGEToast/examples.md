@@ -190,3 +190,21 @@ function activateTurkish() {
   CGEToast.success('Ayarlar başarıyla kaydedildi!');
 }
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+A session flash DOM node is consumed only once across repeated initialization. New flash nodes still work. Declarative data-cge-duration="0"/"false" and data-cge-toast-duration="0"/"false" create persistent toasts.
+
+Nested document/subtree delegation handles a single click only once.
+
+## Extended maintenance contract (2026-10-04)
+
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+const toast = CGEToast.success('Saved', { duration: 0 });
+await toast.dismiss();
+```

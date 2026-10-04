@@ -123,7 +123,7 @@ export class CGESelect {
   static setTranslations(dict: Partial<CGESelectTranslations>): void;
   static get(target: string | HTMLSelectElement): CGESelect | null;
   static getOrCreate(target: string | HTMLSelectElement, options?: CGESelectOptions): CGESelect;
-  static init(selector?: string, options?: CGESelectOptions): CGESelect[];
+  static init(selector?: string, options?: CGESelectOptions, root?: Document | HTMLElement): CGESelect[];
 
   // Instance Properties
   element: HTMLSelectElement;
@@ -137,7 +137,7 @@ export class CGESelect {
   isLoading: boolean;
 
   wrapper: HTMLDivElement;
-  trigger: HTMLButtonElement;
+  trigger: HTMLDivElement;
   selectionContainer: HTMLDivElement;
   clearBtn: HTMLButtonElement;
   arrowIcon: HTMLSpanElement;

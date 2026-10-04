@@ -61,3 +61,9 @@ Track the execution and verification phases for the `CGEModal` plugin.
 - [x] **Phase 9: AI skill creation**
   - [x] `.agents/skills/cge-modal-skill.md`
   - [x] `.agents/skills/cge-modal/SKILL.md`
+
+## 2026-10-04 ek bakım
+- [x] Kapsam ve mevcut sözleşme incelemesi
+- [x] Runtime ve declaration düzenlemesi
+- [x] Regresyon ve paket doğrulaması
+- [x] Doküman ve skill eşitlemesi

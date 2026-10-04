@@ -62,7 +62,7 @@ Wrap your gallery images or links with `data-cge-lightbox` and a shared `data-cg
      data-cge-lightbox
      data-cge-gallery="nature-album"
      data-cge-caption="Yosemite Valley Mist"
-     data-cge-subtitle="High-resolution landscape photograph"
+     data-cge-description="High-resolution landscape photograph"
      data-cge-thumb="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600" alt="Yosemite" class="w-full h-48 object-cover">
@@ -101,7 +101,7 @@ CGELightbox.open([
     src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1600',
     thumb: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300',
     caption: 'Yosemite Valley Mist',
-    subtitle: 'Nature Collection'
+    description: 'Nature Collection'
   },
   {
     src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -111,7 +111,7 @@ CGELightbox.open([
 ], {
   loop: true,
   thumbnails: true,
-  zoomable: true
+  zoom: true
 });
 
 // Or create an instance to control lifecycle
@@ -131,7 +131,18 @@ lb.open(0);
 
 ## Documentation Index
 
-- [Usage Guide (`usage.md`)](file:///f:/GITHUB/TailTools/docs/CGELightbox/usage.md) - Configuration options, instance & static methods, keyboard controls, touch gestures, and events.
-- [Laravel Blade Guide (`laravel-blade.md`)](file:///f:/GITHUB/TailTools/docs/CGELightbox/laravel-blade.md) - Blade components `<x-cge-lightbox>` and `<x-cge-gallery>` with slots and declarative options.
-- [Examples & Recipes (`examples.md`)](file:///f:/GITHUB/TailTools/docs/CGELightbox/examples.md) - Practical code patterns for photo albums, mixed media, gigapixel inspection, and inline HTML.
-- [API Reference (`api.md`)](file:///f:/GITHUB/TailTools/docs/CGELightbox/api.md) - TypeScript interfaces, types, and event payload structures.
+- [Usage Guide (`usage.md`)](usage.md) - Configuration options, instance & static methods, keyboard controls, touch gestures, and events.
+- [Laravel Blade Guide (`laravel-blade.md`)](laravel-blade.md) - Blade components `<x-cge-lightbox>` and `<x-cge-gallery>` with slots and declarative options.
+- [Examples & Recipes (`examples.md`)](examples.md) - Practical code patterns for photo albums, mixed media, gigapixel inspection, and inline HTML.
+- [API Reference (`api.md`)](api.md) - TypeScript interfaces, types, and event payload structures.
+
+
+## Maintenance notes (2026-10-04)
+
+Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()` and `downloadCurrent()`. Pass items/index to open, not constructor options. `init(selector)` delegates on document and takes a string. Subscribe with `.on()` instead of constructor onOpen/onChange callbacks. `await close()` waits for removal and scroll restoration; reopening waits for close. Closing removes global mouse/keyboard listeners; slow old slides cannot replace the latest slide. Partial translations preserve defaults.
+
+## Extended maintenance contract (2026-10-04)
+
+Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

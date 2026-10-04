@@ -1,3 +1,4 @@
+import { Lifecycle } from '../shared/lifecycle.js';
 /**
  * CGEActionButton - TailTools Plugin
  * High-performance, declarative action button and confirmation interceptor plugin
@@ -76,6 +77,9 @@ export class CGEActionButton {
    * @param {HTMLElement} element - Target button or trigger element
    * @param {Object} [options={}] - Custom configuration options
    */
+  _destroyed = false;
+  _lifecycle = new Lifecycle();
+
   constructor(element, options = {}) {
     if (!element || !(element instanceof HTMLElement)) {
       throw new Error('[CGEActionButton] A valid DOM HTMLElement is required.');
@@ -85,6 +89,7 @@ export class CGEActionButton {
     this.options = this._resolveOptions(options);
 
     this.isExecuting = false;
+    this._isConfirming = false;
     this._originalHtml = null;
     this._originalMinWidth = null;
     this._lockedSiblings = [];
@@ -123,9 +128,9 @@ export class CGEActionButton {
 
     return {
       ...CGEActionButton.defaults,
-      translations: { ...CGEActionButton.translations, ...(options.translations || {}) },
       ...options,
-      ...dataOpts
+      ...dataOpts,
+      translations: { ...CGEActionButton.translations, ...(options.translations || {}) }
     };
   }
 
@@ -135,7 +140,7 @@ export class CGEActionButton {
    * @returns {Promise<any>}
    */
   async execute(event = null) {
-    if (this.isExecuting || this.element.disabled || this.element.getAttribute('aria-busy') === 'true') {
+    if (this._destroyed || this.isExecuting || this._isConfirming || this.element.disabled || this.element.getAttribute('aria-busy') === 'true') {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -148,7 +153,14 @@ export class CGEActionButton {
 
     // 1. Confirmation Gatekeeper (if not direct)
     if (!isDirect) {
-      const confirmed = await this._promptConfirmation();
+      this._isConfirming = true;
+      let confirmed;
+      try {
+        confirmed = await this._promptConfirmation();
+      } finally {
+        this._isConfirming = false;
+      }
+      if (this._destroyed) return;
       if (!confirmed) {
         this._emit('cancel', { element: this.element, action });
         return;
@@ -157,22 +169,30 @@ export class CGEActionButton {
     }
 
     // 2. Lock state and show loading spinner
+    const form = this._resolveForm();
+    this._formData = form && !this.options.url ? new FormData(form) : null;
+    if (this._formData && this.element.name && !this.element.disabled) this._formData.append(this.element.name, this.element.value);
+    this._requestController = new AbortController();
     this.freeze();
     this._emit('start', { element: this.element, action });
 
     try {
       // 3. Dispatch execution to target engine
       const result = await this._runTargetAction();
+      if (this._destroyed) return;
       this._handleSuccess(result);
       this._emit('success', { element: this.element, action, result });
       return result;
     } catch (error) {
+      if (this._destroyed || error?.name === "AbortError" || error?.code === "ERR_CANCELED") return;
       this._handleError(error);
       this._emit('error', { element: this.element, action, error });
       throw error;
     } finally {
       // 4. Restore button state (unless page is redirecting)
-      if (!this._isRedirecting) {
+      this._formData = null;
+      this._requestController = null;
+      if (!this._destroyed && !this._isRedirecting) {
         this.unfreeze();
         this._emit('complete', { element: this.element, action });
       }
@@ -251,7 +271,12 @@ export class CGEActionButton {
    * Executes the target action based on element context (form, async URL, or link).
    * @private
    */
+  _wait(delay) {
+    return new Promise(resolve => this._lifecycle.timeout(this._lifecycle.settle(resolve), delay));
+  }
+
   async _runTargetAction() {
+    if (this._destroyed) return;
     const el = this.element;
     const action = this.options.action.toLowerCase();
     const simulateMs = parseInt(
@@ -268,7 +293,8 @@ export class CGEActionButton {
     // Target 2: Browser Navigation Link
     if (action === 'link' || (el.tagName === 'A' && !this.options.url && !this.options.ajax)) {
       if (simulateMs > 0) {
-        await new Promise((r) => setTimeout(r, simulateMs));
+        await this._wait(simulateMs);
+        if (this._destroyed) return;
       }
       const dest = el.getAttribute('href');
       if (dest && dest !== '#' && !dest.startsWith('#') && !dest.startsWith('javascript:')) {
@@ -283,7 +309,8 @@ export class CGEActionButton {
     const url = this.options.url || (el.tagName === 'A' ? null : el.getAttribute('href'));
     if (url && url !== '#' && !url.startsWith('javascript:')) {
       if (simulateMs > 0) {
-        await new Promise((r) => setTimeout(r, simulateMs));
+        await this._wait(simulateMs);
+        if (this._destroyed) return;
       }
       return this._executeAsyncRequest(url);
     }
@@ -291,7 +318,8 @@ export class CGEActionButton {
     // Target 4: Custom Callback or Programmatic Action
     if (typeof this.options.onExecute === 'function') {
       if (simulateMs > 0) {
-        await new Promise((r) => setTimeout(r, simulateMs));
+        await this._wait(simulateMs);
+        if (this._destroyed) return;
       }
       return await this.options.onExecute(this);
     }
@@ -307,14 +335,16 @@ export class CGEActionButton {
 
     // Target 6: Simulated latency or default fallback
     if (simulateMs > 0) {
-      await new Promise((r) => setTimeout(r, simulateMs));
+      await this._wait(simulateMs);
+      if (this._destroyed) return;
       return { success: true, simulated: true, duration: simulateMs };
     }
 
     // Minimum visual feedback duration (300ms) if successToast is defined and no latency specified
     // to prevent instant unfreezing before the browser paints the spinner
     if (this.options.successToast) {
-      await new Promise((r) => setTimeout(r, 300));
+      await this._wait(300);
+      if (this._destroyed) return;
     }
 
     return { success: true };
@@ -341,6 +371,23 @@ export class CGEActionButton {
   async _executeForm(form) {
     const method = this.options.method;
 
+    if (this._destroyed) return;
+    const simulateMs = parseInt(
+      this.options.simulate !== undefined ? this.options.simulate : (this.element.dataset.cgeSimulate || 0),
+      10
+    );
+    if (simulateMs > 0) {
+      await this._wait(simulateMs);
+      if (this._destroyed) return;
+      return { submitted: true, method, spoofed: true };
+    }
+
+    if (this.options.ajax) {
+      const data = this._formData || new FormData(form);
+      const url = form.getAttribute('action') || window.location.href;
+      return this._sendHttpRequest(url, method, data);
+    }
+
     // Inject Laravel method spoofing for DELETE, PUT, PATCH
     if (['DELETE', 'PUT', 'PATCH'].includes(method)) {
       let methodInput = form.querySelector('input[name="_method"]');
@@ -353,25 +400,10 @@ export class CGEActionButton {
       methodInput.value = method;
     }
 
-    const simulateMs = parseInt(
-      this.options.simulate !== undefined ? this.options.simulate : (this.element.dataset.cgeSimulate || 0),
-      10
-    );
-    if (simulateMs > 0) {
-      await new Promise((r) => setTimeout(r, simulateMs));
-      return { submitted: true, method, spoofed: true };
-    }
-
-    if (this.options.ajax) {
-      // Async Form Submission
-      const formData = new FormData(form);
-      const url = form.getAttribute('action') || window.location.href;
-      return this._sendHttpRequest(url, method, formData);
-    }
-
     // Native form submit
     this._isRedirecting = true;
-    form.submit();
+    this.unfreeze();
+    HTMLFormElement.prototype.submit.call(form);
     return { submitted: true };
   }
 
@@ -389,6 +421,18 @@ export class CGEActionButton {
    * @private
    */
   async _sendHttpRequest(url, method, body = null) {
+    if (this._destroyed) return;
+    method = method.toUpperCase();
+    if (body instanceof FormData && ['PUT', 'PATCH', 'DELETE'].includes(method)) {
+      body.set('_method', method); method = 'POST';
+    }
+    if (body instanceof FormData && method === 'GET') {
+      const params = new URLSearchParams();
+      for (const [key, value] of body) params.append(key, value);
+      const target = new URL(url, window.location.href);
+      for (const [key, value] of params) target.searchParams.append(key, value);
+      url = target.href; body = null;
+    }
     const csrfToken = this._getCsrfToken();
     const headers = {
       'X-Requested-With': 'XMLHttpRequest',
@@ -397,6 +441,9 @@ export class CGEActionButton {
       ...this.options.headers
     };
 
+    if (body instanceof FormData) for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === 'content-type') delete headers[key];
+    }
     let responseData = null;
 
     // Driver 1: window.axios
@@ -405,7 +452,8 @@ export class CGEActionButton {
         url,
         method: method.toLowerCase(),
         headers,
-        data: body
+        data: body,
+        signal: this._requestController?.signal
       };
       const res = await window.axios(axiosConfig);
       responseData = res.data;
@@ -413,6 +461,7 @@ export class CGEActionButton {
       // Driver 2: Native fetch()
       const fetchConfig = {
         method,
+        signal: this._requestController?.signal,
         headers
       };
 
@@ -465,7 +514,8 @@ export class CGEActionButton {
 
     if (redirectUrl) {
       this._isRedirecting = true;
-      setTimeout(() => {
+      this._redirectTimer = setTimeout(() => {
+        if (this._destroyed) return;
         window.location.href = redirectUrl;
       }, 400);
     }
@@ -700,6 +750,10 @@ export class CGEActionButton {
    * Destroys instance and restores original element state.
    */
   destroy() {
+    this._destroyed = true;
+    this._lifecycle.cancel();
+    this._requestController?.abort();
+    clearTimeout(this._redirectTimer);
     this.unfreeze();
     this._listeners.clear();
     CGEActionButton.instances.delete(this.element);

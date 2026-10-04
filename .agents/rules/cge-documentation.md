@@ -48,6 +48,6 @@ docs/CGE<X>/
 
 ## 4. Root Documentation Synchronicity
 If a plugin alters general installation or build procedures:
-- Update [docs/installing.md](file:///f:/GITHUB/TailTools/docs/installing.md).
-- Update [docs/developing.md](file:///f:/GITHUB/TailTools/docs/developing.md).
-- Note changes for future release in [docs/versioning.md](file:///f:/GITHUB/TailTools/docs/versioning.md).
+- Update [docs/installing.md](../../docs/installing.md).
+- Update [docs/developing.md](../../docs/developing.md).
+- Note changes for future release in [docs/versioning.md](../../docs/versioning.md).

@@ -1,13 +1,20 @@
 {
   "type": "module",
   "scripts": {
+    "test": "node --test tests/*.test.mjs && npm run test:types",
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "npm run build:lib && npm run build:demo",
+    "preview": "vite preview --outDir dist/demo",
+    "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.bundler.json",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "build:demo": "vite build",
+    "prepack": "npm run build:lib",
+    "test:package": "node tests/package-check.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
     "vite": "^7.2.4"
   },
   "dependencies": {
@@ -17,5 +24,182 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "name": "tailtools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Native JavaScript UI plugins for Tailwind CSS and Laravel Blade.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Doyosi/TailTools.git"
+  },
+  "main": "./dist/tailtools.js",
+  "module": "./dist/tailtools.js",
+  "types": "./src/index.d.ts",
+  "unpkg": "./dist/tailtools.umd.cjs",
+  "jsdelivr": "./dist/tailtools.umd.cjs",
+  "sideEffects": [
+    "**/*.css",
+    "./src/index.ts",
+    "./dist/tailtools.js",
+    "./dist/tailtools.umd.cjs"
+  ],
+  "files": [
+    "dist/tailtools.js",
+    "dist/tailtools.umd.cjs",
+    "dist/tailtools.css",
+    "src/index.d.ts",
+    "plugins",
+    "styles.css",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./dist/tailtools.js",
+      "default": "./dist/tailtools.js"
+    },
+    "./style.css": "./dist/tailtools.css",
+    "./styles": "./styles.css",
+    "./styles.css": "./styles.css",
+    "./package.json": "./package.json",
+    "./plugins/CGEActionButton": {
+      "types": "./plugins/CGEActionButton/index.d.ts",
+      "import": "./plugins/CGEActionButton/index.js",
+      "default": "./plugins/CGEActionButton/index.js"
+    },
+    "./CGEActionButton": {
+      "types": "./plugins/CGEActionButton/index.d.ts",
+      "import": "./plugins/CGEActionButton/index.js",
+      "default": "./plugins/CGEActionButton/index.js"
+    },
+    "./plugins/CGEActionButton/style.css": "./plugins/CGEActionButton/style.css",
+    "./plugins/CGEActionButton/CGEActionButton.js": {
+      "types": "./plugins/CGEActionButton/CGEActionButton.d.ts",
+      "import": "./plugins/CGEActionButton/CGEActionButton.js"
+    },
+    "./plugins/CGEAlert": {
+      "types": "./plugins/CGEAlert/index.d.ts",
+      "import": "./plugins/CGEAlert/index.js",
+      "default": "./plugins/CGEAlert/index.js"
+    },
+    "./CGEAlert": {
+      "types": "./plugins/CGEAlert/index.d.ts",
+      "import": "./plugins/CGEAlert/index.js",
+      "default": "./plugins/CGEAlert/index.js"
+    },
+    "./plugins/CGEAlert/style.css": "./plugins/CGEAlert/style.css",
+    "./plugins/CGEAlert/CGEAlert.js": {
+      "types": "./plugins/CGEAlert/CGEAlert.d.ts",
+      "import": "./plugins/CGEAlert/CGEAlert.js"
+    },
+    "./plugins/CGEDrawer": {
+      "types": "./plugins/CGEDrawer/index.d.ts",
+      "import": "./plugins/CGEDrawer/index.js",
+      "default": "./plugins/CGEDrawer/index.js"
+    },
+    "./CGEDrawer": {
+      "types": "./plugins/CGEDrawer/index.d.ts",
+      "import": "./plugins/CGEDrawer/index.js",
+      "default": "./plugins/CGEDrawer/index.js"
+    },
+    "./plugins/CGEDrawer/style.css": "./plugins/CGEDrawer/style.css",
+    "./plugins/CGEDrawer/CGEDrawer.js": {
+      "types": "./plugins/CGEDrawer/CGEDrawer.d.ts",
+      "import": "./plugins/CGEDrawer/CGEDrawer.js"
+    },
+    "./plugins/CGEDropzone": {
+      "types": "./plugins/CGEDropzone/index.d.ts",
+      "import": "./plugins/CGEDropzone/index.js",
+      "default": "./plugins/CGEDropzone/index.js"
+    },
+    "./CGEDropzone": {
+      "types": "./plugins/CGEDropzone/index.d.ts",
+      "import": "./plugins/CGEDropzone/index.js",
+      "default": "./plugins/CGEDropzone/index.js"
+    },
+    "./plugins/CGEDropzone/style.css": "./plugins/CGEDropzone/style.css",
+    "./plugins/CGEDropzone/CGEDropzone.js": {
+      "types": "./plugins/CGEDropzone/CGEDropzone.d.ts",
+      "import": "./plugins/CGEDropzone/CGEDropzone.js"
+    },
+    "./plugins/CGEForm": {
+      "types": "./plugins/CGEForm/index.d.ts",
+      "import": "./plugins/CGEForm/index.js",
+      "default": "./plugins/CGEForm/index.js"
+    },
+    "./CGEForm": {
+      "types": "./plugins/CGEForm/index.d.ts",
+      "import": "./plugins/CGEForm/index.js",
+      "default": "./plugins/CGEForm/index.js"
+    },
+    "./plugins/CGEForm/style.css": "./plugins/CGEForm/style.css",
+    "./plugins/CGEForm/CGEForm.js": {
+      "types": "./plugins/CGEForm/CGEForm.d.ts",
+      "import": "./plugins/CGEForm/CGEForm.js"
+    },
+    "./plugins/CGELightbox": {
+      "types": "./plugins/CGELightbox/index.d.ts",
+      "import": "./plugins/CGELightbox/index.js",
+      "default": "./plugins/CGELightbox/index.js"
+    },
+    "./CGELightbox": {
+      "types": "./plugins/CGELightbox/index.d.ts",
+      "import": "./plugins/CGELightbox/index.js",
+      "default": "./plugins/CGELightbox/index.js"
+    },
+    "./plugins/CGELightbox/style.css": "./plugins/CGELightbox/style.css",
+    "./plugins/CGELightbox/CGELightbox.js": {
+      "types": "./plugins/CGELightbox/CGELightbox.d.ts",
+      "import": "./plugins/CGELightbox/CGELightbox.js"
+    },
+    "./plugins/CGEModal": {
+      "types": "./plugins/CGEModal/index.d.ts",
+      "import": "./plugins/CGEModal/index.js",
+      "default": "./plugins/CGEModal/index.js"
+    },
+    "./CGEModal": {
+      "types": "./plugins/CGEModal/index.d.ts",
+      "import": "./plugins/CGEModal/index.js",
+      "default": "./plugins/CGEModal/index.js"
+    },
+    "./plugins/CGEModal/style.css": "./plugins/CGEModal/style.css",
+    "./plugins/CGEModal/CGEModal.js": {
+      "types": "./plugins/CGEModal/CGEModal.d.ts",
+      "import": "./plugins/CGEModal/CGEModal.js"
+    },
+    "./plugins/CGESelect": {
+      "types": "./plugins/CGESelect/index.d.ts",
+      "import": "./plugins/CGESelect/index.js",
+      "default": "./plugins/CGESelect/index.js"
+    },
+    "./CGESelect": {
+      "types": "./plugins/CGESelect/index.d.ts",
+      "import": "./plugins/CGESelect/index.js",
+      "default": "./plugins/CGESelect/index.js"
+    },
+    "./plugins/CGESelect/style.css": "./plugins/CGESelect/style.css",
+    "./plugins/CGESelect/CGESelect.js": {
+      "types": "./plugins/CGESelect/CGESelect.d.ts",
+      "import": "./plugins/CGESelect/CGESelect.js"
+    },
+    "./plugins/CGEToast": {
+      "types": "./plugins/CGEToast/index.d.ts",
+      "import": "./plugins/CGEToast/index.js",
+      "default": "./plugins/CGEToast/index.js"
+    },
+    "./CGEToast": {
+      "types": "./plugins/CGEToast/index.d.ts",
+      "import": "./plugins/CGEToast/index.js",
+      "default": "./plugins/CGEToast/index.js"
+    },
+    "./plugins/CGEToast/style.css": "./plugins/CGEToast/style.css",
+    "./plugins/CGEToast/CGEToast.js": {
+      "types": "./plugins/CGEToast/CGEToast.d.ts",
+      "import": "./plugins/CGEToast/CGEToast.js"
+    }
   }
 }

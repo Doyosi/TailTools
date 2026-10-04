@@ -5,7 +5,7 @@ description: Ultra-fast, touch-capable media lightbox and gallery viewer designe
 
 # CGELightbox Agent Skill
 
-Use this skill when implementing, configuring, or debugging media lightboxes, photo albums, video popups, and zoomable gallery viewers using the **TailTools** `CGELightbox` plugin in Tailwind CSS v4.3+ or Laravel Blade projects.
+Use this skill when implementing, configuring, or debugging media lightboxes, photo albums, video popups, and zoom gallery viewers using the **TailTools** `CGELightbox` plugin in Tailwind CSS v4.3+ or Laravel Blade projects.
 
 ---
 
@@ -53,7 +53,7 @@ window.CGELightbox = CGELightbox;
      data-cge-lightbox
      data-cge-gallery="nature-album"
      data-cge-caption="Yosemite Valley Stream"
-     data-cge-subtitle="High-Resolution Landscape"
+     data-cge-description="High-Resolution Landscape"
      data-cge-thumb="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600" alt="Yosemite" class="w-full h-48 object-cover">
@@ -84,7 +84,7 @@ CGELightbox.open([
     src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1600',
     thumb: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300',
     caption: 'Yosemite Mist',
-    subtitle: 'Nature Archive'
+    description: 'Nature Archive'
   },
   {
     src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -94,7 +94,7 @@ CGELightbox.open([
 ], {
   loop: true,
   thumbnails: true,
-  zoomable: true
+  zoom: true
 });
 ```
 
@@ -102,11 +102,12 @@ CGELightbox.open([
 ```javascript
 const lb = new CGELightbox({
   loop: true,
-  thumbnails: true,
-  onOpen: (index) => console.log('Opened at index', index),
-  onChange: (index, item) => console.log('Slide changed', index, item.caption),
-  onClose: () => console.log('Closed')
+  thumbnails: true
 });
+
+lb.on('open', ({ index }) => console.log('Opened at index', index));
+lb.on('change', ({ index, item }) => console.log('Slide changed', index, item.caption));
+lb.on('close', () => console.log('Closed'));
 
 lb.on('zoom', ({ scale }) => console.log('Zoom scale:', scale));
 
@@ -119,7 +120,7 @@ lb.prev();
 lb.zoom(2.5);
 lb.resetZoom();
 lb.toggleFullscreen();
-lb.download();
+lb.downloadCurrent();
 lb.close();
 ```
 
@@ -133,9 +134,8 @@ lb.close();
 | `data-cge-gallery` | `string` | Groups items into an interconnected gallery album. |
 | `data-cge-type` | `image`, `video`, `youtube`, `vimeo`, `inline` | Explicitly overrides media type detection. |
 | `data-cge-caption` | `string` | Primary caption title displayed at bottom. |
-| `data-cge-subtitle` | `string` | Secondary subtitle text displayed under caption. |
+| `data-cge-description` | `string` | Secondary subtitle text displayed under caption. |
 | `data-cge-thumb` | `string` (URL) | Custom image URL for bottom thumbnail strip preview. |
-| `data-cge-poster` | `string` (URL) | Poster frame for direct HTML5 video playback. |
 | `href` / `src` | URL or `#selector` | Target media asset or DOM template selector. |
 
 ---
@@ -147,17 +147,27 @@ lb.close();
   - `ArrowLeft` / `ArrowRight`: Slide navigation.
   - `ArrowUp` / `+`: Zoom in.
   - `ArrowDown` / `-`: Zoom out.
-  - `0`: Reset zoom to 1x.
   - `f` / `F`: Toggle fullscreen.
 - **Touch Gestures:**
   - Horizontal swipe: Navigates slides.
-  - Vertical swipe down: Flick down to dismiss/close the lightbox (threshold: 80px).
+  - Vertical swipe down: Flick down to dismiss/close the lightbox (threshold: 100px).
   - Pinch-to-zoom: Smoothly scales images.
-  - Double-tap: Cycles zoom factor (1x → 2x → 3x → reset).
+  - Double-click: Cycles zoom factor (1x → 2x → 3x → reset).
 
 ---
 
 ## 7. Strict Design System Rule
 
-- **Strict Border Radius:** Always apply **`rounded-sm`** for buttons, badges, thumbnails, inputs, cards, and dialogue frames.
-- **Forbidden:** Never use `rounded-2xl`, `rounded-3xl`, `rounded-4xl`, or `rounded-xl`.
+
+
+
+
+## Verified maintenance guidance (2026-10-04)
+
+Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()` and `downloadCurrent()`. Pass items/index to open, not constructor options. `init(selector)` delegates on document and takes a string. Subscribe with `.on()` instead of constructor onOpen/onChange callbacks. `await close()` waits for removal and scroll restoration; reopening waits for close. Closing removes global mouse/keyboard listeners; slow old slides cannot replace the latest slide. Partial translations preserve defaults.
+
+## Verified maintenance contract (2026-10-04)
+
+Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGELightbox.d.ts](../../../../plugins/CGELightbox/CGELightbox.d.ts).

@@ -1,3 +1,5 @@
+import { acquireOverlay, releaseOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { Lifecycle } from '../shared/lifecycle.js';
 /**
  * CGELightbox - TailTools Plugin
  * Ultra-fast, touch-capable media lightbox and gallery viewer designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -72,17 +74,23 @@ export class CGELightbox {
   /**
    * @param {Object} [options={}] - Custom configuration
    */
+  _destroyed = false;
+  _lifecycle = new Lifecycle();
+
   constructor(options = {}) {
     this.options = {
       ...CGELightbox.defaults,
-      translations: { ...CGELightbox.translations, ...(options.translations || {}) },
-      ...options
+      ...options,
+      translations: { ...CGELightbox.translations, ...(options.translations || {}) }
     };
 
     this.items = [];
     this.currentIndex = 0;
     this.isOpen = false;
     this._listeners = new Map();
+    this._renderVersion = 0;
+    this._closePromise = null;
+    this._eventController = null;
     this.portalEl = null;
     this.stageEl = null;
     this.wrapperEl = null;
@@ -126,6 +134,11 @@ export class CGELightbox {
    * @returns {Promise<void>}
    */
   async open(index = 0, items = null) {
+    if (this._closePromise) await this._closePromise;
+    if (CGELightbox.activeInstance && CGELightbox.activeInstance !== this) {
+      await CGELightbox.activeInstance.close();
+    }
+    if (this._destroyed) return;
     if (this.isOpen) {
       this.goTo(index);
       return;
@@ -142,22 +155,25 @@ export class CGELightbox {
       return;
     }
 
+    this._triggerElement = document.activeElement;
+    this._lifecycle = new Lifecycle();
     this.currentIndex = Math.max(0, Math.min(index, this.items.length - 1));
     this.isOpen = true;
+    CGELightbox.instances.add(this);
     CGELightbox.activeInstance = this;
 
-    // 1. Lock document body scroll
-    this._lockScroll();
+    // Capture scroll only after the portal is available.
 
     // 2. Build portal DOM
     this._buildPortal();
+    this._lockScroll();
 
     // 3. Bind runtime event listeners
     this._bindEvents();
 
     // 4. Load initial slide
     await this._renderSlide(this.currentIndex);
-
+    if (!this.isOpen) return;
     this._emit('open', { index: this.currentIndex, item: this.items[this.currentIndex] });
   }
 
@@ -166,33 +182,55 @@ export class CGELightbox {
    * @returns {Promise<void>}
    */
   async close() {
+    if (this._closePromise) return this._closePromise;
     if (!this.isOpen || !this.portalEl) return;
 
     this.isOpen = false;
+    ++this._renderVersion;
+    this._mediaController?.abort();
+    this._eventController?.abort();
+    this.isDragging = false;
+    const portal = this.portalEl;
+    this._lifecycle.cancel();
     this._emit('close', { index: this.currentIndex });
 
-    // Exit fullscreen if active
-    if (document.fullscreenElement) {
-      try {
-        await document.exitFullscreen();
-      } catch (err) {
-        // Ignored
+    this._closePromise = (async () => {
+      // Exit fullscreen if active
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
+          // Ignored
+        }
       }
-    }
 
-    this.portalEl.classList.remove('opacity-100');
-    this.portalEl.classList.add('opacity-0');
-
-    setTimeout(() => {
-      if (this.portalEl && this.portalEl.parentNode) {
-        this.portalEl.parentNode.removeChild(this.portalEl);
+      const driver = this._resolveAnimationDriver();
+      if (driver === 'tailwind-animations') {
+        portal.classList.remove('animate-fade-in');
+        portal.classList.add('animate-fade-out');
+      } else if (driver !== 'none') {
+        portal.classList.remove('opacity-100');
+        portal.classList.add('opacity-0');
       }
-      this.portalEl = null;
+
+      if (!this._destroyed && driver !== "none") await new Promise(resolve => {
+        this._finishClose = resolve;
+        this._closeTimer = setTimeout(resolve, this.options.duration);
+      });
+      portal.remove();
+      if (this.portalEl === portal) this.portalEl = null;
+      this._finishClose = null;
       this._unlockScroll();
       if (CGELightbox.activeInstance === this) {
         CGELightbox.activeInstance = null;
       }
-    }, this.options.duration);
+      CGELightbox.instances.delete(this);
+    })();
+    try {
+      await this._closePromise;
+    } finally {
+      this._closePromise = null;
+    }
   }
 
   /**
@@ -232,10 +270,11 @@ export class CGELightbox {
    * @param {number} index
    */
   async goTo(index) {
-    if (index < 0 || index >= this.items.length) return;
+    if (this._destroyed || !this.isOpen || index < 0 || index >= this.items.length) return;
     this.resetZoom();
     this.currentIndex = index;
     await this._renderSlide(index);
+    if (!this.isOpen || this._destroyed || this.currentIndex !== index) return;
     this._emit('change', { index, item: this.items[index] });
   }
 
@@ -323,7 +362,18 @@ export class CGELightbox {
     const portal = document.createElement('div');
     portal.id = 'cge-lightbox-portal';
     portal.className = 'cge-lightbox fixed inset-0 z-[99999] flex flex-col justify-between overflow-hidden bg-black/92 backdrop-blur-md select-none transition-opacity duration-300 opacity-0';
+    portal.style.transitionDuration = `${this.options.duration}ms`;
+    const driver = this._resolveAnimationDriver();
+    if (driver === 'none' || driver === 'tailwind-animations') {
+      portal.classList.remove('transition-opacity', 'opacity-0');
+      portal.classList.add('opacity-100');
+    }
+    if (driver === 'tailwind-animations') {
+      portal.style.animationDuration = `${this.options.duration}ms`;
+      portal.classList.add('animate-fade-in');
+    }
     portal.setAttribute('role', 'dialog');
+    portal.tabIndex = -1;
     portal.setAttribute('aria-modal', 'true');
     portal.setAttribute('aria-label', 'Media Gallery Lightbox');
 
@@ -418,7 +468,9 @@ export class CGELightbox {
     this.nextBtn = nextBtn;
 
     // Trigger reveal transition
-    requestAnimationFrame(() => {
+    this._lifecycle.frame(() => {
+      if (!this.isOpen || this._destroyed) return;
+      portal.focus();
       portal.classList.remove('opacity-0');
       portal.classList.add('opacity-100');
     });
@@ -429,6 +481,10 @@ export class CGELightbox {
    * @private
    */
   async _renderSlide(index) {
+    this._mediaController?.abort();
+    const controller = this._mediaController = new AbortController();
+    const version = ++this._renderVersion;
+    const wrapper = this.wrapperEl;
     const item = this.items[index];
     if (!item) return;
 
@@ -483,7 +539,13 @@ export class CGELightbox {
     let mediaNode = null;
 
     if (type === 'image') {
-      mediaNode = await this._createImageNode(item);
+      let cancel;
+      const canceled = new Promise(resolve => {
+        cancel = () => resolve(null);
+        controller.signal.addEventListener('abort', cancel, { once: true });
+      });
+      try { mediaNode = await Promise.race([this._createImageNode(item, controller.signal), canceled]); }
+      finally { controller.signal.removeEventListener('abort', cancel); }
     } else if (type === 'video') {
       mediaNode = this._createVideoNode(item);
     } else if (type === 'youtube' || type === 'vimeo' || type === 'iframe') {
@@ -491,6 +553,8 @@ export class CGELightbox {
     } else if (type === 'inline') {
       mediaNode = this._createInlineNode(item);
     }
+
+    if (!this.isOpen || version !== this._renderVersion || wrapper !== this.wrapperEl) return;
 
     if (this.spinnerEl) {
       this.spinnerEl.classList.add('hidden');
@@ -549,19 +613,27 @@ export class CGELightbox {
    * Creates an Image element with progressive loading.
    * @private
    */
-  _createImageNode(item) {
+  _createImageNode(item, signal) {
     return new Promise((resolve) => {
       const img = new Image();
+      const cancel = () => {
+        img.onload = img.onerror = null;
+        img.removeAttribute('src');
+        resolve(null);
+      };
+      signal?.addEventListener('abort', cancel, { once: true });
       img.className = 'max-w-[90vw] max-h-[80vh] object-contain rounded-sm transition-opacity duration-200 opacity-0 cursor-zoom-in';
       img.alt = item.caption || 'Lightbox Image';
 
       img.onload = () => {
+        signal?.removeEventListener('abort', cancel);
         img.classList.remove('opacity-0');
         img.classList.add('opacity-100');
         resolve(img);
       };
 
       img.onerror = () => {
+        signal?.removeEventListener('abort', cancel);
         const errorDiv = document.createElement('div');
         errorDiv.className = 'p-6 rounded-sm bg-rose-950/80 border border-rose-500/40 text-rose-200 text-xs text-center';
         errorDiv.innerHTML = `⚠️ Failed to load image: <br><span class="font-mono text-[11px] text-white/70">${item.src}</span>`;
@@ -700,6 +772,9 @@ export class CGELightbox {
    * @private
    */
   _bindEvents() {
+    this._eventController?.abort();
+    this._eventController = new AbortController();
+    const signal = this._eventController.signal;
     // Toolbar and Navigation Click Handling
     this.portalEl.addEventListener('click', (e) => {
       const actionBtn = e.target.closest('[data-cge-lb-action]');
@@ -754,7 +829,7 @@ export class CGELightbox {
       this.panX = e.clientX - this.dragStartX;
       this.panY = e.clientY - this.dragStartY;
       this._applyTransform();
-    });
+    }, { signal });
 
     window.addEventListener('mouseup', () => {
       if (!this.isDragging) return;
@@ -762,18 +837,28 @@ export class CGELightbox {
       if (this.mediaEl) {
         this.mediaEl.style.cursor = this.scale > 1 ? 'grab' : 'zoom-in';
       }
-    });
+    }, { signal });
 
     // Touch Gestures (Swipe to navigate, vertical flick to dismiss, pinch zoom)
     this._bindTouchGestures();
 
     // Keyboard Shortcuts
     this._handleKeyDown = (e) => {
-      if (!this.isOpen) return;
+      if (!this.isOpen || !claimOverlayKey(this, e)) return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
         this.close();
+      } else if (e.key === 'Tab') {
+        const focusable = [...this.portalEl.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          .filter(element => element.offsetWidth || element.offsetHeight);
+        const first = focusable[0] || this.portalEl;
+        const last = focusable.at(-1) || this.portalEl;
+        if (!this.portalEl.contains(document.activeElement) || document.activeElement === this.portalEl ||
+          e.shiftKey && document.activeElement === first || !e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         this.next();
@@ -791,7 +876,7 @@ export class CGELightbox {
         this.toggleFullscreen();
       }
     };
-    document.addEventListener('keydown', this._handleKeyDown);
+    document.addEventListener('keydown', this._handleKeyDown, { signal });
   }
 
   /**
@@ -921,26 +1006,15 @@ export class CGELightbox {
    * Locks document body scroll with layout shift compensation.
    * @private
    */
-  _lockScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    this._originalBodyPadding = document.body.style.paddingRight || '';
-    this._originalBodyOverflow = document.body.style.overflow || '';
-
-    if (scrollbarWidth > 0) {
-      const currentPadding = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
-      document.body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
+  _resolveAnimationDriver() {
+    if (this.options.animationDriver !== 'auto') return this.options.animationDriver;
+    return document.documentElement.classList.contains('has-tailwind-animations') || window.__TAILWIND_ANIMATIONS__
+      ? 'tailwind-animations' : 'css';
   }
 
-  /**
-   * Restores document body scroll and padding.
-   * @private
-   */
-  _unlockScroll() {
-    document.body.style.paddingRight = this._originalBodyPadding;
-    document.body.style.overflow = this._originalBodyOverflow;
-  }
+  _lockScroll() { acquireOverlay(this, this.portalEl, true); }
+
+  _unlockScroll() { releaseOverlay(this, this._triggerElement); }
 
   /**
    * Emits instance callbacks and native DOM CustomEvents.
@@ -950,7 +1024,7 @@ export class CGELightbox {
     if (this._listeners.has(eventName)) {
       this._listeners.get(eventName).forEach((cb) => {
         try {
-          cb(detail);
+          cb({ lightbox: this, ...detail });
         } catch (err) {
           console.error(`[CGELightbox] Error in event listener "${eventName}":`, err);
         }
@@ -996,6 +1070,13 @@ export class CGELightbox {
    * Cleans up instance and listeners.
    */
   destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this._lifecycle.cancel();
+    clearTimeout(this._closeTimer);
+    this._finishClose?.();
+    this._eventController?.abort();
+    ++this._renderVersion;
     if (this.isOpen) {
       this.close();
     }
@@ -1003,6 +1084,7 @@ export class CGELightbox {
       document.removeEventListener('keydown', this._handleKeyDown);
     }
     CGELightbox.instances.delete(this);
+    this._listeners.clear();
   }
 
   // =========================================================================
@@ -1049,7 +1131,7 @@ export class CGELightbox {
       let initialIndex = 0;
 
       if (galleryName) {
-        const galleryNodes = Array.from(document.querySelectorAll(`${selector}[data-cge-gallery="${galleryName}"]`));
+        const galleryNodes = Array.from(document.querySelectorAll(selector)).filter(el => el.dataset.cgeGallery === galleryName);
         items = galleryNodes.map((el) => ({
           src: el.getAttribute('href') || el.dataset.cgeSrc || el.getAttribute('src'),
           thumb: el.dataset.cgeThumb || el.querySelector('img')?.getAttribute('src'),

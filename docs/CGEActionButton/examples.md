@@ -146,3 +146,19 @@ async function performAutomatedPurge() {
   await CGEActionButton.execute(button);
 }
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+Repeated execute calls while confirmation is pending are ignored, preventing duplicate dialogs/requests. Canceling or failing confirmation releases the guard. Partial per-instance translations retain global defaults.
+
+## Extended maintenance contract (2026-10-04)
+
+Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+new CGEActionButton(button, { ajax: true, method: 'PATCH' });
+// Form button name/value and uploads are sent via POST + _method=PATCH.
+```

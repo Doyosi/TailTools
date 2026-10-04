@@ -81,3 +81,10 @@ Standard wrapper hierarchy:
 8. Create full documentation suite in `docs/CGEForm/`.
 9. Create AI agent skill in `.agents/skills/cge-form/SKILL.md` and `.agents/skills/cge-form-skill.md`.
 10. Integrate interactive test sandbox in `index.html` and verify in browser.
+
+## Maintenance audit — 2026-10-04
+Laravel method spoofing across all drivers; prevent concurrent submissions; remove delegated error listeners on destroy.
+Preserve existing public methods, CSS, Blade markup and exports. Verify programmatic and declarative behavior with regression fixtures; update docs and consumer guidance. No new dependencies or redesign.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

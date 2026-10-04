@@ -113,7 +113,13 @@ modal.open();
 
 ## Documentation Links
 
-- [Usage & Configuration Guide](file:///f:/GITHUB/TailTools/docs/CGEModal/usage.md)
-- [Laravel Blade Integration](file:///f:/GITHUB/TailTools/docs/CGEModal/laravel-blade.md)
-- [Code Examples](file:///f:/GITHUB/TailTools/docs/CGEModal/examples.md)
-- [TypeScript API Reference](file:///f:/GITHUB/TailTools/docs/CGEModal/api.md)
+- [Usage & Configuration Guide](usage.md)
+- [Laravel Blade Integration](laravel-blade.md)
+- [Code Examples](examples.md)
+- [TypeScript API Reference](api.md)
+
+## Extended maintenance contract (2026-10-04)
+
+Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

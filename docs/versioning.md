@@ -1,5 +1,21 @@
 # Versioning Strategy for TailTools
 
+## Unreleased maintenance (2026-10-04)
+
+- Fixed CGEForm Laravel method spoofing and duplicate submissions; removed stale delegated handlers on destroy.
+- Fixed CGESelect remote/multiple native serialization, declarative async configuration, stale requests and DOM restoration. Added an optional discovery root to static init.
+- Fixed CGEDropzone confirmation API, individual deletion errors, cancellation accounting, bounded uploadAll and shutdown queue behavior.
+- Fixed CGELightbox close/reopen and slide races, global listener cleanup, partial translations and quoted gallery names.
+- Fixed CGEActionButton duplicate confirmation workflows and partial translations.
+- Fixed CGEToast repeated session flashes, persistent declarative durations and nested delegation.
+- Added request/API regressions, interactive browser checks and corrected consumer docs/skills.
+
+This records maintenance, not a published release. Local metadata is tailtools@0.0.0 with private:true; exports, strict declarations and ESM/UMD artifacts are validated locally. Public versioning, npm publication and CDN availability remain release decisions.
+
+- Completed the follow-up list: lifecycle cancellation, awaited Dropzone clear/avatar contract, Form/Action cancellation, Select ARIA/native synchronization, submitter handling, shared overlay ownership, Lightbox drivers and pending media.
+- Added type barrels, strict NodeNext/Bundler tests and library/archive/browser bundle checks.
+- Consolidated duplicate guides/skills/tracking paths, preserved styling, and ignored/untracked node_modules/dist while keeping local files.
+
 TailTools adheres strictly to [Semantic Versioning 2.0.0 (SemVer)](https://semver.org/).
 
 Given a version number `MAJOR.MINOR.PATCH`, we increment:
@@ -14,7 +30,7 @@ Given a version number `MAJOR.MINOR.PATCH`, we increment:
 
 While TailTools contains multiple `CGE` plugins (`plugins/CGETooltip`, `plugins/CGEModal`, etc.), the entire suite is published as a unified npm package (`tailtools`).
 
-- **Unified Package Version:** Governed by [package.json](file:///f:/GITHUB/TailTools/package.json).
+- **Unified Package Version:** Governed by [package.json](../package.json).
 - **Per-Plugin Metadata:** Each plugin folder maintains its own `README.md` and changelog section indicating the TailTools version it was introduced or updated in.
 
 ---

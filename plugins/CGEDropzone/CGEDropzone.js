@@ -8,6 +8,7 @@
  */
 
 export class CGEDropzone {
+  _deleteControllers = new Set();
   /**
    * Static Map registry mapping DOM elements / IDs to CGEDropzone instances.
    * @type {Map<HTMLElement | string, CGEDropzone>}
@@ -173,6 +174,7 @@ export class CGEDropzone {
     this.isUploading = false;
     this._listeners = new Map();
     this._activeUploadsCount = 0;
+    this._destroyed = false;
 
     // DOM Elements
     this.hiddenInput = null;
@@ -530,14 +532,22 @@ export class CGEDropzone {
    * @returns {Object | null} Created fileItem or null if rejected
    */
   addFile(file) {
-    if (this.isDisabled) return null;
+    if (this.isDisabled || this._destroyed) return null;
+
+    const validation = this._validateFile(file);
+    if (this.options.mode === 'avatar' && !validation.valid) {
+      this._emit('error', null, validation.error);
+      this.options.onError?.(null, validation.error);
+      return null;
+    }
 
     // Check Max Files constraint
     const activeFilesCount = this.files.filter(f => f.status !== 'error' && f.status !== 'canceled').length;
     if (this.options.maxFiles !== null && activeFilesCount >= this.options.maxFiles) {
       if (this.options.mode === 'avatar') {
         // In avatar mode, replace existing file cleanly
-        this.clear();
+        // Replacing a preview must not delete the saved server asset.
+        this.files.slice().forEach(item => this._detachFile(item, true));
       } else {
         const errorMsg = this._t('dict-max-files-exceeded', { maxFiles: this.options.maxFiles });
         this._emit('error', null, errorMsg);
@@ -546,8 +556,6 @@ export class CGEDropzone {
     }
 
     // Validate file
-    const validation = this._validateFile(file);
-
     const isImage = file.type.startsWith('image/');
     const previewUrl = isImage ? URL.createObjectURL(file) : null;
 
@@ -611,27 +619,54 @@ export class CGEDropzone {
     if (index === -1) return;
 
     const fileItem = this.files[index];
+    if (fileItem._removePromise) return fileItem._removePromise;
+    const pending = this._removeFileItem(fileItem, silent);
+    fileItem._removePromise = pending;
+    try { await pending; }
+    finally { fileItem._removePromise = null; }
+  }
 
+  async _removeFileItem(fileItem, silent) {
+    const fileId = fileItem.id;
     // Confirmation if already uploaded or removeUrl is active
     if (!silent && this.options.confirmDelete && fileItem.status === 'success' && this.options.removeUrl) {
       const confirmed = await this._confirmAction(this._t('dict-remove-confirmation'));
-      if (!confirmed) return;
+      if (!confirmed || this._destroyed) return;
     }
 
     // If currently uploading, cancel first
     if (fileItem.status === 'uploading') {
       this.cancelUpload(fileId);
+      this._detachFile(fileItem, silent);
+      return;
     }
 
     // If remote delete URL is provided and file was successfully uploaded
     if (this.options.removeUrl && fileItem.status === 'success') {
       try {
-        await this._sendDeleteRequest(fileItem);
+        fileItem._removing = this._sendDeleteRequest(fileItem);
+        await fileItem._removing;
+        if (this._destroyed) return;
       } catch (err) {
+        if (this._destroyed) return;
         console.error('[CGEDropzone] Failed to delete file on server:', err);
-      }
+        this._emit('error', fileItem, err.message);
+        if (typeof this.options.onError === 'function') this.options.onError(fileItem, err.message);
+        return;
+      } finally { fileItem._removing = null; }
     }
 
+    this._detachFile(fileItem, silent);
+  }
+
+  _detachFile(fileItem, silent = false) {
+    const fileId = fileItem.id;
+    if (!this.files.some(item => item.id === fileId)) return;
+    if (fileItem.status === 'uploading') {
+      fileItem.status = 'canceled';
+      fileItem.xhr?.abort();
+      fileItem.abortController?.abort();
+    }
     // Cleanup Object URL to prevent memory leaks
     if (fileItem.previewUrl && fileItem.isImage && !fileItem.isExisting) {
       URL.revokeObjectURL(fileItem.previewUrl);
@@ -643,10 +678,12 @@ export class CGEDropzone {
     }
 
     // Remove from internal array
-    this.files.splice(index, 1);
+    const currentIndex = this.files.findIndex(f => f.id === fileId);
+    if (currentIndex === -1) return;
+    this.files.splice(currentIndex, 1);
 
     // Update Avatar UI if avatar mode
-    if (this.options.mode === 'avatar') {
+    if (this.options.mode === 'avatar' && this.files.length === 0) {
       this.avatarImage.src = '';
       this.avatarImage.classList.add('hidden');
       this.avatarPlaceholder.classList.remove('hidden');
@@ -672,23 +709,28 @@ export class CGEDropzone {
   /**
    * Clears all files from the dropzone.
    */
-  clear() {
+  async clear({ remote = true } = {}) {
+    if (this._destroyed) return;
+    if (this._clearPromise) return this._clearPromise;
+    this._queuePaused = true;
     const copy = [...this.files];
-    copy.forEach(f => this.removeFile(f.id, true));
-    this.files = [];
-    if (this.previewsContainer) {
-      this.previewsContainer.innerHTML = '';
+    const work = remote
+      ? Promise.all(copy.map(item => this.removeFile(item.id, true)))
+      : Promise.resolve(copy.forEach(item => this._detachFile(item, true)));
+    this._clearPromise = work;
+    try { await work; }
+    finally {
+      this._queuePaused = false;
+      this._clearPromise = null;
+      if (!this._destroyed) this._processQueue();
     }
-    this._syncFormInput();
   }
 
   /**
    * Uploads all queued files (instant mode).
    */
   uploadAll() {
-    if (this.isDisabled) return;
-    const queued = this.getQueuedFiles();
-    queued.forEach(f => this.uploadFile(f.id));
+    this._processQueue();
   }
 
   /**
@@ -696,6 +738,7 @@ export class CGEDropzone {
    * @param {string} fileId
    */
   async uploadFile(fileId) {
+    if (this._destroyed || this.isDisabled) return;
     const fileItem = this.files.find(f => f.id === fileId);
     if (!fileItem || fileItem.status === 'uploading' || fileItem.status === 'success') {
       return;
@@ -739,6 +782,7 @@ export class CGEDropzone {
         response = await this._uploadWithXHR(uploadUrl, formData, headers, fileItem);
       }
 
+      if (this._destroyed || fileItem.status === 'canceled') return;
       fileItem.status = 'success';
       fileItem.progress = 100;
       fileItem.response = response;
@@ -753,7 +797,7 @@ export class CGEDropzone {
         this.options.onSuccess(fileItem, response);
       }
     } catch (err) {
-      if (fileItem.status !== 'canceled') {
+      if (!this._destroyed && fileItem.status !== 'canceled') {
         fileItem.status = 'error';
         fileItem.errorMessage = err.message || this._t('dict-response-error', { statusCode: err.status || '500' });
         this._updateCardUI(fileItem);
@@ -778,6 +822,7 @@ export class CGEDropzone {
   cancelUpload(fileId) {
     const fileItem = this.files.find(f => f.id === fileId);
     if (!fileItem || fileItem.status !== 'uploading') return;
+    fileItem.status = 'canceled';
 
     if (fileItem.xhr) {
       fileItem.xhr.abort();
@@ -786,8 +831,7 @@ export class CGEDropzone {
       fileItem.abortController.abort();
     }
 
-    fileItem.status = 'canceled';
-    this._activeUploadsCount = Math.max(0, this._activeUploadsCount - 1);
+    // The upload's finally block owns slot release, including canceled requests.
     this.removeFile(fileId, true);
   }
 
@@ -827,8 +871,12 @@ export class CGEDropzone {
    * Completely destroys dropzone, removes listeners, and cleans up memory.
    */
   destroy() {
+    this._deleteControllers.forEach(controller => controller.abort());
+    this._deleteControllers.clear();
+    if (this._destroyed) return;
+    this._destroyed = true;
     // Revoke all object URLs
-    this.files.forEach(f => {
+    [...this.files].forEach(f => {
       if (f.previewUrl && f.isImage && !f.isExisting) {
         URL.revokeObjectURL(f.previewUrl);
       }
@@ -868,6 +916,7 @@ export class CGEDropzone {
     if (this.element.id) {
       CGEDropzone.instances.delete(this.element.id);
     }
+    this._listeners.clear();
   }
 
   // =========================================================================
@@ -919,7 +968,8 @@ export class CGEDropzone {
    * @private
    */
   _processQueue() {
-    if (this.isDisabled || this.options.uploadMode !== 'instant') return;
+    if (this._queuePaused) return;
+    if (this._destroyed || this.isDisabled || this.options.uploadMode !== 'instant') return;
 
     const queued = this.getQueuedFiles();
     if (queued.length === 0) {
@@ -951,7 +1001,7 @@ export class CGEDropzone {
 
       // Apply headers
       for (const [key, value] of Object.entries(headers)) {
-        xhr.setRequestHeader(key, value);
+        if (key.toLowerCase() !== 'content-type') xhr.setRequestHeader(key, value);
       }
 
       // Progress reporting
@@ -1041,24 +1091,24 @@ export class CGEDropzone {
     const headers = this._buildHeaders();
     const payload = { id: fileItem.id, name: fileItem.name, response: fileItem.response };
 
-    if (window.axios || this.options.axiosInstance) {
-      const axiosLib = window.axios || this.options.axiosInstance;
-      return axiosLib({
-        url: url,
-        method: method.toLowerCase(),
-        data: payload,
-        headers: headers
-      });
-    } else {
-      return fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        },
+    const controller = new AbortController();
+    this._deleteControllers.add(controller);
+    try {
+      if (window.axios || this.options.axiosInstance) {
+        const axiosLib = window.axios || this.options.axiosInstance;
+        return await axiosLib({
+          url, method: method.toLowerCase(), data: payload, headers,
+          signal: controller.signal
+        });
+      }
+      const response = await fetch(url, {
+        signal: controller.signal, method,
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload)
       });
-    }
+      if (!response.ok) throw new Error(this._t('dict-response-error', { statusCode: response.status }));
+      return response;
+    } finally { this._deleteControllers.delete(controller); }
   }
 
   /**
@@ -1067,9 +1117,7 @@ export class CGEDropzone {
    */
   async _confirmAction(message) {
     if (window.CGEAlert && typeof window.CGEAlert.confirm === 'function') {
-      const res = await window.CGEAlert.confirm({
-        title: this._t('dict-remove-file'),
-        text: message,
+      const res = await window.CGEAlert.confirm(this._t('dict-remove-file'), message, {
         confirmButtonText: 'Yes, delete',
         cancelButtonText: 'Cancel',
         variant: 'danger'

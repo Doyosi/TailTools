@@ -16,9 +16,6 @@ import { CGEDropzone } from '../plugins/CGEDropzone';
 
 export { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone };
 
-// Registry of initialized plugin instances
-const initializedInstances = new Map<string, any[]>();
-
 /**
  * Automatically initializes all TailTools plugins on the page
  * based on declarative data-cge-* attributes.
@@ -46,13 +43,15 @@ export function initTailTools(root: Document | HTMLElement = document): void {
   CGEActionButton.init();
 
   // Initialize CGESelect declarative select elements
-  CGESelect.init('select[data-cge-select]');
+  CGESelect.init('select[data-cge-select]', {}, root);
 
   // Initialize CGEDropzone declarative dropzones
   CGEDropzone.init(root);
 
   console.log('[TailTools] Initialized plugins successfully');
 }
+
+export const init = initTailTools;
 
 // Auto-initialize when loaded in browser environments if DOM is ready
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {

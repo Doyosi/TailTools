@@ -45,7 +45,6 @@ Create two lightweight, zero-dependency Blade components in your Laravel project
     'caption' => null,
     'subtitle' => null,
     'thumb' => null,
-    'poster' => null,
     'class' => 'group relative block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shadow-xs hover:border-indigo-500 transition cursor-pointer'
 ])
 
@@ -54,9 +53,8 @@ Create two lightweight, zero-dependency Blade components in your Laravel project
    @if($gallery) data-cge-gallery="{{ $gallery }}" @endif
    @if($type) data-cge-type="{{ $type }}" @endif
    @if($caption) data-cge-caption="{{ $caption }}" @endif
-   @if($subtitle) data-cge-subtitle="{{ $subtitle }}" @endif
+   @if($subtitle) data-cge-description="{{ $subtitle }}" @endif
    @if($thumb) data-cge-thumb="{{ $thumb }}" @endif
-   @if($poster) data-cge-poster="{{ $poster }}" @endif
    {{ $attributes->merge(['class' => $class]) }}>
     
     {{ $slot }}

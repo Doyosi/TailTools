@@ -91,3 +91,6 @@ const drawer = new CGEDrawer('#main-drawer', {
 ## 4. UI & Design System Rule Compliance
 - Strictly follow the project border-radius standard: **`rounded-sm`** for buttons, badges, inputs, cards, and corner radii (e.g. bottom-sheet top corners `rounded-t-sm`).
 - Never use `rounded-2xl`, `rounded-3xl`, `rounded-4xl`, or `rounded-xl`.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

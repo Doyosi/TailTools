@@ -60,3 +60,9 @@ Track the progress of designing, implementing, testing, and documenting the **CG
 - [x] **Phase 9: AI skill creation in `.agents/skills/`**
   - [x] `.agents/skills/cge-drawer/SKILL.md`
   - [x] `.agents/skills/cge-drawer-skill.md`
+
+## 2026-10-04 ek bakım
+- [x] Kapsam ve mevcut sözleşme incelemesi
+- [x] Runtime ve declaration düzenlemesi
+- [x] Regresyon ve paket doğrulaması
+- [x] Doküman ve skill eşitlemesi

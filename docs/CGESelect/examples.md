@@ -123,3 +123,21 @@ setTimeout(() => {
     select.open();
 }, 1000);
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+Remote selections become native options and serialize through FormData. Native multiple is synchronized. Declarative async URL/driver/method/param/debounce and close-on-select attributes work. Async requests honor minSearchLength; POST uses a JSON query body. Superseded/destroyed requests cannot replace current results. Destroy restores original style/tabindex/aria-hidden/multiple attributes. Local search resets on reopening and disabled optgroups remain disabled. `CGESelect.init(selector, options, root)` accepts an optional discovery root and includes a matching root itself.
+
+## Extended maintenance contract (2026-10-04)
+
+The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+nativeSelect.value = '42';
+nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+form.reset(); // UI refreshes in a microtask after native defaults apply
+select.on('opened', ({ instance }) => console.log(instance.getValue()));
+```

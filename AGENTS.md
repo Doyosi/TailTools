@@ -37,7 +37,7 @@ Whenever the user asks for a plugin `X` (e.g., *Tooltip*, *Modal*, *Accordion*, 
 
 ### Rule 3: End-of-Creation Testing (Mandatory)
 - Never declare a plugin finished without testing.
-- Add an interactive showcase and test section into [index.html](file:///f:/GITHUB/TailTools/index.html).
+- Add an interactive showcase and test section into [index.html](index.html).
 - Verify both programmatic instantiation (`new CGE<X>()`) and declarative data attributes (`data-cge-*`).
 
 ### Rule 4: Dedicated Documentation

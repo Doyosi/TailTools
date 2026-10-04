@@ -110,3 +110,9 @@ if (deleteRes.isConfirmed) {
 - [Laravel Blade Integration](laravel-blade.md) - Form submission interception, delete triggers, and `<x-cge-alert-trigger>` component.
 - [Practical Examples](examples.md) - Real-world patterns (type-to-confirm, prompt inputs, tri-action dialogs, spinners).
 - [TypeScript API Specification](api.md) - Full TypeScript interfaces and event contracts.
+
+## Extended maintenance contract (2026-10-04)
+
+Declarative confirmation uses a valid submit button with requestSubmit, supports external form-associated buttons, and removes temporary name/value inputs for other triggers. Repeated clicks while confirmation waits cannot bypass it. Dismissed async validators/preConfirm cannot deliver late confirmation. Alert owns scroll/focus only while its overlay is active; use dismiss/close and await the result Promise rather than assuming an instance destroy API.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

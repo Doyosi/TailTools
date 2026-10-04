@@ -43,10 +43,18 @@ All plugins created in TailTools follow strict architectural conventions to ensu
 
 ## 4. Required Plugin Lifecycle Methods
 
-Every CGE plugin class must implement:
+For instance-based plugins, this list describes lifecycle responsibilities (method names follow the shipped API):
 1. `constructor(target, options)` - Parses target and merges defaults.
 2. `init()` - Attaches listeners, sets ARIA attributes, prepares DOM.
 3. `open()` / `show()` or primary action method.
 4. `close()` / `hide()` or secondary action method.
 5. `destroy()` - Completely cleans up DOM nodes, removes all bound event listeners, and clears timeouts.
 6. `_dispatch(eventName, detail)` - Dispatches custom DOM events for lifecycle hooks.
+
+
+## Existing API and visual compatibility
+
+- Static/promise controllers such as CGEAlert use fire/confirm results and dismiss/close; CGEToast uses show/dismiss/clear. Do not invent constructor(target), init, update or destroy methods for every plugin. Consult its declaration first.
+- All instance teardown paths cancel owned requests, timers and animation frames, release scroll/focus, and remove listeners. Pending animation promises must settle when destroyed.
+- Preserve current radius/theme defaults. rounded-sm is a preference for new matching markup; Dropzone rounded-xl and circular avatar designs are valid existing contracts.
+- Keep both index.js and index.d.ts barrels beside every plugin. Shared internal lifecycle/overlay/form helpers do not replace public plugin APIs.

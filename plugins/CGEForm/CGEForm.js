@@ -234,6 +234,10 @@ export class CGEForm {
     // Submit button state memory
     this._submitButtonOriginalHTML = null;
     this._submitButtonOriginalDisabled = false;
+    this._isSubmitting = false;
+    this._destroyed = false;
+    this._requestController = null;
+    this._addedNoValidate = !this.form.hasAttribute('novalidate');
 
     // Internal bound handler
     this._handleSubmit = this._handleSubmit.bind(this);
@@ -259,18 +263,14 @@ export class CGEForm {
 
     // Attach immediate live clearing on inputs if autoClearErrors is active
     if (this.options.autoClearErrors) {
-      this.form.addEventListener('input', (e) => {
+      this._handleClearError = (e) => {
         const input = e.target;
         if (input instanceof HTMLElement && input.hasAttribute('name')) {
           this._clearInputError(input);
         }
-      });
-      this.form.addEventListener('change', (e) => {
-        const input = e.target;
-        if (input instanceof HTMLElement && input.hasAttribute('name')) {
-          this._clearInputError(input);
-        }
-      });
+      };
+      this.form.addEventListener('input', this._handleClearError);
+      this.form.addEventListener('change', this._handleClearError);
     }
   }
 
@@ -385,12 +385,15 @@ export class CGEForm {
     if (event && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
+    if (this._isSubmitting || this._destroyed) return;
 
     // Clear previous errors before fresh submission
     this.clearErrors();
 
     // Construct FormData from the form BEFORE freezing inputs
-    const formData = new FormData(this.form);
+    const formData = new FormData(this.form, event?.submitter);
+    this._requestController = new AbortController();
+    this._isSubmitting = true;
 
     // Freeze inputs and transition submit button to loading state immediately
     this._freezeForm();
@@ -412,6 +415,8 @@ export class CGEForm {
         }
       }
 
+      if (this._destroyed) return;
+
       // Determine target URL and HTTP method
       const targetUrl = this._resolveUrl();
       const targetMethod = this._resolveMethod();
@@ -423,12 +428,14 @@ export class CGEForm {
       const submitPayload = { form: this, formData, url: targetUrl, method: targetMethod };
       this._emit('submit', submitPayload);
       this._dispatchDOMEvent('submit', submitPayload);
+      if (this._destroyed) return;
 
       if (mockResponse) {
         response = mockResponse;
       } else {
         response = await this._sendRequest(targetUrl, targetMethod, formData, headers);
       }
+      if (this._destroyed) return;
       ok = true;
 
       // Check for server-guided redirect
@@ -448,7 +455,7 @@ export class CGEForm {
         if (allowRedirect) {
           const delay = Number(this.options.redirectDelay) || 0;
           if (delay > 0) {
-            setTimeout(() => { window.location.href = redirectUrl; }, delay);
+            this._redirectTimer = setTimeout(() => { if (!this._destroyed) window.location.href = redirectUrl; }, delay);
           } else {
             window.location.href = redirectUrl;
           }
@@ -474,6 +481,7 @@ export class CGEForm {
       }
 
     } catch (err) {
+      if (this._destroyed || err?.name === "AbortError" || err?.code === "ERR_CANCELED") return;
       ok = false;
       const res = err?.response || (err?.status ? err : null);
 
@@ -503,7 +511,10 @@ export class CGEForm {
       }
     } finally {
       // Re-enable fields respecting State Memory Guard
-      this._unfreezeForm();
+      if (!this._destroyed) this._unfreezeForm();
+      this._isSubmitting = false;
+      this._requestController = null;
+      if (this._destroyed) return;
 
       const completePayload = { form: this, ok, response };
       this._emit('complete', completePayload);
@@ -611,6 +622,7 @@ export class CGEForm {
       return axiosLib.request({
         url: finalUrl,
         method: 'GET',
+        signal: this._requestController?.signal,
         headers
       });
     }
@@ -618,8 +630,8 @@ export class CGEForm {
     // In Laravel, if sending PUT/PATCH with file uploads via FormData,
     // PHP doesn't populate $_FILES for non-POST requests.
     // Ensure method spoofing _method is present if method is PUT/PATCH/DELETE
-    if (['PUT', 'PATCH', 'DELETE'].includes(method) && !formData.has('_method')) {
-      formData.append('_method', method);
+    if (['PUT', 'PATCH', 'DELETE'].includes(method)) {
+      formData.set('_method', method);
     }
 
     // When sending FormData with axios, let axios set multipart boundary automatically
@@ -630,6 +642,7 @@ export class CGEForm {
       url,
       method: ['PUT', 'PATCH', 'DELETE'].includes(method) ? 'POST' : method,
       data: formData,
+      signal: this._requestController?.signal,
       headers: reqHeaders,
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total) {
@@ -658,8 +671,8 @@ export class CGEForm {
       const separator = url.includes('?') ? '&' : '?';
       finalUrl = params.toString() ? `${url}${separator}${params.toString()}` : url;
     } else {
-      if (['PUT', 'PATCH', 'DELETE'].includes(method) && !formData.has('_method')) {
-        formData.append('_method', method);
+      if (['PUT', 'PATCH', 'DELETE'].includes(method)) {
+        formData.set('_method', method);
         reqMethod = 'POST';
       }
       body = formData;
@@ -672,6 +685,7 @@ export class CGEForm {
     const response = await fetch(finalUrl, {
       method: reqMethod,
       headers: reqHeaders,
+      signal: this._requestController?.signal,
       body: method === 'GET' ? undefined : body
     });
 
@@ -712,6 +726,12 @@ export class CGEForm {
   async _sendXHR(url, method, formData, headers) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
+      const signal = this._requestController?.signal;
+      const abort = () => { xhr.abort(); reject(new DOMException("Request canceled", "AbortError")); };
+      signal?.addEventListener("abort", abort, { once: true });
+      xhr.onloadend = () => signal?.removeEventListener("abort", abort);
+      xhr.onabort = () => reject(new DOMException("Request canceled", "AbortError"));
+      if (signal?.aborted) { abort(); return; }
       let finalUrl = url;
       let reqMethod = method;
 
@@ -722,8 +742,8 @@ export class CGEForm {
         }
         const separator = url.includes('?') ? '&' : '?';
         finalUrl = params.toString() ? `${url}${separator}${params.toString()}` : url;
-      } else if (['PUT', 'PATCH', 'DELETE'].includes(method) && !formData.has('_method')) {
-        formData.append('_method', method);
+      } else if (['PUT', 'PATCH', 'DELETE'].includes(method)) {
+        formData.set('_method', method);
         reqMethod = 'POST';
       }
 
@@ -945,13 +965,7 @@ export class CGEForm {
             }
           }
 
-          // Auto-clear on user interaction
-          if (this.options.autoClearErrors && !this._errorBoundInputs.has(input)) {
-            this._errorBoundInputs.add(input);
-            const clearFn = () => this._clearInputError(input);
-            input.addEventListener('input', clearFn, { once: true });
-            input.addEventListener('change', clearFn, { once: true });
-          }
+          // Input/change events bubble to the form's delegated clearing handler.
         }
       }
 
@@ -1367,6 +1381,7 @@ export class CGEForm {
    * @private
    */
   _emit(event, data) {
+    if (this._destroyed) return;
     // Check direct constructor option hook (e.g. onSubmit, onSuccess, etc.)
     const hookName = `on${event.charAt(0).toUpperCase()}${event.slice(1)}`;
     if (typeof this.options[hookName] === 'function') {
@@ -1399,6 +1414,7 @@ export class CGEForm {
    * @private
    */
   _dispatchDOMEvent(eventName, detail) {
+    if (this._destroyed) return;
     const fullEventName = `cge:form:${eventName}`;
     const customEvent = new CustomEvent(fullEventName, {
       bubbles: true,
@@ -1424,7 +1440,17 @@ export class CGEForm {
    * Completely destroys the CGEForm instance, removing listeners and clearing DOM references.
    */
   destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this._requestController?.abort();
+    clearTimeout(this._redirectTimer);
+    if (this._isSubmitting) this._unfreezeForm();
     this.form.removeEventListener('submit', this._handleSubmit);
+    if (this._handleClearError) {
+      this.form.removeEventListener('input', this._handleClearError);
+      this.form.removeEventListener('change', this._handleClearError);
+    }
+    if (this._addedNoValidate) this.form.removeAttribute('novalidate');
     this.clearErrors();
     this._listeners.clear();
     this._previouslyDisabled.clear();

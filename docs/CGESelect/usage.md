@@ -44,6 +44,12 @@ All features can be declared directly in HTML or Laravel Blade markup without be
 | `data-cge-max-tags-visible`| `<select>` | Maximum tags shown before `+N more` badge. | `data-cge-max-tags-visible="2"` |
 | `data-cge-min-search` | `<select>` | Minimum character threshold before filtering. | `data-cge-min-search="2"` |
 | `data-cge-placement` | `<select>` | Forces placement `'bottom'`, `'top'`, or `'auto'`. | `data-cge-placement="top"` |
+| `data-cge-close-on-select` | `<select>` | Closes after selection; defaults to single/multiple behavior. | `data-cge-close-on-select="false"` |
+| `data-cge-async-url` | `<select>` | Remote endpoint. Constructor asyncSource takes precedence. | `data-cge-async-url="/api/users"` |
+| `data-cge-async-driver` | `<select>` | Remote driver: fetch (default) or axios. | `data-cge-async-driver="fetch"` |
+| `data-cge-async-method` | `<select>` | GET (default) or POST with JSON query body. | `data-cge-async-method="GET"` |
+| `data-cge-async-param` | `<select>` | Query parameter name; default q. | `data-cge-async-param="term"` |
+| `data-cge-async-debounce` | `<select>` | Delay in milliseconds; default 300. Zero is supported. | `data-cge-async-debounce="300"` |
 | `data-image` | `<option>` | Avatar/thumbnail image URL. | `data-image="/avatars/user.jpg"` |
 | `data-icon` | `<option>` | SVG or icon markup snippet. | `data-icon="<svg...>"` |
 | `data-subtext` | `<option>` | Secondary description or role label. | `data-subtext="Engineering Lead"` |
@@ -113,3 +119,14 @@ document.getElementById('my-select').addEventListener('cge:select:change', (e) =
   console.log('DOM Event:', e.detail.value);
 });
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+Remote selections become native options and serialize through FormData. Native multiple is synchronized. Declarative async URL/driver/method/param/debounce and close-on-select attributes work. Async requests honor minSearchLength; POST uses a JSON query body. Superseded/destroyed requests cannot replace current results. Destroy restores original style/tabindex/aria-hidden/multiple attributes. Local search resets on reopening and disabled optgroups remain disabled. `CGESelect.init(selector, options, root)` accepts an optional discovery root and includes a matching root itself.
+
+## Extended maintenance contract (2026-10-04)
+
+The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

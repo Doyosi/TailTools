@@ -1,161 +1,84 @@
 # Installing TailTools
 
-`TailTools` is a modular, high-performance UI plugin and utility library designed specifically for **Tailwind CSS v4.3+** and **Laravel** (Blade & Vite), as well as modern Vanilla JavaScript and TypeScript projects.
+This checkout builds a private local `tailtools@0.0.0` package. `private: true` prevents accidental npm publication. The archive and imports are tested locally; no registry/CDN release is claimed.
 
----
+## Local build and installation
 
-## 1. Installation via npm
-
-Install `tailtools` along with its peer dependencies:
-
-```bash
-npm install tailtools
-# Optional animations peer:
-npm install tailwind-animations
+```powershell
+npm ci
+npm test
+npm run build
+npm run test:package
+npm pack
+# From a consumer application:
+npm install /path/to/tailtools-0.0.0.tgz
 ```
 
-For Yarn or pnpm:
-```bash
-# pnpm
-pnpm add tailtools tailwind-animations
+`npm pack` rebuilds the library through prepack. The archive includes ESM/UMD output, styles, plugin source/barrels/declarations and docs. Demo output, tests and node_modules are excluded.
 
-# yarn
-yarn add tailtools tailwind-animations
+## JavaScript / TypeScript
+
+```javascript
+import TailTools, { CGEModal, CGESelect, initTailTools } from 'tailtools';
+// Root import exposes globals and auto-initializes in the browser.
+initTailTools(document.querySelector('#new-content')); // after injecting a subtree
+
+// Individual imports have no root auto-initialization side effect:
+import { CGEDropzone } from 'tailtools/plugins/CGEDropzone';
+import CGEAlert from 'tailtools/CGEAlert';
 ```
 
----
+Root/plugin declarations pass strict NodeNext and Bundler resolution with skipLibCheck disabled. Plugins require a DOM when used; importing the ESM package itself does not require a DOM.
 
-## 2. Tailwind CSS v4 Setup
-
-TailTools is built natively for Tailwind CSS v4's CSS-first architecture.
-
-In your main CSS file (e.g. `src/style.css` or `resources/css/app.css`):
+## Tailwind CSS v4 / Laravel Vite
 
 ```css
+/* resources/css/app.css */
 @import "tailwindcss";
 @import "tailwind-animations";
-
-/* Import all TailTools plugin styles (or individual plugin styles) */
 @import "tailtools/styles";
 ```
 
-If importing an individual plugin's styles:
+`tailtools/styles` aggregates raw plugin CSS and a relative @source for their JavaScript. This shares your application's Tailwind theme. Individual styling:
+
 ```css
-@import "tailtools/plugins/CGETooltip/style.css";
+@import "tailwindcss";
+@import "tailtools/plugins/CGEModal/style.css";
+@source "../../node_modules/tailtools/plugins/CGEModal/*.js";
 ```
 
----
+Adjust @source relative to the CSS file. `import 'tailtools/style.css'` is the precompiled alternative, including this checkout's theme and preflight. Prefer the raw aggregate in an existing Tailwind app. Animation classes need the animation stylesheet; auto detection uses `has-tailwind-animations` on html or `window.__TAILWIND_ANIMATIONS__ = true`, otherwise CSS is the fallback.
 
-## 3. JavaScript / TypeScript Usage
-
-All TailTools plugins are written in modern, dependency-free native JavaScript and include complete TypeScript type definitions (`.d.ts`).
-
-### Modular Import (Recommended)
 ```javascript
-import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone } from 'tailtools';
-// or direct path:
-// import { CGEDropzone } from 'tailtools/plugins/CGEDropzone';
-
-// Initialize Drag & Drop File Uploader
-const dropzone = new CGEDropzone('#my-dropzone', {
-  uploadMode: 'instant',
-  url: '/api/upload',
-  acceptedFiles: 'image/*,.pdf'
-});
-
-// Initialize CGESelect on a searchable dropdown or multi-tag input
-const select = new CGESelect('#skills-select', {
-  multiple: true,
-  maxItems: 5,
-  searchable: true
-});
-
-// Initialize Action Button global delegation (auto-called in initTailTools)
-CGEActionButton.init();
-
-// Launch a touch-capable media lightbox & gallery viewer
-CGELightbox.open([
-  { src: '/images/photo1.jpg', caption: 'Yosemite Stream', thumb: '/images/thumb1.jpg' },
-  { src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'youtube', caption: 'Product Video' }
-]);
-
-// Initialize Sliding Drawer or Bottom Sheet
-const drawer = new CGEDrawer('#nav-drawer', {
-  placement: 'left',
-  size: 'md',
-  swipeClose: true
-});
-
-// Initialize AJAX Form with auto Laravel 422 error binding
-const form = new CGEForm('#contact-form', {
-  feedback: 'toast',
-  resetOnSuccess: true
-});
-
-// Launch a confirmation dialog
-const { isConfirmed } = await CGEAlert.confirm('Publish Article?');
-
-// Trigger a toast notification
-CGEToast.success('Saved successfully!', { position: 'top-right' });
-
-// Initialize Modal
-const modal = new CGEModal('#my-modal', {
-  size: 'lg',
-  backdrop: 'static',
-});
+// resources/js/app.js
+import { CGEForm } from 'tailtools';
 ```
 
-### Auto-Initialization (Data Attributes)
-All CGE plugins support declarative HTML initialization via `data-cge-*` attributes:
-```javascript
-import { initTailTools } from 'tailtools';
-
-// Automatically initializes all plugins on elements with data-cge-* attributes
-initTailTools();
-```
-
----
-
-## 4. Laravel Integration (Vite + Blade)
-
-### Step A: Configure Vite (`resources/js/app.js`)
-```javascript
-import './bootstrap';
-import '../css/app.css';
-
-import { initTailTools, CGETooltip } from 'tailtools';
-
-document.addEventListener('DOMContentLoaded', () => {
-    initTailTools();
-});
-
-// Optionally expose to window for Alpine.js or inline scripts
-window.CGETooltip = CGETooltip;
-```
-
-### Step B: Blade View Example
 ```blade
-{{-- In resources/views/welcome.blade.php --}}
-<button 
-    data-cge-tooltip="Settings & Profile"
-    data-cge-placement="bottom"
-    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-sm transition-colors">
-    Hover Me
-</button>
+<form data-cge-form data-cge-driver="fetch" action="{{ route('users.update', $user) }}" method="POST">
+    @csrf
+    @method('PATCH')
+    <input name="name" value="{{ $user->name }}">
+    <button type="submit" name="action" value="save">Save</button>
+</form>
 ```
 
----
+CGEForm and AJAX CGEActionButton send multipart PUT/PATCH/DELETE as POST plus _method, including submitter name/value. Axios is an optional driver; Fetch works without it.
 
-## 5. CDN / Standalone Browser Script
+## Static script distribution
 
-For quick prototyping or non-bundled environments:
+Copy dist/tailtools.css and dist/tailtools.umd.cjs to static assets. Serve the UMD file as JavaScript; it can be renamed tailtools.umd.js for conventional static hosting.
 
 ```html
-<link rel="stylesheet" href="https://unpkg.com/tailtools/dist/tailtools.min.css">
-<script src="https://unpkg.com/tailtools/dist/tailtools.umd.js"></script>
-
-<script>
-  const { CGETooltip, initTailTools } = TailTools;
-  initTailTools();
-</script>
+<link rel="stylesheet" href="/assets/tailtools.css">
+<script src="/assets/tailtools.umd.js"></script>
+<script>TailTools.CGEToast.success('Ready');</script>
 ```
+
+The bundle exposes TailTools and individual CGE globals. Before a public release, choose a release version and review/remove private. Publication is outside this maintenance.
+
+## HTML contract
+
+Toast rich messages, Alert HTML/custom content, Select custom renderers and Lightbox captions/inline templates accept trusted HTML. Escape user-controlled text before passing it to these APIs or use their text fields/native labels. Existing rich rendering is preserved; the plugins do not provide a universal sanitizer.
+
+See [development](developing.md) and [tests](../tests/README.md).

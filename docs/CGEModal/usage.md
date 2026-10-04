@@ -146,3 +146,9 @@ modalEl.addEventListener('cge:modal:opened', (event) => {
   console.log('Modal fully displayed:', event.detail.modal.id);
 });
 ```
+
+## Extended maintenance contract (2026-10-04)
+
+Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

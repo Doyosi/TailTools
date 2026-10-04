@@ -1,12 +1,15 @@
-# CGEDropzone API Reference
+# CGEDropzone API
 
-Complete TypeScript interfaces, options definitions, and DOM event contracts for **CGEDropzone**.
+This reference mirrors the shipped [declaration](../../plugins/CGEDropzone/CGEDropzone.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## 1. TypeScript Types & Interfaces
+clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
 
 ```typescript
+/**
+ * CGEDropzone TypeScript Definitions
+ * TailTools Plugin Library
+ */
+
 export type CGEDropzoneUploadMode = 'instant' | 'form';
 export type CGEDropzoneVisualMode = 'standard' | 'avatar';
 export type CGEDropzoneAspectRatio = '1:1' | '16:9' | '300x600' | '1200x630' | '50x50' | 'auto';
@@ -73,6 +76,25 @@ export interface CGEDropzoneUI {
   avatarIcon?: string;
 }
 
+export interface CGEDropzoneTranslations {
+  "dict-default-message"?: string;
+  "dict-fallback-message"?: string;
+  "dict-file-too-big"?: string;
+  "dict-file-too-small"?: string;
+  "dict-invalid-file-type"?: string;
+  "dict-response-error"?: string;
+  "dict-cancel-upload"?: string;
+  "dict-cancel-confirmation"?: string;
+  "dict-remove-file"?: string;
+  "dict-remove-confirmation"?: string;
+  "dict-max-files-exceeded"?: string;
+  "dict-uploading"?: string;
+  "dict-uploaded"?: string;
+  "dict-retry"?: string;
+  "dict-avatar-prompt"?: string;
+  [key: string]: string | undefined;
+}
+
 export interface CGEDropzoneOptions {
   url?: string | null;
   method?: string;
@@ -99,7 +121,7 @@ export interface CGEDropzoneOptions {
   renderPreview?: ((fileItem: DropzoneFile, dropzone: CGEDropzone) => HTMLElement | string) | null;
   renderTrigger?: ((dropzone: CGEDropzone) => HTMLElement | string) | null;
   ui?: CGEDropzoneUI;
-  translations?: Record<string, string>;
+  translations?: CGEDropzoneTranslations;
   onAddedFile?: (file: DropzoneFile) => void;
   onUploadProgress?: (file: DropzoneFile, progress: number) => void;
   onSuccess?: (file: DropzoneFile, response: any) => void;
@@ -107,19 +129,50 @@ export interface CGEDropzoneOptions {
   onRemoved?: (file: DropzoneFile) => void;
   onQueueComplete?: () => void;
 }
+
+export declare class CGEDropzone {
+  static instances: Map<HTMLElement | string, CGEDropzone>;
+  static defaults: CGEDropzoneOptions;
+  static translations: CGEDropzoneTranslations;
+  static setTranslations(dict: Partial<CGEDropzoneTranslations>): void;
+  static get(target: string | HTMLElement): CGEDropzone | null;
+  static init(root?: string | HTMLElement | Document, options?: CGEDropzoneOptions): CGEDropzone[];
+
+  element: HTMLElement;
+  options: Required<CGEDropzoneOptions>;
+  files: DropzoneFile[];
+  isDisabled: boolean;
+  isUploading: boolean;
+  hiddenInput: HTMLInputElement;
+  previewsContainer: HTMLElement | null;
+  triggerContainer: HTMLElement | null;
+  form: HTMLFormElement | null;
+
+  constructor(target: string | HTMLElement, options?: CGEDropzoneOptions);
+
+  addFiles(fileList: FileList | File[]): void;
+  addFile(file: File): DropzoneFile | null;
+  removeFile(fileOrId: string | DropzoneFile, silent?: boolean): Promise<void>;
+  /** Waits for remote deletes; failures retain their cards. remote:false only detaches locally. */
+  clear(options?: { remote?: boolean }): Promise<void>;
+  uploadAll(): void;
+  uploadFile(fileId: string): Promise<void>;
+  cancelUpload(fileId: string): void;
+  retryUpload(fileId: string): void;
+  disable(): void;
+  enable(): void;
+  destroy(): void;
+
+  getFiles(): DropzoneFile[];
+  getQueuedFiles(): DropzoneFile[];
+  getUploadingFiles(): DropzoneFile[];
+  getCompletedFiles(): DropzoneFile[];
+  getFailedFiles(): DropzoneFile[];
+  appendToFormData(formData: FormData, fieldName?: string): void;
+
+  on(event: 'add' | 'progress' | 'success' | 'error' | 'removed' | 'complete' | string, handler: Function): this;
+  off(event: string, handler: Function): this;
+}
+
+export default CGEDropzone;
 ```
-
----
-
-## 2. DOM CustomEvents Contract
-
-All events bubble and provide payload information in `event.detail`:
-
-| Event Name | Detail Payload | Description |
-| :--- | :--- | :--- |
-| `cge:dropzone:add` | `{ instance, file }` | Dispatched immediately when a file is added and validated. |
-| `cge:dropzone:progress` | `{ instance, file, data: percent }` | Dispatched on every upload progress tick (0 - 100). |
-| `cge:dropzone:success` | `{ instance, file, data: response }` | Dispatched when a file upload completes successfully. |
-| `cge:dropzone:error` | `{ instance, file, data: errorMessage }` | Dispatched when validation or network upload fails. |
-| `cge:dropzone:removed` | `{ instance, file }` | Dispatched when a file is removed from the dropzone. |
-| `cge:dropzone:complete` | `{ instance }` | Dispatched when all queued files have finished uploading. |

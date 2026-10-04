@@ -138,3 +138,6 @@ const modal = new CGEModal('#myModal', options);
    - Update `docs/installing.md`, `docs/developing.md`, `docs/versioning.md`.
 8. **AI Consumer Skill:**
    - `.agents/skills/cge-modal-skill.md` and `.agents/skills/cge-modal/SKILL.md`.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

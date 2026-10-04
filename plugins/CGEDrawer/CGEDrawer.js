@@ -1,3 +1,5 @@
+import { Lifecycle } from '../shared/lifecycle.js';
+import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey } from '../shared/overlay.js';
 /**
  * CGEDrawer - TailTools Plugin
  * High-performance, gesture-capable sliding drawer and off-canvas navigation plugin designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -130,6 +132,11 @@ export class CGEDrawer {
    * @param {string | HTMLElement} target - Drawer element or selector
    * @param {Object} [options={}] - Custom configuration
    */
+  _eventController = new AbortController();
+  _pushStyles = new Map();
+  _lifecycle = new Lifecycle();
+  _destroyed = false;
+
   constructor(target, options = {}) {
     this.drawer = typeof target === 'string' ? document.querySelector(target) : target;
 
@@ -233,14 +240,14 @@ export class CGEDrawer {
       dataOptions.restoreFocus = dataset.cgeRestoreFocus !== 'false';
     }
     if ('cgeDuration' in dataset) {
-      dataOptions.duration = parseInt(dataset.cgeDuration, 10) || 300;
+      dataOptions.duration = Math.max(0, Number(dataset.cgeDuration) || 0);
     }
 
     const merged = {
       ...CGEDrawer.defaults,
-      translations: { ...CGEDrawer.translations, ...(userOptions.translations || {}) },
       ...dataOptions,
-      ...userOptions
+      ...userOptions,
+      translations: { ...CGEDrawer.translations, ...(userOptions.translations || {}) }
     };
 
     // Synchronize backdrop and backdropClose
@@ -378,7 +385,7 @@ export class CGEDrawer {
       this.backdrop.addEventListener('click', (e) => {
         if (e.target !== this.backdrop) return;
         this._handleBackdropClick(e);
-      });
+      }, { signal: this._eventController.signal });
     }
 
     // Drawer container click (handles outside click if backdrop is non-rendered or transparent)
@@ -386,7 +393,7 @@ export class CGEDrawer {
       if (e.target === this.drawer) {
         this._handleBackdropClick(e);
       }
-    });
+    }, { signal: this._eventController.signal });
 
     // Close button delegation inside drawer
     this.drawer.addEventListener('click', (e) => {
@@ -395,11 +402,11 @@ export class CGEDrawer {
         e.preventDefault();
         this.close();
       }
-    });
+    }, { signal: this._eventController.signal });
 
     // Keydown handler (Escape & Focus Trap)
     this._handleKeyDown = (e) => {
-      if (!this._isOpen) return;
+      if (!this._isOpen || !claimOverlayKey(this, e)) return;
 
       if (e.key === 'Escape' && this.options.escapeClose) {
         e.preventDefault();
@@ -411,7 +418,7 @@ export class CGEDrawer {
         this._handleFocusTrap(e);
       }
     };
-    document.addEventListener('keydown', this._handleKeyDown);
+    document.addEventListener('keydown', this._handleKeyDown, { signal: this._eventController.signal });
   }
 
   /**
@@ -438,7 +445,7 @@ export class CGEDrawer {
 
       // Temporarily disable CSS transition during active touch dragging
       el.style.transition = 'none';
-    }, { passive: true });
+    }, { passive: true, signal: this._eventController.signal });
 
     el.addEventListener('touchmove', (e) => {
       if (!this._touchState.tracking) return;
@@ -482,7 +489,7 @@ export class CGEDrawer {
         progress,
         event: e
       });
-    }, { passive: true });
+    }, { passive: true, signal: this._eventController.signal });
 
     const handleTouchEnd = () => {
       if (!this._touchState.tracking) return;
@@ -510,8 +517,8 @@ export class CGEDrawer {
       }
     };
 
-    el.addEventListener('touchend', handleTouchEnd, { passive: true });
-    el.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    el.addEventListener('touchend', handleTouchEnd, { passive: true, signal: this._eventController.signal });
+    el.addEventListener('touchcancel', handleTouchEnd, { passive: true, signal: this._eventController.signal });
   }
 
   /**
@@ -519,6 +526,7 @@ export class CGEDrawer {
    * @private
    */
   _handleBackdropClick(e) {
+    if (!isTopOverlay(this)) return;
     this._emit('backdropClick', { drawer: this, event: e });
 
     if (this.options.backdropClose) {
@@ -544,7 +552,7 @@ export class CGEDrawer {
     this.dialog.classList.add(bounceClass);
 
     if (this._bounceTimeout) clearTimeout(this._bounceTimeout);
-    this._bounceTimeout = setTimeout(() => {
+    this._bounceTimeout = this._lifecycle.timeout(() => {
       if (this.dialog) {
         this.dialog.classList.remove(bounceClass);
       }
@@ -621,8 +629,9 @@ export class CGEDrawer {
     }
 
     this._pushElements.forEach((el) => {
+      if (!this._pushStyles.has(el)) this._pushStyles.set(el, { transition: el.style.transition, transform: el.style.transform });
       el.style.transition = `transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-      el.style.transform = open ? `translate3d(${shiftX}px, ${shiftY}px, 0)` : '';
+      el.style.transform = open ? `translate3d(${shiftX}px, ${shiftY}px, 0)` : this._pushStyles.get(el).transform;
     });
   }
 
@@ -632,13 +641,16 @@ export class CGEDrawer {
    * @returns {Promise<void>}
    */
   async open(trigger = null) {
-    if (this._isOpen || this._isAnimating) return;
+    if (this._destroyed || this._isOpen || this._isAnimating) return;
 
     this._isOpen = true;
     this._isAnimating = true;
     this._triggerElement = trigger || document.activeElement;
 
     this._emit('open', { drawer: this });
+    if (this._destroyed) return;
+
+    acquireOverlay(this, this.drawer, false);
 
     // 1. Lock document body scroll
     if (this.options.lockScroll && this.options.backdrop) {
@@ -680,7 +692,8 @@ export class CGEDrawer {
 
     // 5. Trigger transition
     return new Promise((resolve) => {
-      requestAnimationFrame(() => {
+      resolve = this._lifecycle.settle(resolve);
+      this._lifecycle.frame(() => {
         // Backdrop fade in
         if (this.backdrop) {
           this.backdrop.classList.remove('opacity-0');
@@ -698,7 +711,7 @@ export class CGEDrawer {
           }
         }
 
-        setTimeout(() => {
+        this._lifecycle.timeout(() => {
           this._isAnimating = false;
 
           // Autofocus management
@@ -718,12 +731,13 @@ export class CGEDrawer {
    * @returns {Promise<void>}
    */
   async close() {
-    if (!this._isOpen || this._isAnimating) return;
+    if (this._destroyed || !this._isOpen || this._isAnimating) return;
 
     this._isOpen = false;
     this._isAnimating = true;
 
     this._emit('close', { drawer: this });
+    if (this._destroyed) return;
 
     // 1. Revert layout push
     this._applyLayoutPush(false);
@@ -732,6 +746,7 @@ export class CGEDrawer {
     const driver = this._resolveAnimationDriver();
 
     return new Promise((resolve) => {
+      resolve = this._lifecycle.settle(resolve);
       // 2. Backdrop fade out
       if (this.backdrop) {
         this.backdrop.classList.remove('opacity-100');
@@ -749,7 +764,7 @@ export class CGEDrawer {
         }
       }
 
-      setTimeout(() => {
+      this._lifecycle.timeout(() => {
         // Mini mode re-collapse vs Complete hide
         if (this.options.mini) {
           this._setupMiniMode();
@@ -770,9 +785,7 @@ export class CGEDrawer {
         }
 
         // Restore focus to original trigger element
-        if (this.options.restoreFocus && this._triggerElement && typeof this._triggerElement.focus === 'function') {
-          this._triggerElement.focus();
-        }
+        releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
 
         this._isAnimating = false;
         this._emit('closed', { drawer: this });
@@ -857,26 +870,9 @@ export class CGEDrawer {
    * Locks body scroll with scrollbar-gutter jump compensation.
    * @private
    */
-  _lockScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    this._originalBodyPadding = document.body.style.paddingRight || '';
-    this._originalBodyOverflow = document.body.style.overflow || '';
+  _lockScroll() { acquireOverlay(this, this.drawer, true); }
 
-    if (scrollbarWidth > 0) {
-      const currentPadding = parseFloat(window.getComputedStyle(document.body).paddingRight) || 0;
-      document.body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
-  }
-
-  /**
-   * Restores body scroll and padding.
-   * @private
-   */
-  _unlockScroll() {
-    document.body.style.paddingRight = this._originalBodyPadding;
-    document.body.style.overflow = this._originalBodyOverflow;
-  }
+  _unlockScroll() { releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null); }
 
   /**
    * Emits both instance callback and native DOM CustomEvents.
@@ -937,10 +933,21 @@ export class CGEDrawer {
    * Destroys instance, removes listeners, and cleans up DOM attributes.
    */
   destroy() {
-    if (this._isOpen) {
-      this.close();
-    }
-
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this._eventController.abort();
+    this._lifecycle.cancel();
+    releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
+    this._isOpen = false;
+    this._isAnimating = false;
+    this._touchState.tracking = false;
+    this._pushStyles.forEach((style, element) => Object.assign(element.style, style));
+    this._pushStyles.clear();
+    if (this.dialog) { this.dialog.style.transform = ''; this.dialog.style.transition = ''; }
+    if (this.backdrop) this.backdrop.style.opacity = '';
+    this.drawer.classList.add('hidden');
+    this.drawer.setAttribute('aria-hidden', 'true');
+    this._listeners.clear();
     if (this._handleKeyDown) {
       document.removeEventListener('keydown', this._handleKeyDown);
     }
@@ -989,9 +996,9 @@ export class CGEDrawer {
    * @param {Object} [options={}]
    * @returns {Promise<void>}
    */
-  static toggle(target, options = {}) {
+  static toggle(target, options = {}, trigger = null) {
     const drawer = CGEDrawer.get(target) || new CGEDrawer(target, options);
-    return drawer ? drawer.toggle() : Promise.resolve();
+    return drawer ? drawer.toggle(trigger) : Promise.resolve();
   }
 
   /**
@@ -1007,6 +1014,7 @@ export class CGEDrawer {
         if (toggleBtn) {
           e.preventDefault();
           const target = toggleBtn.getAttribute('data-cge-drawer-toggle');
+          if (!target) return;
           CGEDrawer.toggle(target.startsWith('#') ? target : `#${target}`, {}, toggleBtn);
           return;
         }
@@ -1016,6 +1024,7 @@ export class CGEDrawer {
         if (openBtn) {
           e.preventDefault();
           const target = openBtn.getAttribute('data-cge-drawer-target');
+          if (!target) return;
           const instance = CGEDrawer.get(target.startsWith('#') ? target : `#${target}`) || new CGEDrawer(target.startsWith('#') ? target : `#${target}`);
           if (instance) instance.open(openBtn);
         }

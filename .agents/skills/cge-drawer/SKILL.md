@@ -156,5 +156,9 @@ const drawer = new CGEDrawer('#mini-nav', {
 ---
 
 ## 9. Design System Rule Reminder
-- **Always use `rounded-sm`** for buttons, inputs, dialog containers, badges, and card corners.
-- **Never use `rounded-2xl`, `rounded-3xl`, `rounded-4xl`, or `rounded-xl`**.
+
+## Verified maintenance contract (2026-10-04)
+
+Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEDrawer.d.ts](../../../../plugins/CGEDrawer/CGEDrawer.d.ts).

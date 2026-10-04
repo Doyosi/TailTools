@@ -220,3 +220,16 @@ CGEToast.setTranslations({
   'info-title': 'Bilgilendirme'
 });
 ```
+
+
+## Verified maintenance guidance (2026-10-04)
+
+A session flash DOM node is consumed only once across repeated initialization. New flash nodes still work. Declarative data-cge-duration="0"/"false" and data-cge-toast-duration="0"/"false" create persistent toasts.
+
+Nested document/subtree delegation handles a single click only once.
+
+## Verified maintenance contract (2026-10-04)
+
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEToast.d.ts](../../../../plugins/CGEToast/CGEToast.d.ts).

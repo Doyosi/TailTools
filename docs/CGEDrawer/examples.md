@@ -194,3 +194,16 @@ Displace adjacent content along the drawer's orientation axis:
     </div>
 </div>
 ```
+
+## Extended maintenance contract (2026-10-04)
+
+Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+const opening = drawer.open(trigger);
+drawer.destroy(); // cancels entry and restores pushed layout
+await opening;
+const replacement = new CGEDrawer(drawerElement);
+```

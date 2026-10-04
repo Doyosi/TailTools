@@ -66,7 +66,7 @@ dz.uploadAll();
 dz.uploadFile(fileId);
 dz.cancelUpload(fileId);
 dz.retryUpload(fileId);
-dz.clear();
+await dz.clear();
 
 // State controls
 dz.disable();
@@ -144,3 +144,14 @@ const dropzone = new CGEDropzone('#my-dropzone', {
   }
 });
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+Delete confirmation uses `CGEAlert.confirm(title, message, options)`. Failed individual remote deletions retain the file/card and emit `error` / onError. Fetch checks non-2xx responses. uploadAll respects maxConcurrent in instant mode. Cancellation releases slots once when requests settle; removing an upload preserves neighboring files. Destroy stops the queue. Upload driver fetch currently falls back to XHR for progress support.
+
+## Extended maintenance contract (2026-10-04)
+
+clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

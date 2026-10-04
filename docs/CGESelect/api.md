@@ -1,12 +1,15 @@
-# CGESelect - TypeScript API Reference
+# CGESelect API
 
-Complete TypeScript declarations, option schemas, and event payload types for **CGESelect**.
+This reference mirrors the shipped [declaration](../../plugins/CGESelect/CGESelect.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## 1. Type Interfaces
+The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
 
 ```typescript
+/**
+ * CGESelect - TypeScript Definitions
+ * Type definitions for TailTools CGESelect plugin.
+ */
+
 export interface CGESelectTranslations {
   placeholder?: string;
   'search-placeholder'?: string;
@@ -68,23 +71,23 @@ export interface CGESelectAsyncSource {
 }
 
 export interface CGESelectOptions {
-  /** Enables multi-selection tags mode */
+  /** Enables multi-selection tags mode (default: false or inferred from `<select multiple>`) */
   multiple?: boolean;
-  /** Enables search input filtering */
+  /** Enables search input filtering (default: true) */
   searchable?: boolean;
-  /** Enables quick clear button when items are selected */
+  /** Enables quick clear button when items are selected (default: true) */
   clearable?: boolean;
   /** Trigger box placeholder when nothing is selected */
   placeholder?: string | null;
   /** Search box input placeholder text */
   searchPlaceholder?: string | null;
-  /** Whether to close dropdown after selecting an option */
+  /** Whether to close dropdown after selecting an option (default: true for single, false for multi) */
   closeOnSelect?: boolean;
-  /** Maximum number of items selectable in multi mode */
+  /** Maximum number of items selectable in multi mode (default: null) */
   maxItems?: number | null;
-  /** Maximum number of tags visible before collapsing into "+N more" badge */
+  /** Maximum number of tags visible before collapsing into "+N more" badge (default: null) */
   maxTagsVisible?: number | null;
-  /** Minimum characters typed before filtering starts */
+  /** Minimum characters typed before filtering starts (default: 0) */
   minSearchLength?: number;
   /** Dropdown placement behavior ('auto' | 'bottom' | 'top') */
   placement?: 'auto' | 'bottom' | 'top';
@@ -101,13 +104,7 @@ export interface CGESelectOptions {
   /** Localization dictionary overrides */
   translations?: Partial<CGESelectTranslations>;
 }
-```
 
----
-
-## 2. Event Payloads
-
-```typescript
 export interface CGESelectEventMap {
   open: { instance: CGESelect; element: HTMLSelectElement };
   opened: { instance: CGESelect; element: HTMLSelectElement };
@@ -122,22 +119,18 @@ export interface CGESelectEventMap {
   clear: { instance: CGESelect; element: HTMLSelectElement };
   search: { instance: CGESelect; element: HTMLSelectElement; query: string };
 }
-```
 
----
-
-## 3. Class Methods & Signatures
-
-```typescript
 export class CGESelect {
-  // Static Registry & Initializers
+  // Static Properties
   static instances: WeakMap<HTMLSelectElement, CGESelect>;
   static defaults: CGESelectOptions;
   static translations: CGESelectTranslations;
+
+  // Static Methods
   static setTranslations(dict: Partial<CGESelectTranslations>): void;
   static get(target: string | HTMLSelectElement): CGESelect | null;
   static getOrCreate(target: string | HTMLSelectElement, options?: CGESelectOptions): CGESelect;
-  static init(selector?: string, options?: CGESelectOptions): CGESelect[];
+  static init(selector?: string, options?: CGESelectOptions, root?: Document | HTMLElement): CGESelect[];
 
   // Instance Properties
   element: HTMLSelectElement;
@@ -149,6 +142,18 @@ export class CGESelect {
   focusedIndex: number;
   searchQuery: string;
   isLoading: boolean;
+
+  wrapper: HTMLDivElement;
+  trigger: HTMLDivElement;
+  selectionContainer: HTMLDivElement;
+  clearBtn: HTMLButtonElement;
+  arrowIcon: HTMLSpanElement;
+  dropdown: HTMLDivElement;
+  searchInput: HTMLInputElement | null;
+  optionsContainer: HTMLDivElement;
+
+  // Constructor
+  constructor(target: string | HTMLSelectElement, options?: CGESelectOptions);
 
   // Instance Methods
   open(): this;

@@ -21,6 +21,8 @@ export class CGEToast {
    * @type {Map<string, HTMLElement>}
    */
   static containers = new Map();
+  static _processedFlashes = new WeakSet();
+  static _handledTriggerEvents = new WeakSet();
 
   /**
    * Default translations dictionary.
@@ -755,33 +757,41 @@ export class CGEToast {
     // 1. Process Laravel Session Flash Toasts: <div data-cge-toast-flash data-cge-variant="success" data-cge-message="...">
     const flashElements = root.querySelectorAll('[data-cge-toast-flash]');
     flashElements.forEach((el) => {
+      if (CGEToast._processedFlashes.has(el)) return;
       const message = el.getAttribute('data-cge-message') || el.innerHTML.trim();
       const variant = el.getAttribute('data-cge-variant') || 'success';
       const theme = el.getAttribute('data-cge-toast-theme') || el.getAttribute('data-cge-theme') || CGEToast.defaults.theme;
       const title = el.getAttribute('data-cge-title') || null;
       const position = el.getAttribute('data-cge-position') || 'top-right';
-      const duration = parseInt(el.getAttribute('data-cge-duration'), 10) || 5000;
+      const rawDuration = el.getAttribute('data-cge-duration');
+      const parsedDuration = Number.parseInt(rawDuration, 10);
+      const duration = rawDuration === 'false' ? false : (Number.isNaN(parsedDuration) ? 5000 : parsedDuration);
 
       if (message) {
         CGEToast.show({ message, variant, theme, title, position, duration });
+        CGEToast._processedFlashes.add(el);
         el.style.display = 'none'; // hide placeholder
       }
     });
 
     // 2. Delegated click triggers: <button data-cge-toast="Order Placed!" data-cge-toast-variant="success">
     const onTriggerClick = (e) => {
+      if (CGEToast._handledTriggerEvents.has(e)) return;
       const trigger = e.target.closest('[data-cge-toast]');
       if (!trigger) return;
 
       const message = trigger.getAttribute('data-cge-toast');
       if (!message) return;
+      CGEToast._handledTriggerEvents.add(e);
 
       e.preventDefault();
       const variant = trigger.getAttribute('data-cge-toast-variant') || 'neutral';
       const theme = trigger.getAttribute('data-cge-toast-theme') || trigger.getAttribute('data-cge-theme') || CGEToast.defaults.theme;
       const title = trigger.getAttribute('data-cge-toast-title') || null;
       const position = trigger.getAttribute('data-cge-toast-position') || 'top-right';
-      const duration = parseInt(trigger.getAttribute('data-cge-toast-duration'), 10) || 5000;
+      const rawDuration = trigger.getAttribute('data-cge-toast-duration');
+      const parsedDuration = Number.parseInt(rawDuration, 10);
+      const duration = rawDuration === 'false' ? false : (Number.isNaN(parsedDuration) ? 5000 : parsedDuration);
 
       CGEToast.show({ message, variant, theme, title, position, duration });
     };

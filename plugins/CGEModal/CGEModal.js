@@ -1,3 +1,5 @@
+import { Lifecycle } from '../shared/lifecycle.js';
+import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey } from '../shared/overlay.js';
 /**
  * CGEModal - TailTools Plugin
  * High-performance, accessible native JavaScript modal plugin for Tailwind CSS v4.3+ and Laravel Blade.
@@ -52,6 +54,9 @@ export class CGEModal {
    * @param {string | HTMLElement} target - Modal element or selector
    * @param {Object} [options={}] - Custom configuration
    */
+  _lifecycle = new Lifecycle();
+  _destroyed = false;
+
   constructor(target, options = {}) {
     this.modal = typeof target === 'string' ? document.querySelector(target) : target;
 
@@ -169,6 +174,7 @@ export class CGEModal {
   _bindEvents() {
     // Backdrop click handling
     const onModalClick = (e) => {
+      if (!isTopOverlay(this)) return;
       // If click target is inside dialog, ignore
       if (this.dialog && (this.dialog === e.target || this.dialog.contains(e.target))) {
         return;
@@ -193,7 +199,7 @@ export class CGEModal {
 
     // Keyboard handlers (Escape & Focus Trap)
     const onKeyDown = (e) => {
-      if (!this._isOpen) return;
+      if (!this._isOpen || !claimOverlayKey(this, e)) return;
 
       if (e.key === 'Escape') {
         if (this.options.escapeClose) {
@@ -323,17 +329,19 @@ export class CGEModal {
    * @returns {Promise<boolean>}
    */
   async open(triggerElement = null) {
-    if (this._isOpen || this._isAnimating) return false;
+    if (this._destroyed || this._isOpen || this._isAnimating) return false;
 
     // Capture trigger element for focus restoration
     this._triggerElement = triggerElement || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
     // Dispatch cancelable 'cge:modal:open' event
     const openEvent = this._dispatch('open', { trigger: this._triggerElement });
-    if (openEvent.defaultPrevented) return false;
+    if (openEvent.defaultPrevented || this._destroyed) return false;
 
     this._isAnimating = true;
     this._isOpen = true;
+
+    acquireOverlay(this, this.modal, false);
 
     // Scroll lock handling
     if (this.options.lockScroll) {
@@ -353,6 +361,7 @@ export class CGEModal {
       await this._animateOpenCSS();
     }
 
+    if (this._destroyed) return false;
     this._isAnimating = false;
 
     // Set initial focus
@@ -367,11 +376,11 @@ export class CGEModal {
    * @returns {Promise<boolean>}
    */
   async close() {
-    if (!this._isOpen || this._isAnimating) return false;
+    if (this._destroyed || !this._isOpen || this._isAnimating) return false;
 
     // Dispatch cancelable 'cge:modal:close' event
     const closeEvent = this._dispatch('close');
-    if (closeEvent.defaultPrevented) return false;
+    if (closeEvent.defaultPrevented || this._destroyed) return false;
 
     this._isAnimating = true;
 
@@ -382,6 +391,8 @@ export class CGEModal {
     } else if (driver === 'css') {
       await this._animateCloseCSS();
     }
+
+    if (this._destroyed) return false;
 
     // Hide container
     this.modal.classList.add('hidden');
@@ -397,9 +408,7 @@ export class CGEModal {
     this._isAnimating = false;
 
     // Restore focus to trigger
-    if (this.options.restoreFocus && this._triggerElement && typeof this._triggerElement.focus === 'function') {
-      this._triggerElement.focus();
-    }
+    releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
 
     this._dispatch('closed');
     return true;
@@ -450,7 +459,7 @@ export class CGEModal {
 
     this._dispatch('shake');
 
-    this._shakeTimeout = setTimeout(() => {
+    this._shakeTimeout = this._lifecycle.timeout(() => {
       if (this.dialog) {
         this.dialog.classList.remove('animate-shake', 'cge-modal-shake');
         this.dialog.style.animation = '';
@@ -465,6 +474,7 @@ export class CGEModal {
    */
   _animateOpenTailwindAnimations() {
     return new Promise((resolve) => {
+      resolve = this._lifecycle.settle(resolve);
       // Backdrop
       if (this.backdrop) {
         this.backdrop.classList.remove('animate-fade-out');
@@ -485,7 +495,7 @@ export class CGEModal {
         this.dialog.classList.add(animClass);
       }
 
-      setTimeout(() => {
+      this._lifecycle.timeout(() => {
         // Clean up entry animation classes so they do not block subsequent animations (like shake)
         if (this.dialog) {
           this.dialog.classList.remove(
@@ -506,6 +516,7 @@ export class CGEModal {
    */
   _animateCloseTailwindAnimations() {
     return new Promise((resolve) => {
+      resolve = this._lifecycle.settle(resolve);
       // Backdrop
       if (this.backdrop) {
         this.backdrop.classList.remove('animate-fade-in');
@@ -525,7 +536,7 @@ export class CGEModal {
         this.dialog.classList.add(exitClass);
       }
 
-      setTimeout(() => {
+      this._lifecycle.timeout(() => {
         // Clean up classes after animation
         if (this.backdrop) this.backdrop.classList.remove('animate-fade-out');
         if (this.dialog) this.dialog.classList.remove('animate-zoom-out', 'animate-fade-out', 'animate-slide-out-bottom', 'animate-slide-out-top');
@@ -540,6 +551,7 @@ export class CGEModal {
    */
   _animateOpenCSS() {
     return new Promise((resolve) => {
+      resolve = this._lifecycle.settle(resolve);
       // Initial state
       if (this.backdrop) {
         this.backdrop.classList.add('transition-opacity', 'duration-200', 'opacity-0');
@@ -552,8 +564,8 @@ export class CGEModal {
       }
 
       // Trigger transition on next animation frame
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      this._lifecycle.frame(() => {
+        this._lifecycle.frame(() => {
           if (this.backdrop) {
             this.backdrop.classList.remove('opacity-0');
             this.backdrop.classList.add('opacity-100');
@@ -562,7 +574,7 @@ export class CGEModal {
             this.dialog.classList.remove('opacity-0', 'scale-95');
             this.dialog.classList.add('opacity-100', 'scale-100');
           }
-          setTimeout(() => {
+          this._lifecycle.timeout(() => {
             if (this.dialog) {
               this.dialog.classList.remove('transition-all', 'duration-200', 'ease-out');
             }
@@ -579,6 +591,7 @@ export class CGEModal {
    */
   _animateCloseCSS() {
     return new Promise((resolve) => {
+      resolve = this._lifecycle.settle(resolve);
       if (this.backdrop) {
         this.backdrop.classList.add('transition-opacity', 'duration-200');
         this.backdrop.classList.remove('opacity-100');
@@ -591,7 +604,7 @@ export class CGEModal {
         this.dialog.classList.add('opacity-0', 'scale-95');
       }
 
-      setTimeout(resolve, this.options.duration);
+      this._lifecycle.timeout(resolve, this.options.duration);
     });
   }
 
@@ -599,28 +612,9 @@ export class CGEModal {
    * Locks scroll on body and prevents layout shift from scrollbar disappearing.
    * @private
    */
-  _lockScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    this._originalBodyPadding = document.body.style.paddingRight || '';
+  _lockScroll() { acquireOverlay(this, this.modal, true); }
 
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.classList.add('overflow-hidden');
-  }
-
-  /**
-   * Unlocks body scroll and restores padding.
-   * @private
-   */
-  _unlockScroll() {
-    // Only remove overflow-hidden if no other modals remain open
-    const otherOpenModals = Array.from(CGEModal.instances.values()).some((inst) => inst !== this && inst._isOpen);
-    if (!otherOpenModals) {
-      document.body.classList.remove('overflow-hidden');
-      document.body.style.paddingRight = this._originalBodyPadding;
-    }
-  }
+  _unlockScroll() { releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null); }
 
   /**
    * Places focus onto designated autofocus element or first focusable element.
@@ -682,12 +676,12 @@ export class CGEModal {
    * Cleans up all listeners, resets DOM attributes and unlocks scroll.
    */
   destroy() {
-    if (this._isOpen) {
-      if (this.options.lockScroll) {
-        this._unlockScroll();
-      }
-    }
-
+    if (this._destroyed) return;
+    this._destroyed = true;
+    this._lifecycle.cancel();
+    releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
+    this._isOpen = false;
+    this._isAnimating = false;
     if (this._shakeTimeout) {
       clearTimeout(this._shakeTimeout);
     }
@@ -745,6 +739,8 @@ export class CGEModal {
    * Scans document for declarative triggers and modals and attaches click behaviors.
    * @param {Document | HTMLElement} [root=document]
    */
+  static _handledClicks = new WeakSet();
+
   static init(root = document) {
     // 1. Initialize all modals found with .cge-modal or [data-cge-modal]
     const modalElements = root.querySelectorAll('.cge-modal, [data-cge-modal]');
@@ -756,13 +752,14 @@ export class CGEModal {
     // data-cge-modal-target="#modalId" or data-cge-target="#modalId"
     const onTriggerClick = (e) => {
       const trigger = e.target.closest('[data-cge-modal-target], [data-cge-target]');
-      if (!trigger) return;
+      if (!trigger || CGEModal._handledClicks.has(e)) return;
 
       const targetSelector = trigger.getAttribute('data-cge-modal-target') || trigger.getAttribute('data-cge-target');
       if (!targetSelector) return;
 
       const modalEl = document.querySelector(targetSelector);
-      if (modalEl) {
+      if (modalEl && modalEl.matches('.cge-modal, [data-cge-modal]')) {
+        CGEModal._handledClicks.add(e);
         e.preventDefault();
         const instance = CGEModal.getOrCreateInstance(modalEl);
         instance.toggle(trigger);

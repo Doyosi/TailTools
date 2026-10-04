@@ -111,7 +111,18 @@ CGEActionButton.init();
 
 ## Documentation Index
 
-- [Usage Guide (`usage.md`)](file:///f:/GITHUB/TailTools/docs/CGEActionButton/usage.md) - Configuration options, data attributes, error handling, and API methods.
-- [Laravel Blade Guide (`laravel-blade.md`)](file:///f:/GITHUB/TailTools/docs/CGEActionButton/laravel-blade.md) - Reusable Blade components `<x-cge-action-button>` and `<x-cge-delete-button>`.
-- [Examples & Recipes (`examples.md`)](file:///f:/GITHUB/TailTools/docs/CGEActionButton/examples.md) - Practical patterns for Datatables, Livewire, and command buttons.
-- [API Reference (`api.md`)](file:///f:/GITHUB/TailTools/docs/CGEActionButton/api.md) - TypeScript interfaces, options schema, and DOM event payloads.
+- [Usage Guide (`usage.md`)](usage.md) - Configuration options, data attributes, error handling, and API methods.
+- [Laravel Blade Guide (`laravel-blade.md`)](laravel-blade.md) - Reusable Blade components `<x-cge-action-button>` and `<x-cge-delete-button>`.
+- [Examples & Recipes (`examples.md`)](examples.md) - Practical patterns for Datatables, Livewire, and command buttons.
+- [API Reference (`api.md`)](api.md) - TypeScript interfaces, options schema, and DOM event payloads.
+
+
+## Maintenance notes (2026-10-04)
+
+Repeated execute calls while confirmation is pending are ignored, preventing duplicate dialogs/requests. Canceling or failing confirmation releases the guard. Partial per-instance translations retain global defaults.
+
+## Extended maintenance contract (2026-10-04)
+
+Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

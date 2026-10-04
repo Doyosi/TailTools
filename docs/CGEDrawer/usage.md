@@ -179,3 +179,9 @@ When configured with `backdropClose: false` or `data-cge-backdrop="static"`:
    - Top drawer nudges down (+14px) and snaps back.
    - Bottom drawer nudges up (-14px) and snaps back.
 3. This provides clear tactile feedback that an explicit action is required inside the drawer.
+
+## Extended maintenance contract (2026-10-04)
+
+Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

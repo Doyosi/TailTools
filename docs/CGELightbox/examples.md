@@ -15,7 +15,7 @@ A responsive image gallery grid with thumbnails, captions, subtitles, and automa
      data-cge-lightbox
      data-cge-gallery="travel-album"
      data-cge-caption="Yosemite Valley Stream"
-     data-cge-subtitle="National Park, California"
+     data-cge-description="National Park, California"
      data-cge-thumb="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500" class="w-full h-40 object-cover" alt="Yosemite">
@@ -26,7 +26,7 @@ A responsive image gallery grid with thumbnails, captions, subtitles, and automa
      data-cge-lightbox
      data-cge-gallery="travel-album"
      data-cge-caption="Alpine Mountain Sunrise"
-     data-cge-subtitle="Rocky Peaks Collection"
+     data-cge-description="Rocky Peaks Collection"
      data-cge-thumb="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=500" class="w-full h-40 object-cover" alt="Mountains">
@@ -37,7 +37,7 @@ A responsive image gallery grid with thumbnails, captions, subtitles, and automa
      data-cge-lightbox
      data-cge-gallery="travel-album"
      data-cge-caption="Misty Evergreen Forest"
-     data-cge-subtitle="Pacific Northwest"
+     data-cge-description="Pacific Northwest"
      data-cge-thumb="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=500" class="w-full h-40 object-cover" alt="Forest">
@@ -48,7 +48,7 @@ A responsive image gallery grid with thumbnails, captions, subtitles, and automa
      data-cge-lightbox
      data-cge-gallery="travel-album"
      data-cge-caption="Autumn Valley Sunburst"
-     data-cge-subtitle="Rolling Hillside"
+     data-cge-description="Rolling Hillside"
      data-cge-thumb="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=300"
      class="block overflow-hidden rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:opacity-90 transition">
     <img src="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=500" class="w-full h-40 object-cover" alt="Valley">
@@ -119,7 +119,7 @@ Open a detailed architectural blueprint or ultra-high-resolution photograph with
 <a href="https://images.unsplash.com/photo-1541888946425-d0fbb186f5f8?w=3200"
    data-cge-lightbox
    data-cge-caption="Architectural Blueprint (3200px)"
-   data-cge-subtitle="Double-click, scroll mouse wheel, or pinch to inspect fine structural lines"
+   data-cge-description="Double-click, scroll mouse wheel, or pinch to inspect fine structural lines"
    class="block p-4 rounded-sm border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 text-center hover:bg-indigo-50 transition cursor-pointer">
   <div class="text-sm font-bold text-indigo-700 dark:text-indigo-400">🔍 Inspect High-Resolution Blueprint</div>
   <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Supports up to 4x smooth zoom scale with drag panning</p>
@@ -186,13 +186,12 @@ async function launchProductInspection(productId) {
     src: item.hd_url,
     thumb: item.thumbnail_url,
     caption: item.title,
-    subtitle: item.sku,
+    description: item.sku,
     type: item.is_video ? 'video' : 'image'
   })), {
-    initialIndex: 0,
     loop: true,
     thumbnails: true,
-    zoomable: true
+    zoom: true
   });
 
   lb.on('change', ({ index, item }) => {
@@ -211,9 +210,27 @@ On mobile devices, users can effortlessly flick down anywhere on the screen to c
 <a href="https://images.unsplash.com/photo-1518173946687-a4c8a383392e?w=1600"
    data-cge-lightbox
    data-cge-caption="Touch Interaction Test"
-   data-cge-subtitle="Swipe horizontally for slides, flick downwards to dismiss, or pinch to zoom"
+   data-cge-description="Swipe horizontally for slides, flick downwards to dismiss, or pinch to zoom"
    class="block p-4 rounded-sm border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center">
   <div class="text-xs font-bold text-slate-800 dark:text-slate-200">📱 Mobile Gesture Ready</div>
-  <p class="text-[11px] text-slate-500 mt-1">Touch swipe-to-dismiss threshold: 80px</p>
+  <p class="text-[11px] text-slate-500 mt-1">Touch swipe-to-dismiss threshold: 100px</p>
 </a>
+```
+
+
+## Maintenance notes (2026-10-04)
+
+Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()` and `downloadCurrent()`. Pass items/index to open, not constructor options. `init(selector)` delegates on document and takes a string. Subscribe with `.on()` instead of constructor onOpen/onChange callbacks. `await close()` waits for removal and scroll restoration; reopening waits for close. Closing removes global mouse/keyboard listeners; slow old slides cannot replace the latest slide. Partial translations preserve defaults.
+
+## Extended maintenance contract (2026-10-04)
+
+Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+const viewer = new CGELightbox({ animationDriver: 'none', duration: 0 });
+await viewer.open(0, [{ type: 'inline', content: '<p>Trusted template</p>' }]);
+await viewer.close();
+viewer.destroy();
 ```

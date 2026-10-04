@@ -1,0 +1,34 @@
+export * from '../plugins/CGEActionButton/index.js';
+export * from '../plugins/CGEAlert/index.js';
+export * from '../plugins/CGEDrawer/index.js';
+export * from '../plugins/CGEDropzone/index.js';
+export * from '../plugins/CGEForm/index.js';
+export * from '../plugins/CGELightbox/index.js';
+export * from '../plugins/CGEModal/index.js';
+export * from '../plugins/CGESelect/index.js';
+export * from '../plugins/CGEToast/index.js';
+export declare function initTailTools(root?: Document | HTMLElement): void;
+export declare const init: typeof initTailTools;
+
+import { CGEActionButton } from '../plugins/CGEActionButton/index.js';
+import { CGEAlert } from '../plugins/CGEAlert/index.js';
+import { CGEDrawer } from '../plugins/CGEDrawer/index.js';
+import { CGEDropzone } from '../plugins/CGEDropzone/index.js';
+import { CGEForm } from '../plugins/CGEForm/index.js';
+import { CGELightbox } from '../plugins/CGELightbox/index.js';
+import { CGEModal } from '../plugins/CGEModal/index.js';
+import { CGESelect } from '../plugins/CGESelect/index.js';
+import { CGEToast } from '../plugins/CGEToast/index.js';
+declare const TailTools: {
+  init: typeof initTailTools;
+  CGEActionButton: typeof CGEActionButton;
+  CGEAlert: typeof CGEAlert;
+  CGEDrawer: typeof CGEDrawer;
+  CGEDropzone: typeof CGEDropzone;
+  CGEForm: typeof CGEForm;
+  CGELightbox: typeof CGELightbox;
+  CGEModal: typeof CGEModal;
+  CGESelect: typeof CGESelect;
+  CGEToast: typeof CGEToast;
+};
+export default TailTools;

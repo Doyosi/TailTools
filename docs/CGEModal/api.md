@@ -1,12 +1,15 @@
-# CGEModal API Reference
+# CGEModal API
 
-Comprehensive TypeScript declarations, interface contracts, and DOM event specifications for `CGEModal`.
+This reference mirrors the shipped [declaration](../../plugins/CGEModal/CGEModal.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## 1. Type Definitions
+Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
 
 ```typescript
+/**
+ * TypeScript Declarations for CGEModal
+ * TailTools native modal plugin.
+ */
+
 export type CGEModalSize =
   | 'xs'
   | 'sm'
@@ -26,7 +29,7 @@ export type CGEModalAnimation = 'zoom' | 'fade' | 'slide-up' | 'slide-down' | st
 
 export interface CGEModalOptions {
   /**
-   * Dismissal behavior on backdrop click.
+   * Backdrop dismissal behavior.
    * If `true`, clicking backdrop closes modal.
    * If `'static'`, outside clicks shake the dialog card.
    * If `false`, backdrop does not close modal.
@@ -35,44 +38,49 @@ export interface CGEModalOptions {
   backdrop?: boolean | 'static';
 
   /**
-   * Shorthand alias for backdrop dismissal behavior.
+   * Shorthand alias for backdrop closing behavior.
    * @default true
    */
   backdropClose?: boolean;
 
   /**
    * Whether pressing Escape key closes the modal.
-   * If `false` and `backdrop` is `'static'`, triggers shake effect.
+   * If `false` and `backdrop` is `'static'`, pressing Escape triggers the shake effect.
    * @default true
    */
   escapeClose?: boolean;
 
   /**
-   * Sizing preset key or custom Tailwind max-width class.
+   * Sizing preset or custom max-width Tailwind class.
+   * Presets: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full'
    * @default 'lg'
    */
   size?: CGEModalSize;
 
   /**
-   * Animation engine driver mode.
+   * Animation driver mode.
+   * - 'auto': Checks if tailwind-animations is present; falls back to CSS transitions.
+   * - 'tailwind-animations': Midudev CSS animation utilities.
+   * - 'css': Standard Tailwind v4 transition classes.
+   * - 'none': Immediate toggle with no animation.
    * @default 'auto'
    */
   animationDriver?: CGEModalAnimationDriver;
 
   /**
-   * Preset animation style name.
+   * Entry and exit animation style.
    * @default 'zoom'
    */
   animation?: CGEModalAnimation;
 
   /**
-   * Trap keyboard Tab focus inside open modal.
+   * Trap Tab key focus navigation inside open modal.
    * @default true
    */
   focusTrap?: boolean;
 
   /**
-   * Autofocus first interactive element or selector on open.
+   * Whether to autofocus on first interactive element or selector to focus.
    * @default true
    */
   autoFocus?: boolean | string;
@@ -84,7 +92,7 @@ export interface CGEModalOptions {
   restoreFocus?: boolean;
 
   /**
-   * Lock body scrolling while open (with scrollbar compensation).
+   * Lock body scrolling while modal is open (with scrollbar jump compensation).
    * @default true
    */
   lockScroll?: boolean;
@@ -103,68 +111,126 @@ export interface CGEModalEventDetail {
   trigger?: HTMLElement | null;
   [key: string]: any;
 }
-```
 
----
-
-## 2. Class Signature
-
-```typescript
-export class CGEModal {
+export declare class CGEModal {
+  /**
+   * Active instance registry.
+   */
   static instances: Map<HTMLElement, CGEModal>;
+
+  /**
+   * Sizing presets mapping.
+   */
   static SIZES: Record<string, string>;
+
+  /**
+   * Default configuration options.
+   */
   static defaults: CGEModalOptions;
 
+  /**
+   * The root modal container element.
+   */
   modal: HTMLElement;
+
+  /**
+   * The inner dialog card container.
+   */
   dialog: HTMLElement | null;
+
+  /**
+   * The backdrop overlay element.
+   */
   backdrop: HTMLElement | null;
+
+  /**
+   * Resolved options.
+   */
   options: CGEModalOptions;
 
+  /**
+   * @param target - Modal element or selector
+   * @param options - Custom configuration options
+   */
   constructor(target: string | HTMLElement, options?: CGEModalOptions);
 
+  /**
+   * Initializes modal ARIA attributes, size classes, and DOM listeners.
+   */
   init(): void;
+
+  /**
+   * Opens the modal dialog.
+   * @param triggerElement - Optional element that initiated the open action
+   * @returns Promise resolving to `true` if opened, `false` if prevented
+   */
   open(triggerElement?: HTMLElement | null): Promise<boolean>;
+
+  /**
+   * Closes the modal dialog.
+   * @returns Promise resolving to `true` if closed, `false` if prevented
+   */
   close(): Promise<boolean>;
+
+  /**
+   * Toggles the modal visibility.
+   * @param triggerElement
+   */
   toggle(triggerElement?: HTMLElement | null): Promise<boolean>;
+
+  /**
+   * Triggers tactile shake animation on dialog card.
+   */
   shake(): void;
+
+  /**
+   * Dynamically updates the dialog size preset or custom class.
+   * @param newSize - Size preset or Tailwind max-width class
+   */
   setSize(newSize: CGEModalSize): this;
+
+  /**
+   * Boolean state indicating if modal is currently open.
+   */
   get isOpen(): boolean;
+
+  /**
+   * Destroys the modal instance, resets scroll, and cleans up all listeners.
+   */
   destroy(): void;
 
+  /**
+   * Retrieves existing CGEModal instance attached to an element.
+   */
   static getInstance(target: string | HTMLElement): CGEModal | undefined;
+
+  /**
+   * Gets existing instance or initializes a new CGEModal.
+   */
   static getOrCreateInstance(target: string | HTMLElement, options?: CGEModalOptions): CGEModal;
+
+  /**
+   * Closes all currently opened CGEModal instances on the page.
+   */
   static closeAll(): void;
+
+  /**
+   * Scans document for declarative triggers and modals and attaches click behaviors.
+   */
   static init(root?: Document | HTMLElement): void;
 }
+
+export default CGEModal;
+
+declare global {
+  interface HTMLElementEventMap {
+    'cge:modal:open': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:opened': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:close': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:closed': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:shake': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:init': CustomEvent<CGEModalEventDetail>;
+    'cge:modal:destroy': CustomEvent<CGEModalEventDetail>;
+  }
+}
 ```
-
----
-
-## 3. DOM Events Contract
-
-All custom events bubble (`bubbles: true`) and can be attached to the modal element or delegated to `document`:
-
-| Event Name | Cancelable | Detail Payload | Trigger Timing |
-| :--- | :--- | :--- | :--- |
-| `cge:modal:open` | Yes | `{ instance, modal, dialog, trigger }` | Before open transitions begin. Calling `e.preventDefault()` halts opening. |
-| `cge:modal:opened` | No | `{ instance, modal, dialog, trigger }` | After entry transition finishes and focus is applied. |
-| `cge:modal:close` | Yes | `{ instance, modal, dialog }` | Before exit transitions begin. Calling `e.preventDefault()` halts closing. |
-| `cge:modal:closed` | No | `{ instance, modal, dialog }` | After exit transition completes and focus is restored. |
-| `cge:modal:shake` | No | `{ instance, modal, dialog }` | Whenever shake animation is triggered. |
-| `cge:modal:init` | No | `{ instance, modal, dialog }` | Upon modal initialization. |
-| `cge:modal:destroy` | No | `{ instance, modal, dialog }` | Upon modal destruction. |
-
----
-
-## 4. Accessibility (a11y) Specifications
-
-- **`role="dialog"`**: Automatically attached to the modal root container if not present.
-- **`aria-modal="true"`**: Informs assistive technologies that elements outside the dialog are inert.
-- **`aria-hidden="false"` / `"true"`**: Synchronized with visibility states.
-- **Focus Trap Loop**:
-  - Focusable query: `a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])`.
-  - Pressing <kbd>Tab</kbd> on the last element wraps to the first element.
-  - Pressing <kbd>Shift+Tab</kbd> on the first element wraps to the last element.
-- **Scroll Lock & Shift Compensation**:
-  - Automatically calculates scrollbar width via `window.innerWidth - document.documentElement.clientWidth`.
-  - Sets padding on `document.body` before applying `overflow-hidden` to avoid visual jarring.

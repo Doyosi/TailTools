@@ -271,7 +271,7 @@ export class CGEDrawer {
   /**
    * Toggles a drawer by selector or element.
    */
-  static toggle(target: string | HTMLElement, options?: CGEDrawerOptions): Promise<void>;
+  static toggle(target: string | HTMLElement, options?: CGEDrawerOptions, trigger?: HTMLElement | null): Promise<void>;
 
   /**
    * Binds declarative triggers and discovers drawers in DOM.

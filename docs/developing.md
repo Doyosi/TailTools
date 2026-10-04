@@ -62,7 +62,7 @@ TailTools/
    - Markup patterns must be straightforward to copy into Laravel Blade components.
    - Declarative data-attribute API (`data-cge-*`) ensures zero-JS or single-line JS initialization for Blade views.
 4. **Lifecycle & Memory Safety:**
-   - Every plugin must expose a `destroy()` method that removes event listeners, tears down observers, and restores DOM nodes.
+   - Instance plugins use destroy; static/promise APIs use their declared dismiss/close/clear operations. Cleanup cancels owned requests, scheduled work and listeners and releases DOM/scroll/focus ownership.
 
 ---
 
@@ -139,3 +139,17 @@ export class CGE<X> {
    ```bash
    npm run build
    ```
+
+## Maintenance regression checks (2026-10-04)
+
+Run npm test for Node regressions and strict TypeScript checks. The existing demo links to /tests/regressions.html for programmatic/declarative, ARIA, serialization, stacking and teardown regressions. See [tests/README.md](../tests/README.md). TypeScript is a development dependency; runtime dependencies are unchanged.
+
+## Library and demo artifacts
+
+- npm run build:lib uses vite.lib.config.ts: dist/tailtools.js, dist/tailtools.umd.cjs and dist/tailtools.css.
+- npm run build:demo uses vite.config.ts: the existing showcase and regression page in dist/demo/.
+- npm run build runs both; npm run preview serves dist/demo/.
+- npm run test:package packs/imports every plugin and checks declarations in isolation.
+- node_modules/dist are ignored local generated directories. Recreate with npm ci and npm run build; package-lock.json remains tracked.
+
+Canonical sources: .agents/skills/cge-*/SKILL.md, ai-todos/plans/CGE*-plan.md, ai-todos/todo-cheks/CGE*-checklist.md, docs/installing.md and this guide. Legacy paths remain compatibility links. Shared plugins/shared helpers coordinate ownership while retaining public classes and CSS designs.

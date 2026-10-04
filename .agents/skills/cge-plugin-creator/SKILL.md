@@ -118,3 +118,8 @@ description: Use and configure the TailTools CGE<X> plugin for Tailwind CSS v4 a
 ...
 ```
 This skill enables Antigravity, Claude Code, Cursor, and Codex to instantly generate accurate code using the new plugin.
+
+
+## Maintenance of existing plugins
+
+Append a scoped maintenance phase to the canonical plan/checklist before editing. Preserve the plugin's actual instance/static/promise API and visual defaults; do not impose all sample lifecycle names on existing plugins. Include index.d.ts barrel declarations, strict NodeNext/Bundler checks, affected browser regressions, and docs/skills updates. Canonical docs are installing.md/developing.md; legacy skill and tracking paths are compatibility links, not independent copies. Package checks use npm run build and npm run test:package. Never commit node_modules or dist; npm pack derives artifacts from the build.

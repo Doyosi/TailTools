@@ -99,3 +99,10 @@ const toast = new CGEToast({
 
 - Declarative data attributes: `<button data-cge-toast="Order Placed!" data-cge-toast-variant="success">`
 - Session flash component: `<x-cge-toast />` reading Laravel `@if(session('success'))`.
+
+## Maintenance audit — 2026-10-04
+Consume each session flash once; honor zero/false declarative duration.
+Preserve existing public methods, CSS, Blade markup and exports. Verify programmatic and declarative behavior with regression fixtures; update docs and consumer guidance. No new dependencies or redesign.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

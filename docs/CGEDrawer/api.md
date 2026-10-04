@@ -1,12 +1,18 @@
-# CGEDrawer - API Reference
+# CGEDrawer API
 
-Complete TypeScript definitions, method signatures, properties, and event payloads for **CGEDrawer**.
+This reference mirrors the shipped [declaration](../../plugins/CGEDrawer/CGEDrawer.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## TypeScript Interfaces & Types
+Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
 
 ```typescript
+/**
+ * CGEDrawer TypeScript Definitions
+ * High-performance, gesture-capable sliding drawer and off-canvas navigation plugin designed for Tailwind CSS v4.3+ and Laravel Blade.
+ *
+ * @license MIT
+ * @package TailTools
+ */
+
 export type CGEDrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 
 export type CGEDrawerSideSize = 'sm' | 'md' | 'lg' | 'xl' | 'full' | string;
@@ -34,125 +40,251 @@ export interface CGEDrawerEventDetail {
 }
 
 export interface CGEDrawerOptions {
+  /**
+   * Directional screen placement.
+   * @default 'left'
+   */
   placement?: CGEDrawerPlacement;
+
+  /**
+   * Sizing preset or custom Tailwind CSS dimension utility.
+   * Presets for side: 'sm' (w-64), 'md' (w-80), 'lg' (w-96), 'xl' (w-1/2), 'full' (w-screen).
+   * Presets for vertical: 'sm' (h-48), 'md' (h-80), 'lg' (h-1/2), 'full' (h-screen), 'auto' (bottom-sheet).
+   * @default 'md'
+   */
   size?: CGEDrawerSize;
+
+  /**
+   * Display modal backdrop overlay. Set to false for persistent, non-modal side panels.
+   * @default true
+   */
   backdrop?: boolean | 'static';
+
+  /**
+   * Dismiss drawer when clicking on the backdrop overlay.
+   * If false, outside clicks trigger directional tactile bounce nudge feedback.
+   * @default true
+   */
   backdropClose?: boolean;
+
+  /**
+   * Close drawer on Escape key press.
+   * @default true
+   */
   escapeClose?: boolean;
+
+  /**
+   * Animation driver preference.
+   * @default 'auto'
+   */
   animationDriver?: CGEDrawerAnimationDriver;
+
+  /**
+   * Enable real-time touch swipe-to-dismiss gesture tracking.
+   * @default true
+   */
   swipeClose?: boolean;
+
+  /**
+   * Drag distance ratio (0.0 to 1.0) required to trigger swipe dismissal.
+   * @default 0.3
+   */
   swipeThreshold?: number;
+
+  /**
+   * CSS selector or HTMLElement to push when the drawer opens.
+   * @default null
+   */
   pushContentSelector?: string | HTMLElement | null;
+
+  /**
+   * Collapsed mini-rail mode. If true, closed state docks into a narrow rail rather than hiding off-screen.
+   * @default false
+   */
   mini?: boolean;
+
+  /**
+   * Width of the dock rail when closed in mini mode.
+   * @default 'w-16'
+   */
   miniWidth?: string;
+
+  /**
+   * Lock document body scroll while modal drawer is active (with scrollbar-gutter jump compensation).
+   * @default true
+   */
   lockScroll?: boolean;
+
+  /**
+   * Trap Tab key navigation within the drawer dialog.
+   * @default true
+   */
   focusTrap?: boolean;
+
+  /**
+   * Focus first actionable element or target CSS selector upon opening.
+   * @default true
+   */
   autoFocus?: boolean | string;
+
+  /**
+   * Return focus to trigger element on close.
+   * @default true
+   */
   restoreFocus?: boolean;
+
+  /**
+   * Transition animation duration in milliseconds.
+   * @default 300
+   */
   duration?: number;
+
+  /**
+   * Localization string dictionary.
+   */
   translations?: CGEDrawerTranslations;
 }
-```
 
----
+export type CGEDrawerEventCallback<T = any> = (detail: T) => void;
 
-## Static Members & Registry
+export class CGEDrawer {
+  /**
+   * Registry of active CGEDrawer instances by drawer element.
+   */
+  static instances: Map<HTMLElement, CGEDrawer>;
 
-### `CGEDrawer.instances: Map<HTMLElement, CGEDrawer>`
-Map registry holding all active drawer instances by DOM element.
+  /**
+   * Sizing presets mapping to Tailwind CSS utility classes.
+   */
+  static SIZES: {
+    side: Record<string, string>;
+    vertical: Record<string, string>;
+  };
 
-### `CGEDrawer.SIZES: Object`
-Mapping of dimension presets to Tailwind CSS utility classes:
-- `side`: `{ sm: 'w-64', md: 'w-80', lg: 'w-96', xl: 'w-1/2', full: 'w-screen' }`
-- `vertical`: `{ sm: 'h-48', md: 'h-80', lg: 'h-1/2', full: 'h-screen', auto: 'max-h-[90vh] h-auto' }`
+  /**
+   * Directional geometry and transition configuration.
+   */
+  static PLACEMENTS: Record<CGEDrawerPlacement, {
+    dialogBase: string;
+    closedClass: string;
+    openClass: string;
+    animIn: string;
+    animOut: string;
+    bounceClass: string;
+    axis: 'x' | 'y';
+    dismissFactor: number;
+  }>;
 
-### `CGEDrawer.defaults: CGEDrawerOptions`
-The global default configuration applied to newly instantiated drawers.
+  /**
+   * Default configuration options.
+   */
+  static defaults: CGEDrawerOptions;
 
-### `CGEDrawer.translations: CGEDrawerTranslations`
-Active fallback dictionary for accessibility labels and button texts.
+  /**
+   * Global localization dictionary.
+   */
+  static translations: CGEDrawerTranslations;
 
-### `CGEDrawer.get(target: string | HTMLElement): CGEDrawer | null`
-Finds an active drawer instance by CSS selector, ID, or DOM element.
+  /**
+   * Sets global localization dictionary.
+   */
+  static setTranslations(dict: CGEDrawerTranslations): void;
 
-### `CGEDrawer.open(target: string | HTMLElement, options?: CGEDrawerOptions): Promise<void>`
-Opens a drawer by selector or element.
+  /**
+   * Drawer root container element.
+   */
+  drawer: HTMLElement;
 
-### `CGEDrawer.close(target: string | HTMLElement): Promise<void>`
-Closes a drawer by selector or element.
+  /**
+   * Dialog / drawer panel element.
+   */
+  dialog: HTMLElement | null;
 
-### `CGEDrawer.toggle(target: string | HTMLElement, options?: CGEDrawerOptions): Promise<void>`
-Toggles a drawer by selector or element.
+  /**
+   * Backdrop overlay element.
+   */
+  backdrop: HTMLElement | null;
 
-### `CGEDrawer.init(root?: Document | HTMLElement): void`
-Binds global declarative triggers for `[data-cge-drawer-target]`, `[data-cge-drawer-close]`, and `[data-cge-drawer-toggle]`.
+  /**
+   * Unique instance identifier.
+   */
+  id: string;
 
-### `CGEDrawer.setTranslations(dict: CGEDrawerTranslations): void`
-Replaces or merges global localization strings.
+  /**
+   * Merged configuration options.
+   */
+  options: CGEDrawerOptions;
 
----
+  constructor(target: string | HTMLElement, options?: CGEDrawerOptions);
 
-## Instance Members & Methods
+  /**
+   * Initializes geometry, accessibility attributes, and listeners.
+   */
+  init(): void;
 
-### `constructor(target: string | HTMLElement, options?: CGEDrawerOptions)`
-Initializes a new drawer instance and binds event listeners.
+  /**
+   * Opens the drawer.
+   */
+  open(trigger?: HTMLElement | null): Promise<void>;
 
-### `drawer: HTMLElement`
-The root container element of the drawer.
+  /**
+   * Closes the drawer.
+   */
+  close(): Promise<void>;
 
-### `dialog: HTMLElement | null`
-The sliding dialog / panel container.
+  /**
+   * Toggles the drawer state.
+   */
+  toggle(trigger?: HTMLElement | null): Promise<void>;
 
-### `backdrop: HTMLElement | null`
-The backdrop overlay element (if enabled).
+  /**
+   * Returns whether the drawer is currently open.
+   */
+  isOpen(): boolean;
 
-### `id: string`
-Unique element identifier for the drawer.
+  /**
+   * Subscribes to an instance event.
+   */
+  on(event: 'open' | 'opened' | 'close' | 'closed', callback: CGEDrawerEventCallback<CGEDrawerEventDetail>): this;
+  on(event: 'backdropClick', callback: CGEDrawerEventCallback<{ drawer: CGEDrawer; event: MouseEvent }>): this;
+  on(event: 'swipe', callback: CGEDrawerEventCallback<CGEDrawerSwipeEventDetail>): this;
+  on(event: string, callback: CGEDrawerEventCallback): this;
 
-### `options: CGEDrawerOptions`
-Resolved configuration options.
+  /**
+   * Unsubscribes from an instance event.
+   */
+  off(event: string, callback: CGEDrawerEventCallback): this;
 
-### `open(trigger?: HTMLElement | null): Promise<void>`
-Opens the drawer. Resolves when the transition has finished.
+  /**
+   * Cleans up listeners and removes instance from registry.
+   */
+  destroy(): void;
 
-### `close(): Promise<void>`
-Closes the drawer. Resolves when the exit animation completes.
+  /**
+   * Retrieves an instance by selector or DOM element.
+   */
+  static get(target: string | HTMLElement): CGEDrawer | null;
 
-### `toggle(trigger?: HTMLElement | null): Promise<void>`
-Toggles between open and closed states.
+  /**
+   * Opens a drawer by selector or element.
+   */
+  static open(target: string | HTMLElement, options?: CGEDrawerOptions): Promise<void>;
 
-### `isOpen(): boolean`
-Returns `true` if the drawer is active.
+  /**
+   * Closes a drawer by selector or element.
+   */
+  static close(target: string | HTMLElement): Promise<void>;
 
-### `on(event: string, callback: Function): this`
-Attaches an event listener to the instance. Supported events:
-- `'open'`
-- `'opened'`
-- `'close'`
-- `'closed'`
-- `'backdropClick'`
-- `'swipe'`
+  /**
+   * Toggles a drawer by selector or element.
+   */
+  static toggle(target: string | HTMLElement, options?: CGEDrawerOptions, trigger?: HTMLElement | null): Promise<void>;
 
-### `off(event: string, callback: Function): this`
-Detaches an event listener from the instance.
+  /**
+   * Binds declarative triggers and discovers drawers in DOM.
+   */
+  static init(root?: Document | HTMLElement): void;
+}
 
-### `destroy(): void`
-Unbinds all event listeners, unlocks scroll, and deletes the instance from the registry.
-
----
-
-## Native DOM CustomEvents
-
-All events bubble and can be caught at the `document` level or on the drawer element itself:
-
-```javascript
-document.addEventListener('cge:drawer:opened', (e) => {
-  const { drawer } = e.detail;
-  console.log(`Drawer "${drawer.id}" opened.`);
-});
-
-document.addEventListener('cge:drawer:swipe', (e) => {
-  const { direction, distance, progress } = e.detail;
-  console.log(`Swiping ${direction}: ${progress * 100}%`);
-});
+export default CGEDrawer;
 ```

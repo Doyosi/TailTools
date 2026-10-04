@@ -89,3 +89,10 @@ const lb = new CGELightbox({
 ## 4. UI Design System Compliance
 - Strictly follow the project border-radius standard: **`rounded-sm`** for buttons, badges, inputs, thumbnails, and preview boxes.
 - Zero usage of `rounded-2xl`, `rounded-3xl`, `rounded-4xl`, or `rounded-xl`.
+
+## Maintenance audit — 2026-10-04
+Remove global listeners on close; serialize close/reopen; ignore stale slide loads; preserve merged translations.
+Preserve existing public methods, CSS, Blade markup and exports. Verify programmatic and declarative behavior with regression fixtures; update docs and consumer guidance. No new dependencies or redesign.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

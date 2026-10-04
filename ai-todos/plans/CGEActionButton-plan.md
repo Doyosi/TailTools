@@ -90,3 +90,10 @@ TailTools/
 ├── index.html (Sandbox demo with Data Table, Direct Commands, and Dynamic Elements)
 └── src/ (Core export & style import)
 ```
+
+## Maintenance audit — 2026-10-04
+Prevent parallel confirmation workflows; preserve default translations when partially overridden.
+Preserve existing public methods, CSS, Blade markup and exports. Verify programmatic and declarative behavior with regression fixtures; update docs and consumer guidance. No new dependencies or redesign.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

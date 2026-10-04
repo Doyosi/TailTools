@@ -62,3 +62,8 @@ Create the documentation suite inside `docs/CGE<X>/`:
 For every plugin created:
 1. Generate an AI skill in `.agents/skills/cge-<x>/SKILL.md` formatted to the open agent skills standard (compatible with Antigravity, Claude Code, Cursor, and Codex).
 2. The skill must provide exact prompt triggers, HTML examples, Blade examples, and JS setup patterns for that specific plugin.
+
+
+## Maintenance and canonical sources
+
+For existing plugins append maintenance phases to the plan/checklist rather than restarting creation. Keep legacy paths as forwarding documents. Plugin index.d.ts barrels and strict type checks are required when exports or declarations change. Run affected browser regressions, npm test, npm run build and npm run test:package for distribution changes. Generated node_modules/dist stay local and ignored.

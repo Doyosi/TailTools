@@ -154,5 +154,16 @@ btn.on('error', ({ error }) => console.error('Failed:', error));
 ---
 
 ## 6. Strict Design System Rule
-- **Strict Border Radius:** Always apply **`rounded-sm`** for buttons, badges, inputs, cards, and modal dialogs.
-- **Forbidden:** Never use `rounded-2xl`, `rounded-3xl`, `rounded-4xl`, or `rounded-xl`.
+
+
+
+
+## Verified maintenance guidance (2026-10-04)
+
+Repeated execute calls while confirmation is pending are ignored, preventing duplicate dialogs/requests. Canceling or failing confirmation releases the guard. Partial per-instance translations retain global defaults.
+
+## Verified maintenance contract (2026-10-04)
+
+Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEActionButton.d.ts](../../../../plugins/CGEActionButton/CGEActionButton.d.ts).

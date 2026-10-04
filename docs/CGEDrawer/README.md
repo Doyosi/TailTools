@@ -25,7 +25,7 @@
 - **Collapsed Mini-Rail Mode (`mini: true`):**
   - Docks into a slim icon navigation bar (`w-16`) instead of hiding off-screen.
 - **Strict Accessibility (a11y):**
-  - WCAG 2.1 focus trapping, body scroll locking with scrollbar jump compensation, autofocus, and Escape key handling.
+  - Focus trapping, scroll locking with scrollbar compensation, autofocus and Escape handling. Browser-tested behavior; no WCAG certification is claimed.
 - **Design System Rule Compliance:**
   - Uses modern technical styling adhering strictly to the **`rounded-sm`** border-radius standard.
 
@@ -125,3 +125,9 @@ drawer.on('closed', () => console.log('Drawer closed.'));
 
 await drawer.toggle();
 ```
+
+## Extended maintenance contract (2026-10-04)
+
+Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

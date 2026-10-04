@@ -1,29 +1,65 @@
-# CGELightbox - TypeScript API Reference
+# CGELightbox API
 
-Complete TypeScript declarations, options schemas, and event payload types for **CGELightbox**.
+This reference mirrors the shipped [declaration](../../plugins/CGELightbox/CGELightbox.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## 1. Core Interfaces
+Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
 
 ```typescript
-export type CGELightboxMediaType = 'image' | 'video' | 'youtube' | 'vimeo' | 'inline';
+/**
+ * CGELightbox TypeScript Definitions
+ * Ultra-fast, touch-capable media lightbox and gallery viewer designed for Tailwind CSS v4.3+ and Laravel Blade.
+ *
+ * @license MIT
+ * @package TailTools
+ */
+
+export type CGELightboxMediaType = 'image' | 'video' | 'youtube' | 'vimeo' | 'iframe' | 'inline' | string;
 
 export interface CGELightboxItem {
-  /** Source URL (image file, video URL, YouTube/Vimeo link) or DOM selector for inline templates */
+  /**
+   * Media resource URL (high-res image, video file, or embed URL).
+   */
   src: string;
-  /** Thumbnail image URL for the bottom preview ribbon */
+
+  /**
+   * Optional thumbnail preview image URL.
+   */
   thumb?: string;
-  /** Primary title/caption */
+
+  /**
+   * Main caption or title text.
+   */
   caption?: string;
-  /** Secondary subtitle or description */
-  subtitle?: string;
-  /** Media type: 'image' | 'video' | 'youtube' | 'vimeo' | 'inline' */
+
+  /**
+   * Alias for caption.
+   */
+  title?: string;
+
+  /**
+   * Subtitle or long description text.
+   */
+  description?: string;
+
+  /**
+   * Media type specifier. Auto-detected from URL if omitted.
+   */
   type?: CGELightboxMediaType;
-  /** Poster image URL for direct HTML5 video elements */
-  poster?: string;
-  /** Custom data attributes or metadata */
-  [key: string]: any;
+
+  /**
+   * Gallery identifier group name.
+   */
+  gallery?: string;
+
+  /**
+   * Custom inline HTML string if type is 'inline'.
+   */
+  content?: string;
+
+  /**
+   * Originating DOM element if discovered declaratively.
+   */
+  element?: HTMLElement;
 }
 
 export interface CGELightboxTranslations {
@@ -34,123 +70,237 @@ export interface CGELightboxTranslations {
   'zoom-out'?: string;
   fullscreen?: string;
   download?: string;
-  counter?: string; // Supports ':current' and ':total' tokens
+  counter?: string;
   [key: string]: string | undefined;
 }
 
 export interface CGELightboxOptions {
-  /** Array of media items to display */
-  items?: CGELightboxItem[];
-  /** Initial slide index to open (0-based) */
-  initialIndex?: number;
-  /** Loop navigation when reaching the start or end */
+  /**
+   * CSS selector used to discover declarative lightbox triggers.
+   * @default '[data-cge-lightbox]'
+   */
+  selector?: string;
+
+  /**
+   * Loop continuous navigation past the last slide.
+   * @default true
+   */
   loop?: boolean;
-  /** Enable zoom and pan controls for images */
-  zoomable?: boolean;
-  /** Zoom step factors cycled on click/double-tap (default: [1, 2, 3]) */
-  zoomSteps?: number[];
-  /** Maximum allowable zoom level (default: 4) */
-  maxZoom?: number;
-  /** Enable mouse wheel zooming */
-  wheelZoom?: boolean;
-  /** Enable vertical flick/swipe down to close on touch devices */
-  swipeClose?: boolean;
-  /** Minimum downward swipe distance in pixels to trigger close (default: 80) */
-  swipeThreshold?: number;
-  /** Display bottom thumbnail ribbon */
+
+  /**
+   * Show bottom thumbnail navigation strip.
+   * @default true
+   */
   thumbnails?: boolean;
-  /** Display position counter badge (e.g. 1 / 8) */
+
+  /**
+   * Show slide counter badge (e.g. '1 / 8').
+   * @default true
+   */
   counter?: boolean;
-  /** Show fullscreen toggle button */
-  fullscreen?: boolean;
-  /** Show direct download button */
+
+  /**
+   * Show direct media download button in toolbar.
+   * @default true
+   */
   download?: boolean;
-  /** Close when clicking the backdrop overlay */
-  backdropClose?: boolean;
-  /** Background preload adjacent images */
+
+  /**
+   * Show native browser fullscreen toggle button.
+   * @default true
+   */
+  fullscreen?: boolean;
+
+  /**
+   * Enable pan-and-zoom controls (double-click, wheel, drag pan).
+   * @default true
+   */
+  zoom?: boolean;
+
+  /**
+   * Maximum zoom scale factor.
+   * @default 3
+   */
+  maxZoom?: number;
+
+  /**
+   * Allow vertical swipe down gesture to dismiss lightbox.
+   * @default true
+   */
+  swipeClose?: boolean;
+
+  /**
+   * Preload adjacent images in background.
+   * @default true
+   */
   preload?: boolean;
-  /** Animation driver mode: 'auto' | 'tailwind-animations' | 'css' | 'none' */
+
+  /**
+   * Close lightbox when clicking the backdrop overlay.
+   * @default true
+   */
+  backdropClose?: boolean;
+
+  /**
+   * Transition animation driver.
+   * @default 'auto'
+   */
   animationDriver?: 'auto' | 'tailwind-animations' | 'css' | 'none';
-  /** Animation duration in milliseconds */
+
+  /**
+   * Animation duration in milliseconds.
+   * @default 250
+   */
   duration?: number;
-  /** Custom translation dictionary */
+
+  /**
+   * Localization dictionary.
+   */
   translations?: CGELightboxTranslations;
-  /** Callback fired on open */
-  onOpen?: (index: number) => void;
-  /** Callback fired when slide changes */
-  onChange?: (index: number, item: CGELightboxItem) => void;
-  /** Callback fired on zoom change */
-  onZoom?: (scale: number) => void;
-  /** Callback fired on close */
-  onClose?: () => void;
-}
-```
-
----
-
-## 2. Event Types & Payloads
-
-```typescript
-export interface CGELightboxEventMap {
-  open: { index: number; item: CGELightboxItem };
-  change: { index: number; item: CGELightboxItem };
-  zoom: { scale: number };
-  close: void;
 }
 
-export interface CGELightboxCustomEventDetail {
-  instance: CGELightbox;
+export interface CGELightboxEventDetail {
+  lightbox: CGELightbox;
   index?: number;
   item?: CGELightboxItem;
   scale?: number;
 }
-```
 
----
+export type CGELightboxEventCallback = (detail: CGELightboxEventDetail) => void;
 
-## 3. Class Declaration
-
-```typescript
 export class CGELightbox {
-  // Static Methods
-  static open(items: CGELightboxItem[], options?: CGELightboxOptions): CGELightbox;
-  static init(root?: Document | HTMLElement): void;
-  static setTranslations(translations: Partial<CGELightboxTranslations>): void;
+  /**
+   * Active instance currently displayed on screen.
+   */
   static activeInstance: CGELightbox | null;
 
-  // Instance Properties
-  readonly options: Required<CGELightboxOptions>;
-  readonly items: CGELightboxItem[];
+  /**
+   * Registered instances.
+   */
+  static instances: Set<CGELightbox>;
+
+  /**
+   * Default configuration options.
+   */
+  static defaults: CGELightboxOptions;
+
+  /**
+   * Global localization dictionary.
+   */
+  static translations: CGELightboxTranslations;
+
+  /**
+   * Sets global localization dictionary.
+   */
+  static setTranslations(dict: CGELightboxTranslations): void;
+
+  /**
+   * Array of media items in active gallery.
+   */
+  items: CGELightboxItem[];
+
+  /**
+   * Active slide index.
+   */
   currentIndex: number;
-  currentZoom: number;
+
+  /**
+   * Whether the lightbox portal is currently mounted and visible.
+   */
   isOpen: boolean;
 
-  // Constructor
+  /**
+   * Current pan and zoom scale factor.
+   */
+  scale: number;
+
+  /**
+   * Configuration options.
+   */
+  options: CGELightboxOptions;
+
   constructor(options?: CGELightboxOptions);
 
-  // Instance Methods
-  open(index?: number): this;
-  close(): this;
-  next(): this;
-  prev(): this;
-  goTo(index: number): this;
-  zoom(scale: number): this;
-  zoomIn(): this;
-  zoomOut(): this;
-  resetZoom(): this;
-  toggleFullscreen(): this;
-  download(): this;
+  /**
+   * Opens the lightbox.
+   */
+  open(index?: number, items?: CGELightboxItem[] | null): Promise<void>;
+
+  /**
+   * Closes the lightbox.
+   */
+  close(): Promise<void>;
+
+  /**
+   * Navigates to next slide.
+   */
+  next(): void;
+
+  /**
+   * Navigates to previous slide.
+   */
+  prev(): void;
+
+  /**
+   * Navigates to a specific slide index.
+   */
+  goTo(index: number): Promise<void>;
+
+  /**
+   * Sets zoom scale factor.
+   */
+  zoom(scale: number): void;
+
+  /**
+   * Cycles zoom level (1x -> 2x -> 3x -> 1x).
+   */
+  toggleZoom(): void;
+
+  /**
+   * Resets zoom and pan.
+   */
+  resetZoom(): void;
+
+  /**
+   * Toggles native browser fullscreen.
+   */
+  toggleFullscreen(): Promise<void>;
+
+  /**
+   * Downloads active media file.
+   */
+  downloadCurrent(): void;
+
+  /**
+   * Attaches an event callback.
+   */
+  on(event: 'open' | 'change' | 'zoom' | 'close' | string, callback: CGELightboxEventCallback): this;
+
+  /**
+   * Detaches an event callback.
+   */
+  off(event: string, callback: CGELightboxEventCallback): this;
+
+  /**
+   * Cleans up instance and removes portal.
+   */
   destroy(): void;
 
-  // Event Subscription
-  on<K extends keyof CGELightboxEventMap>(
-    event: K,
-    handler: (payload: CGELightboxEventMap[K]) => void
-  ): this;
+  /**
+   * Opens a lightbox programmatically.
+   */
+  static open(items: CGELightboxItem[], options?: CGELightboxOptions, initialIndex?: number): CGELightbox;
 
-  off<K extends keyof CGELightboxEventMap>(
-    event: K,
-    handler: (payload: CGELightboxEventMap[K]) => void
-  ): this;
+  /**
+   * Closes the active lightbox instance.
+   */
+  static close(): void;
+
+  /**
+   * Binds declarative click triggers on DOM.
+   */
+  static init(selector?: string): void;
 }
+
+export default CGELightbox;
 ```

@@ -112,7 +112,7 @@ const dz = new CGEDropzone('#my-dropzone', {
 dz.addFile(myBlob);
 dz.uploadAll();
 dz.cancelUpload(fileId);
-dz.clear();
+await dz.clear();
 dz.disable();
 dz.enable();
 dz.destroy();
@@ -128,3 +128,14 @@ dz.destroy();
 - `cge:dropzone:error` — Fired when validation or upload fails.
 - `cge:dropzone:removed` — Fired when file is deleted.
 - `cge:dropzone:complete` — Fired when the upload queue empties.
+
+
+## Verified maintenance guidance (2026-10-04)
+
+Delete confirmation uses `CGEAlert.confirm(title, message, options)`. Failed individual remote deletions retain the file/card and emit `error` / onError. Fetch checks non-2xx responses. uploadAll respects maxConcurrent in instant mode. Cancellation releases slots once when requests settle; removing an upload preserves neighboring files. Destroy stops the queue. Upload driver fetch currently falls back to XHR for progress support.
+
+## Verified maintenance contract (2026-10-04)
+
+clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEDropzone.d.ts](../../../../plugins/CGEDropzone/CGEDropzone.d.ts).

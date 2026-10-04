@@ -102,3 +102,14 @@ form.on('invalid', ({ errors }) => {
 - 🎨 [**laravel-blade.md**](./laravel-blade.md): Reusable Blade components (`<x-cge-form>`, `<x-cge-form-group>`), array validation, and CSRF patterns.
 - 💡 [**examples.md**](./examples.md): Practical recipes including array fields, file uploads, feedback drivers, SweetAlert2 bridge, and i18n switching.
 - ⚙️ [**api.md**](./api.md): Full TypeScript interfaces, constructor options, and DOM CustomEvent specifications.
+
+
+## Maintenance notes (2026-10-04)
+
+PUT/PATCH/DELETE forms use POST with `_method` across Axios, Fetch and XHR, including Blade forms that already contain `@method`. Concurrent submit calls are ignored until the active submission completes. `destroy()` removes delegated input/change handlers and removes `novalidate` only when added by the plugin.
+
+## Extended maintenance contract (2026-10-04)
+
+All drivers send Laravel multipart PUT/PATCH/DELETE as POST plus _method. FormData is captured before freezing and includes the SubmitEvent submitter. Concurrent submissions are prevented. Destroy aborts Axios/Fetch/XHR, cancels redirect timers, restores frozen controls and suppresses late callbacks/events; delayed beforeSubmit cannot start a request afterward. Input/change listeners and plugin-added novalidate are restored on teardown.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.

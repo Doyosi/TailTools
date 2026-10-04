@@ -146,7 +146,8 @@ export declare class CGEDropzone {
   addFiles(fileList: FileList | File[]): void;
   addFile(file: File): DropzoneFile | null;
   removeFile(fileOrId: string | DropzoneFile, silent?: boolean): Promise<void>;
-  clear(): void;
+  /** Waits for remote deletes; failures retain their cards. remote:false only detaches locally. */
+  clear(options?: { remote?: boolean }): Promise<void>;
   uploadAll(): void;
   uploadFile(fileId: string): Promise<void>;
   cancelUpload(fileId: string): void;

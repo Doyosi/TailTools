@@ -62,3 +62,16 @@ Track the progress of designing, implementing, testing, and documenting the **CG
 - [x] **Phase 9: AI skill creation in `.agents/skills/`**
   - [x] `.agents/skills/cge-lightbox/SKILL.md`
   - [x] `.agents/skills/cge-lightbox-skill.md`
+
+## Maintenance audit — 2026-10-04
+- [x] Read AGENTS.md, rules, skills and existing implementation.
+- [x] Define compatible maintenance scope in plan.
+- [x] Apply fixes and synchronize docs/types/skills as applicable.
+- [x] Verify regressions in programmatic and declarative use; build demo.
+- [x] Record results and remaining limitations in REPORTS.md.
+
+## 2026-10-04 ek bakım
+- [x] Kapsam ve mevcut sözleşme incelemesi
+- [x] Runtime ve declaration düzenlemesi
+- [x] Regresyon ve paket doğrulaması
+- [x] Doküman ve skill eşitlemesi

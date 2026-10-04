@@ -86,6 +86,8 @@ export class CGESelect {
    * @param {string | HTMLSelectElement} target - Select element or selector string
    * @param {Object} [options={}] - Custom configuration options
    */
+  static _nextId = 0;
+
   constructor(target, options = {}) {
     const element = typeof target === 'string' ? document.querySelector(target) : target;
     if (!element || !(element instanceof HTMLSelectElement)) {
@@ -97,7 +99,9 @@ export class CGESelect {
     }
 
     this.element = element;
+    this._originalAttributes = new Map(['style', 'tabindex', 'aria-hidden', 'multiple'].map(name => [name, element.getAttribute(name)]));
     this.options = this._resolveOptions(options);
+    this.element.multiple = this.options.multiple;
 
     // State
     this.isOpen = false;
@@ -110,6 +114,9 @@ export class CGESelect {
     this.abortController = null;
     this._listeners = new Map();
     this._debounceTimer = null;
+    this._focusTimer = null;
+    this._searchVersion = 0;
+    this._destroyed = false;
 
     // DOM Elements
     this.wrapper = null;
@@ -154,13 +161,22 @@ export class CGESelect {
     const closeOnSelect =
       options.closeOnSelect !== undefined
         ? options.closeOnSelect
-        : !dataOpts.multiple;
+        : ds.cgeCloseOnSelect !== undefined ? ds.cgeCloseOnSelect !== 'false' : !dataOpts.multiple;
+
+    const asyncSource = options.asyncSource !== undefined ? options.asyncSource : ds.cgeAsyncUrl ? {
+      url: ds.cgeAsyncUrl,
+      driver: ds.cgeAsyncDriver || 'fetch',
+      method: ds.cgeAsyncMethod || 'GET',
+      param: ds.cgeAsyncParam || 'q',
+      debounce: ds.cgeAsyncDebounce !== undefined ? Number(ds.cgeAsyncDebounce) : 300
+    } : null;
 
     return {
       ...CGESelect.defaults,
       ...options,
       ...dataOpts,
       closeOnSelect,
+      asyncSource,
       ui: { ...CGESelect.defaults.ui, ...(options.ui || {}) },
       translations: { ...CGESelect.translations, ...(options.translations || {}) }
     };
@@ -210,7 +226,7 @@ export class CGESelect {
         value: String(opt.value),
         label: opt.textContent.trim(),
         selected: opt.selected,
-        disabled: opt.disabled,
+        disabled: opt.disabled || opt.parentElement?.disabled === true,
         image: opt.dataset.cgeImage || opt.dataset.image || null,
         icon: opt.dataset.cgeIcon || opt.dataset.icon || null,
         subtext: opt.dataset.cgeSubtext || opt.dataset.subtext || opt.dataset.cgeDescription || null,
@@ -234,17 +250,6 @@ export class CGESelect {
         parseOption(child, null);
       }
     });
-
-    // If single select has no selected item, default to first non-disabled option if native behavior dictates
-    if (!this.options.multiple && this.selectedValues.length === 0 && this.items.length > 0) {
-      if (!this.options.placeholder && !this.element.hasAttribute('data-cge-placeholder')) {
-        const firstActive = this.items.find((i) => !i.disabled);
-        if (firstActive) {
-          firstActive.selected = true;
-          this.selectedValues = [firstActive.value];
-        }
-      }
-    }
 
     this.filteredItems = [...this.items];
   }
@@ -277,12 +282,18 @@ export class CGESelect {
     const inheritedClasses = this._extractInheritedClasses(el);
 
     // 4. Create Trigger Button
-    this.trigger = document.createElement('button');
-    this.trigger.type = 'button';
+    this.trigger = document.createElement('div');
+    this.trigger.tabIndex = 0;
     this.trigger.className = `${ui.trigger} ${inheritedClasses}`.trim();
     this.trigger.setAttribute('role', 'combobox');
     this.trigger.setAttribute('aria-expanded', 'false');
     this.trigger.setAttribute('aria-haspopup', 'listbox');
+    this._listboxId = `cge-select-list-${++CGESelect._nextId}`;
+    this.trigger.setAttribute('aria-controls', this._listboxId);
+    const labelledby = el.getAttribute('aria-labelledby');
+    const label = el.getAttribute('aria-label') || Array.from(el.labels || []).map(item => item.textContent.trim()).join(' ') || this.options.placeholder || 'Select';
+    if (labelledby) this.trigger.setAttribute('aria-labelledby', labelledby);
+    else this.trigger.setAttribute('aria-label', label);
 
     // Trigger Content Container (Selection & Tags)
     this.selectionContainer = document.createElement('div');
@@ -321,8 +332,7 @@ export class CGESelect {
     // 5. Create Dropdown Panel
     this.dropdown = document.createElement('div');
     this.dropdown.className = `${ui.dropdown} hidden`;
-    this.dropdown.setAttribute('role', 'listbox');
-    this.dropdown.setAttribute('aria-multiselectable', this.options.multiple ? 'true' : 'false');
+
 
     // Optional Search Bar
     if (this.options.searchable) {
@@ -343,6 +353,11 @@ export class CGESelect {
       this.searchInput.className = ui.searchInput;
       this.searchInput.placeholder =
         this.options.searchPlaceholder || this.options.translations['search-placeholder'];
+      this.searchInput.setAttribute('role', 'combobox');
+      this.searchInput.setAttribute('aria-label', this.searchInput.placeholder);
+      this.searchInput.setAttribute('aria-autocomplete', 'list');
+      this.searchInput.setAttribute('aria-expanded', 'false');
+      this.searchInput.setAttribute('aria-controls', this._listboxId);
       this.searchInput.setAttribute('autocomplete', 'off');
       this.searchInput.setAttribute('autocapitalize', 'off');
       this.searchInput.setAttribute('spellcheck', 'false');
@@ -354,6 +369,9 @@ export class CGESelect {
     // Options Scrollable Container
     this.optionsContainer = document.createElement('div');
     this.optionsContainer.className = ui.optionsList;
+    this.optionsContainer.id = this._listboxId;
+    this.optionsContainer.setAttribute('role', 'listbox');
+    this.optionsContainer.setAttribute('aria-multiselectable', String(this.options.multiple));
     this.dropdown.appendChild(this.optionsContainer);
 
     this.wrapper.appendChild(this.dropdown);
@@ -394,9 +412,20 @@ export class CGESelect {
    * @private
    */
   _bindEvents() {
+    this._onNativeChange = () => {
+      if (!this._syncingNative && !this._destroyed) this.refresh();
+    };
+    this._onFormReset = event => queueMicrotask(() => {
+      if (!event.defaultPrevented && !this._destroyed) this.refresh();
+    });
+    this._ownerForm = this.element.form;
+    this.element.addEventListener('change', this._onNativeChange);
+    this._ownerForm?.addEventListener('reset', this._onFormReset);
+
     // 1. Toggle Trigger Click
     this.trigger.addEventListener('click', (e) => {
       e.preventDefault();
+      if (this.element.disabled || this._destroyed) return;
       // If clicking clear button, don't toggle open/close
       if (e.target.closest('.cge-select-clear')) {
         this.clear();
@@ -436,6 +465,7 @@ export class CGESelect {
 
     // 3. Keyboard Navigation on Dropdown & Trigger
     const handleKeyNav = (e) => {
+      if (e.target.closest('button')) return;
       if (!this.isOpen) {
         if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
           e.preventDefault();
@@ -546,18 +576,25 @@ export class CGESelect {
    * @private
    */
   async _handleAsyncSearch(query) {
+    const version = ++this._searchVersion;
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);
+    }
+    this.abortController?.abort();
+    this.isLoading = false;
+    if (this._destroyed) return;
+    if (query.trim().length < this.options.minSearchLength) {
+      this.filteredItems = [];
+      this._renderEmptyState();
+      return;
     }
 
     const cfg = this.options.asyncSource;
     const debounceMs = cfg.debounce !== undefined ? cfg.debounce : 300;
 
     this._debounceTimer = setTimeout(async () => {
-      if (this.abortController) {
-        this.abortController.abort();
-      }
-      this.abortController = new AbortController();
+      const controller = new AbortController();
+      this.abortController = controller;
 
       this.isLoading = true;
       this._renderLoadingState();
@@ -565,28 +602,35 @@ export class CGESelect {
       try {
         const urlObj = new URL(cfg.url, window.location.origin);
         const paramName = cfg.param || 'q';
-        urlObj.searchParams.set(paramName, query);
+        const method = (cfg.method || 'GET').toUpperCase();
+        if (method === 'GET') urlObj.searchParams.set(paramName, query);
 
         let data = null;
 
         // Driver 1: window.axios
         if (cfg.driver === 'axios' && typeof window !== 'undefined' && window.axios) {
-          const res = await window.axios.get(urlObj.toString(), {
-            signal: this.abortController.signal
+          const res = await window.axios.request({
+            url: urlObj.toString(), method,
+            ...(method === 'POST' ? { data: { [paramName]: query } } : {}),
+            signal: controller.signal
           });
           data = res.data;
         } else {
           // Driver 2: Native fetch()
           const res = await fetch(urlObj.toString(), {
-            method: cfg.method || 'GET',
-            signal: this.abortController.signal,
+            method,
+            signal: controller.signal,
+            ...(method === 'POST' ? { body: JSON.stringify({ [paramName]: query }) } : {}),
             headers: {
+              ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
               Accept: 'application/json',
               'X-Requested-With': 'XMLHttpRequest'
             }
           });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           data = await res.json();
         }
+        if (this._destroyed || version !== this._searchVersion || controller.signal.aborted) return;
 
         // Transform results if transformer provided
         let rawItems = [];
@@ -601,7 +645,7 @@ export class CGESelect {
         }
 
         // Map into internal structure
-        this.items = rawItems.map((raw) => ({
+        const remoteItems = rawItems.map((raw) => ({
           value: String(raw.value ?? raw.id),
           label: String(raw.label ?? raw.name ?? raw.title ?? raw.value),
           selected: this.selectedValues.includes(String(raw.value ?? raw.id)),
@@ -614,12 +658,14 @@ export class CGESelect {
           element: null
         }));
 
-        this.filteredItems = [...this.items];
+        const retainedItems = this.items.filter(item => this.selectedValues.includes(item.value) && !remoteItems.some(remote => remote.value === item.value));
+        this.items = [...retainedItems, ...remoteItems];
+        this.filteredItems = remoteItems;
         this.focusedIndex = this.filteredItems.length > 0 ? 0 : -1;
         this.isLoading = false;
         this._renderOptionsList();
       } catch (err) {
-        if (err.name === 'AbortError') return;
+        if (this._destroyed || version !== this._searchVersion || controller.signal.aborted || err.name === 'AbortError') return;
         console.error('[CGESelect] Async search failed:', err);
         this.isLoading = false;
         this.filteredItems = [];
@@ -843,6 +889,7 @@ export class CGESelect {
       const optEl = document.createElement('div');
       optEl.className = ui.option;
       optEl.setAttribute('role', 'option');
+      optEl.id = `${this._listboxId}-option-${index}`;
       optEl.setAttribute('data-index', String(index));
       optEl.setAttribute('data-value', item.value);
 
@@ -946,6 +993,7 @@ export class CGESelect {
       list.appendChild(optEl);
     });
 
+    this._updateFocusedOption();
     this._scrollToFocused();
   }
 
@@ -959,6 +1007,7 @@ export class CGESelect {
         ${this.options.translations['no-results']}
       </div>
     `;
+    this._updateFocusedOption();
   }
 
   /**
@@ -975,6 +1024,7 @@ export class CGESelect {
         <span>${this.options.translations.loading}</span>
       </div>
     `;
+    this._updateFocusedOption();
   }
 
   /**
@@ -1033,10 +1083,18 @@ export class CGESelect {
    */
   _syncNativeSelect(triggerChange = true) {
     const el = this.element;
+    // Remote results must exist as native options to participate in FormData.
+    for (const value of this.selectedValues) {
+      if (!Array.from(el.options).some(option => option.value === value)) {
+        const item = this.items.find(item => item.value === value);
+        if (item) el.add(new Option(item.label, item.value, false, false));
+      }
+    }
 
     if (!this.options.multiple) {
       const val = this.selectedValues[0] || '';
-      el.value = val;
+      if (this.selectedValues.length === 0) el.selectedIndex = -1;
+      else el.value = val;
     } else {
       Array.from(el.options).forEach((opt) => {
         opt.selected = this.selectedValues.includes(opt.value);
@@ -1045,8 +1103,11 @@ export class CGESelect {
 
     if (triggerChange) {
       // Native bubbling events (for CGEForm, standard form listeners, and Livewire)
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
+      this._syncingNative = true;
+      try {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { this._syncingNative = false; }
 
       // Custom CGE Select change event
       const selectedItems = this.items.filter((i) => this.selectedValues.includes(i.value));
@@ -1096,6 +1157,11 @@ export class CGESelect {
    * @private
    */
   _updateFocusedOption() {
+    const active = this.isOpen ? this.optionsContainer.querySelector(`[data-index="${this.focusedIndex}"]:not([aria-disabled="true"])`) : null;
+    for (const target of [this.trigger, this.searchInput].filter(Boolean)) {
+      if (active) target.setAttribute('aria-activedescendant', active.id);
+      else target.removeAttribute('aria-activedescendant');
+    }
     const options = this.optionsContainer.querySelectorAll('[role="option"]');
     options.forEach((opt) => {
       const idx = parseInt(opt.dataset.index, 10);
@@ -1128,7 +1194,7 @@ export class CGESelect {
     if (this._listeners.has(eventName)) {
       this._listeners.get(eventName).forEach((cb) => {
         try {
-          cb(detail);
+          cb({ instance: this, element: this.element, ...detail });
         } catch (err) {
           console.error(`[CGESelect] Error in listener "${eventName}":`, err);
         }
@@ -1154,7 +1220,7 @@ export class CGESelect {
    * @returns {this}
    */
   open() {
-    if (this.isOpen || this.element.disabled) return this;
+    if (this._destroyed || this.isOpen || this.element.disabled) return this;
     this.isOpen = true;
 
     this.dropdown.classList.remove('hidden');
@@ -1163,16 +1229,24 @@ export class CGESelect {
     this.arrowIcon.classList.add('rotate-180');
 
     this._calculatePlacement();
+    this.searchQuery = '';
+    if (!this.options.asyncSource) this.filteredItems = [...this.items];
+    this.focusedIndex = -1;
     this._renderOptionsList();
 
     // Autofocus search input if present
     if (this.searchInput) {
       this.searchInput.value = '';
       this.searchQuery = '';
-      setTimeout(() => this.searchInput.focus(), 50);
+      this._focusTimer = setTimeout(() => {
+        if (this.isOpen && !this._destroyed) this.searchInput.focus();
+      }, 50);
     }
 
+    this.searchInput?.setAttribute('aria-expanded', 'true');
+    this._updateFocusedOption();
     this._emit('open', {});
+    this._emit('opened', {});
     return this;
   }
 
@@ -1181,6 +1255,7 @@ export class CGESelect {
    * @returns {this}
    */
   close() {
+    clearTimeout(this._focusTimer);
     if (!this.isOpen) return this;
     this.isOpen = false;
 
@@ -1189,7 +1264,10 @@ export class CGESelect {
     this.trigger.setAttribute('aria-expanded', 'false');
     this.arrowIcon.classList.remove('rotate-180');
 
+    this.searchInput?.setAttribute('aria-expanded', 'false');
+    this._updateFocusedOption();
     this._emit('close', {});
+    this._emit('closed', {});
     return this;
   }
 
@@ -1294,7 +1372,10 @@ export class CGESelect {
    */
   disable() {
     this.element.disabled = true;
-    this.trigger.disabled = true;
+    this.trigger.setAttribute('aria-disabled', 'true');
+    this.trigger.tabIndex = -1;
+    this.clearBtn.disabled = true;
+    this.selectionContainer.querySelectorAll('button').forEach(button => { button.disabled = true; });
     this.trigger.classList.add(...this.options.ui.triggerDisabled.split(' '));
     this.close();
     return this;
@@ -1306,7 +1387,10 @@ export class CGESelect {
    */
   enable() {
     this.element.disabled = false;
-    this.trigger.disabled = false;
+    this.trigger.setAttribute('aria-disabled', 'false');
+    this.trigger.tabIndex = 0;
+    this.clearBtn.disabled = false;
+    this.selectionContainer.querySelectorAll('button').forEach(button => { button.disabled = false; });
     this.trigger.classList.remove(...this.options.ui.triggerDisabled.split(' '));
     return this;
   }
@@ -1316,8 +1400,11 @@ export class CGESelect {
    * @returns {this}
    */
   refresh() {
+    if (this._destroyed) return this;
     this._parseOptionsFromDom();
     this._renderSelection();
+    if (this.element.disabled) this.disable();
+    else this.enable();
     if (this.isOpen) {
       this._renderOptionsList();
     }
@@ -1355,17 +1442,26 @@ export class CGESelect {
    * Destroys instance, unbinds events, and restores native `<select>`.
    */
   destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    ++this._searchVersion;
+    clearTimeout(this._debounceTimer);
+    clearTimeout(this._focusTimer);
+    this.abortController?.abort();
     this.close();
 
+    this.element.removeEventListener('change', this._onNativeChange);
+    this._ownerForm?.removeEventListener('reset', this._onFormReset);
     document.removeEventListener('click', this._onDocumentClick);
     window.removeEventListener('resize', this._onWindowResize);
     window.removeEventListener('scroll', this._onWindowResize);
 
     // Restore native select
-    this.element.style.cssText = '';
     this.element.classList.remove('cge-select-native-hidden');
-    this.element.removeAttribute('tabindex');
-    this.element.removeAttribute('aria-hidden');
+    for (const [name, value] of this._originalAttributes) {
+      if (value === null) this.element.removeAttribute(name);
+      else this.element.setAttribute(name, value);
+    }
 
     // Move select back to original DOM parent and remove wrapper
     if (this.wrapper && this.wrapper.parentNode) {
@@ -1411,9 +1507,11 @@ export class CGESelect {
    * @param {Object} [options={}]
    * @returns {CGESelect[]}
    */
-  static init(selector = 'select[data-cge-select]', options = {}) {
+  static init(selector = 'select[data-cge-select]', options = {}, root) {
     if (typeof document === 'undefined') return [];
-    const elements = document.querySelectorAll(selector);
-    return Array.from(elements).map((el) => CGESelect.getOrCreate(el, options));
+    root = root || document;
+    const elements = Array.from(root.querySelectorAll(selector));
+    if (root.matches?.(selector)) elements.unshift(root);
+    return elements.map((el) => CGESelect.getOrCreate(el, options));
   }
 }

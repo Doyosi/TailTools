@@ -1,3 +1,6 @@
+import { acquireOverlay, releaseOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { submitConfirmedForm } from '../shared/form.js';
+import { Lifecycle } from '../shared/lifecycle.js';
 /**
  * CGEAlert - TailTools Plugin
  * Promise-based native JavaScript alert, confirmation, and dialog plugin designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -106,6 +109,8 @@ export class CGEAlert {
   /**
    * @param {Object} options
    */
+  _lifecycle = new Lifecycle();
+
   constructor(options = {}) {
     // If another alert is currently open, dismiss it first
     if (CGEAlert.currentAlert && CGEAlert.currentAlert.isOpen) {
@@ -527,7 +532,7 @@ export class CGEAlert {
    * @private
    */
   _handleKeyDown(e) {
-    if (!this.isOpen) return;
+    if (!this.isOpen || !claimOverlayKey(this, e)) return;
 
     if (e.key === 'Escape') {
       if (this.options.allowEscapeKey) {
@@ -580,6 +585,7 @@ export class CGEAlert {
    * @private
    */
   async _handleConfirm() {
+    if (!this.isOpen || this.isLoadingState) return;
     let value = true;
 
     // 1. Process Input if present
@@ -591,6 +597,7 @@ export class CGEAlert {
         try {
           this.showLoading();
           const validationError = await this.options.inputValidator(value);
+          if (!this.isOpen) return;
           this.hideLoading();
 
           if (validationError) {
@@ -600,6 +607,7 @@ export class CGEAlert {
             return;
           }
         } catch (err) {
+          if (!this.isOpen) return;
           this.hideLoading();
           this._showInputError(err.message || 'Validation error');
           return;
@@ -612,6 +620,7 @@ export class CGEAlert {
       try {
         this.showLoading();
         const preResult = await this.options.preConfirm(value);
+        if (!this.isOpen) return;
         this.hideLoading();
 
         // If preConfirm explicitly returns false, abort dismissal
@@ -622,6 +631,7 @@ export class CGEAlert {
           value = preResult;
         }
       } catch (err) {
+        if (!this.isOpen) return;
         this.hideLoading();
         this._showInputError(err.message || 'Action failed');
         this.shake();
@@ -629,6 +639,7 @@ export class CGEAlert {
       }
     }
 
+    if (!this.isOpen) return;
     this._dispatch('confirm', { value });
     this._closeWithResult({
       isConfirmed: true,
@@ -692,7 +703,7 @@ export class CGEAlert {
       this.overlayEl.classList.add('transition-opacity', 'duration-200', 'opacity-0');
       this.dialogEl.classList.add('transition-all', 'duration-200', 'opacity-0', 'scale-95');
 
-      requestAnimationFrame(() => {
+      this._lifecycle.frame(() => {
         this.overlayEl.classList.remove('opacity-0');
         this.overlayEl.classList.add('opacity-100');
         this.dialogEl.classList.remove('opacity-0', 'scale-95');
@@ -704,7 +715,7 @@ export class CGEAlert {
     this._dispatch('open');
 
     // Initial Focus
-    requestAnimationFrame(() => {
+    this._lifecycle.frame(() => {
       if (this.inputEl) {
         this.inputEl.focus();
       } else if (this.options.focusConfirm && this.confirmBtn) {
@@ -792,6 +803,7 @@ export class CGEAlert {
   _closeWithResult(result) {
     if (!this.isOpen) return;
     this.isOpen = false;
+    this._lifecycle.cancel();
 
     if (typeof this.options.willClose === 'function') {
       this.options.willClose(this.dialogEl);
@@ -804,9 +816,7 @@ export class CGEAlert {
       if (this.overlayEl && this.overlayEl.parentNode) {
         this.overlayEl.parentNode.removeChild(this.overlayEl);
       }
-      if (this.previousActiveElement && typeof this.previousActiveElement.focus === 'function') {
-        this.previousActiveElement.focus();
-      }
+
       this._dispatch('close', result);
 
       if (CGEAlert.currentAlert === this) {
@@ -839,22 +849,9 @@ export class CGEAlert {
    * Locks document scrolling with scrollbar layout-shift compensation.
    * @private
    */
-  _lockScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.classList.add('overflow-hidden');
-  }
+  _lockScroll() { acquireOverlay(this, this.overlayEl, true); }
 
-  /**
-   * Unlocks document scrolling.
-   * @private
-   */
-  _unlockScroll() {
-    document.body.classList.remove('overflow-hidden');
-    document.body.style.paddingRight = '';
-  }
+  _unlockScroll() { releaseOverlay(this, this.previousActiveElement); }
 
   /**
    * Dispatches DOM CustomEvents on document.
@@ -995,12 +992,19 @@ export class CGEAlert {
    * Intercepts form submissions and link clicks until confirmed.
    * @param {Document | HTMLElement} [root=document]
    */
+  static _pendingTriggers = new WeakSet();
+
   static init(root = document) {
     if (root._cgeAlertBound) return;
 
     const onDelegatedClick = async (e) => {
       const trigger = e.target.closest('[data-cge-alert]');
       if (!trigger) return;
+      if (CGEAlert._pendingTriggers.has(trigger)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
 
       // Extract declarative parameters
       const archetype = trigger.getAttribute('data-cge-alert') || 'confirm';
@@ -1016,7 +1020,9 @@ export class CGEAlert {
       e.preventDefault();
       e.stopPropagation();
 
-      const result = await CGEAlert.fire({
+      CGEAlert._pendingTriggers.add(trigger);
+      let result;
+      try { result = await CGEAlert.fire({
         archetype,
         theme,
         title,
@@ -1025,27 +1031,15 @@ export class CGEAlert {
         cancelButtonText: cancelText,
         requireInput,
         size
-      });
+      }); } finally { CGEAlert._pendingTriggers.delete(trigger); }
 
-      if (result.isConfirmed) {
+      if (result.isConfirmed && trigger.isConnected) {
         // If confirmed, proceed with original action:
-        const form = trigger.closest('form');
+        const form = trigger.form || trigger.closest('form');
         if (trigger.tagName === 'A' && trigger.href) {
           window.location.href = trigger.href;
         } else if (form) {
-          // If trigger has a name/value (submit button), append it temporarily
-          if (trigger.name) {
-            const hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.name = trigger.name;
-            hidden.value = trigger.value;
-            form.appendChild(hidden);
-          }
-          if (typeof form.requestSubmit === 'function') {
-            form.requestSubmit(trigger.name ? undefined : trigger);
-          } else {
-            form.submit();
-          }
+          submitConfirmedForm(form, trigger);
         } else {
           // Dispatch custom confirmed action event on trigger
           trigger.dispatchEvent(new CustomEvent('cge:confirmed', { bubbles: true, detail: result }));

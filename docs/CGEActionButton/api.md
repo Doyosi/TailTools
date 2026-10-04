@@ -1,12 +1,15 @@
-# CGEActionButton - TypeScript API Reference
+# CGEActionButton API
 
-Complete TypeScript declarations, option schemas, and event payload types for **CGEActionButton**.
+This reference mirrors the shipped [declaration](../../plugins/CGEActionButton/CGEActionButton.d.ts). Both named and default class imports are supported by the plugin barrel.
 
----
-
-## 1. Type Interfaces
+Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
 
 ```typescript
+/**
+ * CGEActionButton - TypeScript Definitions
+ * Type definitions for TailTools CGEActionButton plugin.
+ */
+
 export type CGEActionType =
   | 'delete'
   | 'restore'
@@ -76,13 +79,7 @@ export interface CGEActionButtonOptions {
   /** Custom execution callback handler */
   onExecute?: (instance: CGEActionButton) => Promise<any> | any;
 }
-```
 
----
-
-## 2. Event Types & Payloads
-
-```typescript
 export interface CGEActionButtonEventMap {
   start: { element: HTMLElement; action: string };
   confirm: { element: HTMLElement; action: string };
@@ -99,13 +96,7 @@ export interface CGEActionButtonCustomEventDetail {
   result?: any;
   error?: any;
 }
-```
 
----
-
-## 3. Class Declaration
-
-```typescript
 export class CGEActionButton {
   // Static Properties
   static instances: WeakMap<HTMLElement, CGEActionButton>;
@@ -144,4 +135,6 @@ export class CGEActionButton {
     callback: (detail: CGEActionButtonEventMap[K]) => void
   ): this;
 }
+
+export default CGEActionButton;
 ```

@@ -247,3 +247,9 @@ modal.modal.addEventListener('cge:modal:closed', (e) => {
    - Add `autofocus` or `data-cge-modal-autofocus` to the desired `<input>` element inside the dialog card.
 4. **Animation flickering:**
    - If using `animationDriver: 'tailwind-animations'`, ensure `@import "tailwind-animations";` is loaded in your CSS bundle.
+
+## Verified maintenance contract (2026-10-04)
+
+Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEModal.d.ts](../../../../plugins/CGEModal/CGEModal.d.ts).

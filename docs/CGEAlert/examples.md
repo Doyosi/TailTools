@@ -160,3 +160,14 @@ async function showMandatoryTerms() {
   });
 }
 ```
+
+## Extended maintenance contract (2026-10-04)
+
+Declarative confirmation uses a valid submit button with requestSubmit, supports external form-associated buttons, and removes temporary name/value inputs for other triggers. Repeated clicks while confirmation waits cannot bypass it. Dismissed async validators/preConfirm cannot deliver late confirmation. Alert owns scroll/focus only while its overlay is active; use dismiss/close and await the result Promise rather than assuming an instance destroy API.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+```javascript
+const result = await CGEAlert.confirm('Continue?', 'Confirm this action.');
+if (result.isConfirmed) console.log('confirmed');
+```

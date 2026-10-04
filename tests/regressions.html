@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="tr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TailTools bakım regresyonları</title>
+<link rel="stylesheet" href="/src/style.css">
+<body class="p-8 bg-slate-50 text-slate-900">
+  <h1 class="text-2xl font-semibold">TailTools bakım testleri</h1>
+  <p class="my-4">Programatik ve data-cge-* kullanımını kontrol eder. Ağ istekleri test içinde taklit edilir.</p>
+  <button id="run" class="px-4 py-2 bg-indigo-600 text-white rounded-sm">Testleri çalıştır</button>
+  <pre id="results" aria-live="polite" class="my-4 whitespace-pre-wrap text-sm"></pre>
+  <script type="module">
+    import { runRegressionTests } from './regressions.js';
+    window.runTailToolsRegressionTests = runRegressionTests;
+    document.getElementById('run').addEventListener('click', async () => {
+      const button = document.getElementById('run');
+      button.disabled = true;
+      try {
+        const results = await runRegressionTests();
+        document.getElementById('results').textContent = results.map(result => `${result.ok ? 'PASS' : 'FAIL'} ${result.name}${result.error ? ': ' + result.error : ''}`).join('\n');
+      } finally { button.disabled = false; }
+    });
+  </script>
+</body>
+</html>

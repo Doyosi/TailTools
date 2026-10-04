@@ -137,3 +137,10 @@ dropzone.off(eventName, handler)
 - **Phase 7:** Interactive test showcase in `index.html`
 - **Phase 8:** Complete documentation suite (`docs/CGEDropzone/` and general guides)
 - **Phase 9:** AI skills (`.agents/skills/cge-dropzone/SKILL.md` and `cge-dropzone-skill.md`)
+
+## Maintenance audit — 2026-10-04
+Correct CGEAlert signature; retain failed remote deletions; single upload slot accounting; prevent queue restart after destroy.
+Preserve existing public methods, CSS, Blade markup and exports. Verify programmatic and declarative behavior with regression fixtures; update docs and consumer guidance. No new dependencies or redesign.
+
+## 2026-10-04 ek bakım planı
+REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.

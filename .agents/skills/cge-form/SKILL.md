@@ -151,3 +151,14 @@ feedback: {
 - `cge:form:complete` (`detail: { form, ok, response }`)
 - `cge:form:redirect` (`detail: { form, url, response }`)
 - `cge:form:progress` (`detail: { form, percent, loaded, total }`)
+
+
+## Verified maintenance guidance (2026-10-04)
+
+PUT/PATCH/DELETE submissions use POST with `_method` across all drivers, including existing Blade @method fields. Concurrent submits are ignored. Destroy removes delegated input/change listeners and restores plugin-added novalidate.
+
+## Verified maintenance contract (2026-10-04)
+
+All drivers send Laravel multipart PUT/PATCH/DELETE as POST plus _method. FormData is captured before freezing and includes the SubmitEvent submitter. Concurrent submissions are prevented. Destroy aborts Axios/Fetch/XHR, cancels redirect timers, restores frozen controls and suppresses late callbacks/events; delayed beforeSubmit cannot start a request afterward. Input/change listeners and plugin-added novalidate are restored on teardown.
+
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEForm.d.ts](../../../../plugins/CGEForm/CGEForm.d.ts).

@@ -84,7 +84,7 @@ All options can be passed to `CGEToast.show(options)` or `new CGEToast(options)`
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'light'` | Color theme mode: `'light'` (clean white card), `'dark'` (slate-900 card), or `'auto'` (system/`html.dark`). |
-| `message` | `string` | `''` | **Required.** Notification text (supports safe HTML markup). |
+| `message` | `string` | `''` | **Required.** Notification text (supports trusted HTML markup). |
 | `title` | `string \| null` | `null` | Optional bold header title. If omitted, uses localized default title for variant. |
 | `variant` | `'success' \| 'error' \| 'warning' \| 'info' \| 'neutral'` | `'neutral'` | Visual theme and semantic coloring. |
 | `position` | `CGEToastPosition` | `'top-right'` | Placement quadrant or banner mode (see positions below). |
@@ -198,3 +198,16 @@ CGEToast.show({
   ]
 });
 ```
+
+
+## Maintenance notes (2026-10-04)
+
+A session flash DOM node is consumed only once across repeated initialization. New flash nodes still work. Declarative data-cge-duration="0"/"false" and data-cge-toast-duration="0"/"false" create persistent toasts.
+
+Nested document/subtree delegation handles a single click only once.
+
+## Extended maintenance contract (2026-10-04)
+
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+
+See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
