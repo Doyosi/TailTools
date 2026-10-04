@@ -16,6 +16,7 @@ import { CGEDropzone } from '../plugins/CGEDropzone';
 import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from '../plugins/CGEDataTable';
 import { CGEDataGrid } from '../plugins/CGEDataGrid';
 import { CGETabs } from '../plugins/CGETabs';
+import { CGEAccordion, CGECollapse } from '../plugins/CGEAccordion';
 
 export {
   CGEModal,
@@ -30,6 +31,8 @@ export {
   CGEDataTable,
   CGEDataGrid,
   CGETabs,
+  CGEAccordion,
+  CGECollapse,
   CGEFilter,
   CGESort,
   CGEPagination,
@@ -77,6 +80,12 @@ export function initTailTools(root: Document | HTMLElement = document): void {
   // Initialize CGETabs declarative tabs
   CGETabs.init(root);
 
+  // Initialize CGEAccordion declarative accordions
+  CGEAccordion.init(root);
+
+  // Initialize CGECollapse declarative collapse toggles
+  CGECollapse.init(root);
+
   console.log('[TailTools] Initialized plugins successfully');
 }
 
@@ -99,6 +108,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     CGEDataTable,
     CGEDataGrid,
     CGETabs,
+    CGEAccordion,
+    CGECollapse,
     CGEFilter,
     CGESort,
     CGEPagination,
@@ -116,6 +127,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   (window as any).CGEDataTable = CGEDataTable;
   (window as any).CGEDataGrid = CGEDataGrid;
   (window as any).CGETabs = CGETabs;
+  (window as any).CGEAccordion = CGEAccordion;
+  (window as any).CGECollapse = CGECollapse;
   (window as any).CGEFilter = CGEFilter;
   (window as any).CGESort = CGESort;
   (window as any).CGEPagination = CGEPagination;
@@ -142,6 +155,8 @@ export default {
   CGEDataTable,
   CGEDataGrid,
   CGETabs,
+  CGEAccordion,
+  CGECollapse,
   CGEFilter,
   CGESort,
   CGEPagination,

@@ -235,7 +235,7 @@
                                 <span class="w-1.5 h-1.5 rounded-full bg-slate-300" id="group-dot-nav"></span>
                                 <span>Nav</span>
                             </span>
-                            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 font-medium">1</span>
+                            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 font-medium">2</span>
                             <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" id="group-arrow-nav" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
@@ -248,11 +248,24 @@
                                     <div class="font-bold text-slate-900 text-xs flex items-center justify-between">
                                         <span class="flex items-center gap-1.5">
                                             <span>CGETabs</span>
-                                            <span class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold text-[9px] border border-indigo-200/60">New</span>
                                         </span>
                                         <span class="active-check hidden text-indigo-600 font-bold">✓</span>
                                     </div>
                                     <div class="text-[10px] text-slate-500 leading-tight">Accessible tabs, deep linking & lazy Ajax</div>
+                                </div>
+                            </button>
+                            <!-- CGEAccordion -->
+                            <button type="button" id="tab-btn-accordion" onclick="switchTab('accordion')" class="w-full px-3 py-2 text-left flex items-start gap-2.5 hover:bg-slate-50 transition cursor-pointer group">
+                                <span class="text-sm p-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">🪗</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-slate-900 text-xs flex items-center justify-between">
+                                        <span class="flex items-center gap-1.5">
+                                            <span>CGEAccordion</span>
+                                            <span class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold text-[9px] border border-indigo-200/60">New</span>
+                                        </span>
+                                        <span class="active-check hidden text-indigo-600 font-bold">✓</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 leading-tight">CSS Grid row transitions & WAI-ARIA</div>
                                 </div>
                             </button>
                         </div>
@@ -296,7 +309,8 @@
                             <option value="datagrid">🔲 CGEDataGrid</option>
                         </optgroup>
                         <optgroup label="Navigation">
-                            <option value="tabs">📑 CGETabs (New)</option>
+                            <option value="tabs">📑 CGETabs</option>
+                            <option value="accordion">🪗 CGEAccordion (New)</option>
                         </optgroup>
                     </select>
                 </div>
@@ -3389,6 +3403,709 @@
             </div>
         </section>
 
+        <!-- ============================================================= -->
+        <!-- SECTION: CGEAccordion Sandbox                                 -->
+        <!-- ============================================================= -->
+        <section id="section-accordion" class="hidden">
+            <!-- Hero -->
+            <div class="mb-10 text-center sm:text-left flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-xs mb-3 font-mono font-medium shadow-2xs">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                        <span>plugins/CGEAccordion</span>
+                        <span class="text-indigo-300">•</span>
+                        <span>CSS Grid Row Transitions & WAI-ARIA</span>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
+                        CGEAccordion Interactive Sandbox
+                    </h2>
+                    <p class="text-slate-600 text-sm sm:text-base max-w-3xl leading-relaxed">
+                        Ultra-smooth, accessible accordion and collapsible panel engine engineered for Tailwind CSS v4 and Laravel Blade. Uses native CSS Grid row interpolation (<code class="font-mono text-xs bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">grid-rows-[0fr] &rarr; grid-rows-[1fr]</code>) to eliminate jittery height calculations. Features single-expand (exclusive), multi-expand, URL deep-linking, animated chevrons, nested trees, and standalone <code class="font-mono text-xs bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-indigo-600 font-bold">CGECollapse</code> toggles.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button type="button" onclick="testAccordionOpenAll()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer">
+                        <span class="text-indigo-600 font-bold">⤢</span>
+                        <span>Expand All</span>
+                    </button>
+                    <button type="button" onclick="testAccordionCloseAll()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs hover:shadow-xs transition cursor-pointer">
+                        <span class="text-slate-500 font-bold">⤡</span>
+                        <span>Collapse All</span>
+                    </button>
+                    <button type="button" onclick="testAccordionDestroyToggle()" id="acc-destroy-btn" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 shadow-2xs transition cursor-pointer">
+                        <span>⚡</span>
+                        <span>.destroy()</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accordion Demo Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+
+                <!-- Card 1: Exclusive FAQ Accordion -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    01
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Exclusive FAQ Accordion</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">exclusive: true • Single-Expand Mode</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span>Auto-Closing Siblings</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Opening any panel automatically collapses sibling panels in the container with zero layout thrashing or laggy scrollHeight calculations:
+                        </p>
+
+                        <!-- Accordion Container 1 -->
+                        <div id="demo-faq-accordion" data-cge-accordion data-cge-exclusive="true" class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 bg-white shadow-2xs">
+                            <!-- Item 1 -->
+                            <div class="cge-accordion-item group" data-cge-item="faq-pricing">
+                                <h3>
+                                    <button type="button" data-cge-trigger="faq-pricing" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-indigo-600 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-indigo-100">Q1</span>
+                                            <span>How does dynamic billing work with prorated credits?</span>
+                                        </span>
+                                        <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0 ml-2">
+                                            <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="faq-pricing" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-5 pb-4 pt-1 leading-relaxed border-t border-slate-100/80 bg-slate-50/40">
+                                            <p class="mb-2">We bill monthly or annually with automated prorated invoicing. If you upgrade mid-cycle, unused hours on your previous tier are automatically credited towards your new subscription.</p>
+                                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200/60 font-mono">Prorated to the Second</span>
+                                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-200/60 font-mono">Instant Invoice</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item 2 -->
+                            <div class="cge-accordion-item group" data-cge-item="faq-security">
+                                <h3>
+                                    <button type="button" data-cge-trigger="faq-security" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-indigo-600 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-indigo-100">Q2</span>
+                                            <span>What compliance and security certifications do you hold?</span>
+                                        </span>
+                                        <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0 ml-2">
+                                            <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="faq-security" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-5 pb-4 pt-1 leading-relaxed border-t border-slate-100/80 bg-slate-50/40">
+                                            <p class="mb-2">All production infrastructure is SOC-2 Type II, ISO 27001, and HIPAA certified. Customer databases feature AES-256 encryption at rest and TLS 1.3 in transit with dedicated key isolation.</p>
+                                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200 font-mono">SOC-2 Type II</span>
+                                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200 font-mono">ISO 27001</span>
+                                                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200 font-mono">HIPAA</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item 3 -->
+                            <div class="cge-accordion-item group" data-cge-item="faq-api">
+                                <h3>
+                                    <button type="button" data-cge-trigger="faq-api" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-indigo-600 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-indigo-100">Q3</span>
+                                            <span>Can I generate programmatic API keys for background bots?</span>
+                                        </span>
+                                        <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors shrink-0 ml-2">
+                                            <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="faq-api" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-5 pb-4 pt-1 leading-relaxed border-t border-slate-100/80 bg-slate-50/40">
+                                            <p class="mb-2">Yes, scoped API tokens with customizable read/write permissions, IP allowlisting, and automated rotation schedules are supported directly in the developer dashboard.</p>
+                                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-200/60 font-mono">read:telemetry</span>
+                                                <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-200/60 font-mono">write:jobs</span>
+                                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200/60 font-mono">IP Allowlisted</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-400 font-mono text-[11px]">Active:</span>
+                            <span id="faq-active-item-display" class="font-bold text-indigo-600 font-mono text-xs px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200/60">None</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="testToggleItem('faq-pricing')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Toggle #1</button>
+                            <button type="button" onclick="testToggleItem('faq-security')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Toggle #2</button>
+                            <button type="button" onclick="testToggleItem('faq-api')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Toggle #3</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Multi-Expand Mode & Storage Persistence -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 border border-violet-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    02
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Multi-Expand Mode & Storage</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">exclusive: false • localStorage: 'demo_acc_state'</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-bold border border-violet-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+                                <span>Independent Panels</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Allows multiple sections to stay open simultaneously and remembers opened panels across browser page reloads:
+                        </p>
+
+                        <!-- Accordion Container 2 (Multi) -->
+                        <div id="demo-multi-accordion" data-cge-accordion data-cge-exclusive="false" data-cge-storage="localStorage" data-cge-storage-key="demo_acc_state" class="space-y-3">
+                            <!-- Multi Item 1 -->
+                            <div class="cge-accordion-item border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs hover:border-violet-300/80 transition-all group" data-cge-item="module-metrics">
+                                <h3>
+                                    <button type="button" data-cge-trigger="module-metrics" class="flex justify-between items-center w-full px-4 py-3 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-violet-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-6 h-6 rounded-md bg-violet-50 text-violet-600 flex items-center justify-center font-bold text-xs border border-violet-100">📈</span>
+                                            <span>Cluster Telemetry & Performance Metrics</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 font-mono">99.99%</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                                </svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="module-metrics" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-4 pb-3.5 pt-1 border-t border-slate-100 bg-slate-50/40">
+                                            <div class="grid grid-cols-2 gap-2 text-[11px] mb-2">
+                                                <div class="p-2.5 bg-white rounded-md border border-slate-200/80 shadow-2xs">
+                                                    <div class="text-slate-400 text-[10px]">Response Latency</div>
+                                                    <div class="font-bold text-slate-800 font-mono text-xs">18.4 ms (p99)</div>
+                                                </div>
+                                                <div class="p-2.5 bg-white rounded-md border border-slate-200/80 shadow-2xs">
+                                                    <div class="text-slate-400 text-[10px]">Active Nodes</div>
+                                                    <div class="font-bold text-emerald-600 font-mono text-xs">12 / 12 Online</div>
+                                                </div>
+                                            </div>
+                                            <div class="p-2 bg-white rounded-md border border-slate-200/80 flex items-center justify-between text-[11px]">
+                                                <span class="text-slate-500">Memory Utilization:</span>
+                                                <span class="font-mono font-bold text-violet-700">1.42 GB / 4.0 GB (35%)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Multi Item 2 -->
+                            <div class="cge-accordion-item border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs hover:border-violet-300/80 transition-all group" data-cge-item="module-security">
+                                <h3>
+                                    <button type="button" data-cge-trigger="module-security" class="flex justify-between items-center w-full px-4 py-3 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-violet-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-6 h-6 rounded-md bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold text-xs border border-cyan-100">🛡️</span>
+                                            <span>Edge WAF & DDoS Shield Policies</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 text-[10px] font-bold border border-cyan-200/60 font-mono">Defense Active</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                                </svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="module-security" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-4 pb-3.5 pt-1 leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                                            <p class="mb-2">Rate-limiting is active with a threshold of 1,200 requests/minute per IP subnet. 42 malicious bot probes blocked in the past 24 hours.</p>
+                                            <div class="space-y-1.5 text-[11px]">
+                                                <div class="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200/70">
+                                                    <span class="text-slate-600">Subnet Rate Limit:</span>
+                                                    <span class="font-mono font-bold text-slate-800">1,200 req/min</span>
+                                                </div>
+                                                <div class="flex items-center justify-between p-1.5 bg-white rounded border border-slate-200/70">
+                                                    <span class="text-slate-600">Threat Mitigation:</span>
+                                                    <span class="font-mono font-bold text-emerald-600">42 Probes Blocked</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Multi Item 3 -->
+                            <div class="cge-accordion-item border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs hover:border-violet-300/80 transition-all group" data-cge-item="module-backup">
+                                <h3>
+                                    <button type="button" data-cge-trigger="module-backup" class="flex justify-between items-center w-full px-4 py-3 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-violet-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs border border-amber-100">💾</span>
+                                            <span>Point-in-Time Database Snapshots</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200/60 font-mono">Every 4h</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-violet-50 group-hover:text-violet-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+                                                </svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="module-backup" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-4 pb-3.5 pt-1 leading-relaxed border-t border-slate-100 bg-slate-50/40">
+                                            <p class="mb-2">Encrypted WAL archiving to geographically isolated S3 buckets with automatic 30-day retention and one-click rollback verification.</p>
+                                            <div class="p-2 bg-white rounded border border-slate-200/70 text-[11px] font-mono text-slate-700 flex items-center justify-between">
+                                                <span>Last Verification:</span>
+                                                <span class="text-emerald-600 font-bold">Today 08:30 UTC (Verified)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-400 font-mono text-[11px]">Storage:</span>
+                            <span id="multi-storage-display" class="font-bold text-violet-600 font-mono text-xs px-2 py-0.5 rounded bg-violet-50 border border-violet-200/60">Saved (localStorage)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="testClearStorage()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Clear Storage</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Deep Linking & URL Hash Sync -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    03
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">URL Hash Deep Linking</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">urlSync: 'hash' • updateHash: true</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 text-[10px] font-bold border border-cyan-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                                <span>#hash-reactive</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Automatically activates and opens accordion items directly from the browser URL hash:
+                        </p>
+
+                        <!-- Accordion Container 3 (Hash) -->
+                        <div id="demo-hash-accordion" data-cge-accordion data-cge-exclusive="true" data-cge-url-sync="hash" data-cge-update-hash="true" class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 bg-white shadow-2xs">
+                            <!-- Hash Item 1 -->
+                            <div class="cge-accordion-item group" data-cge-item="hash-install">
+                                <h3>
+                                    <button type="button" data-cge-trigger="hash-install" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-cyan-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono text-cyan-600 text-xs font-bold">#</span>
+                                            <span>Package Installation & CLI Setup</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px] font-bold">#hash-install</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="hash-install" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs">
+                                        <div class="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/40">
+                                            <div class="p-3 rounded-md bg-slate-900 text-slate-100 font-mono text-xs border border-slate-800 shadow-inner">
+                                                <div class="flex items-center justify-between text-[10px] text-slate-400 pb-2 mb-2 border-b border-slate-800">
+                                                    <span>BASH</span>
+                                                    <span class="text-cyan-400">npm registry</span>
+                                                </div>
+                                                <span class="text-emerald-400">$</span> npm install tailtools
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hash Item 2 -->
+                            <div class="cge-accordion-item group" data-cge-item="hash-laravel">
+                                <h3>
+                                    <button type="button" data-cge-trigger="hash-laravel" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-cyan-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono text-cyan-600 text-xs font-bold">#</span>
+                                            <span>Laravel Blade Component Markup</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px] font-bold">#hash-laravel</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="hash-laravel" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs">
+                                        <div class="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/40">
+                                            <div class="p-3 rounded-md bg-slate-900 text-slate-100 font-mono text-xs border border-slate-800 shadow-inner">
+                                                <div class="flex items-center justify-between text-[10px] text-slate-400 pb-2 mb-2 border-b border-slate-800">
+                                                    <span>BLADE</span>
+                                                    <span class="text-rose-400">&lt;x-cge-accordion&gt;</span>
+                                                </div>
+                                                <span class="text-slate-400">&lt;</span><span class="text-rose-400">x-cge-accordion</span> <span class="text-amber-300">exclusive</span>=<span class="text-emerald-300">"true"</span> <span class="text-amber-300">url-sync</span>=<span class="text-emerald-300">"hash"</span><span class="text-slate-400">&gt;</span><br>
+                                                &nbsp;&nbsp;<span class="text-slate-400">&lt;</span><span class="text-rose-400">x-cge-accordion-item</span> <span class="text-amber-300">id</span>=<span class="text-emerald-300">"faq-1"</span> <span class="text-amber-300">title</span>=<span class="text-emerald-300">"Billing FAQ"</span><span class="text-slate-400">&gt;</span><br>
+                                                &nbsp;&nbsp;&nbsp;&nbsp;Content goes here...<br>
+                                                &nbsp;&nbsp;<span class="text-slate-400">&lt;/</span><span class="text-rose-400">x-cge-accordion-item</span><span class="text-slate-400">&gt;</span><br>
+                                                <span class="text-slate-400">&lt;/</span><span class="text-rose-400">x-cge-accordion</span><span class="text-slate-400">&gt;</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hash Item 3 -->
+                            <div class="cge-accordion-item group" data-cge-item="hash-api">
+                                <h3>
+                                    <button type="button" data-cge-trigger="hash-api" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-semibold text-xs sm:text-sm text-slate-800 hover:text-cyan-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2">
+                                            <span class="font-mono text-cyan-600 text-xs font-bold">#</span>
+                                            <span>Programmatic JavaScript API Instance</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px] font-bold">#hash-api</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="hash-api" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs">
+                                        <div class="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/40">
+                                            <div class="p-3 rounded-md bg-slate-900 text-slate-100 font-mono text-xs border border-slate-800 shadow-inner">
+                                                <div class="flex items-center justify-between text-[10px] text-slate-400 pb-2 mb-2 border-b border-slate-800">
+                                                    <span>TYPESCRIPT / JS</span>
+                                                    <span class="text-amber-400">new CGEAccordion()</span>
+                                                </div>
+                                                <span class="text-violet-400">const</span> acc = <span class="text-violet-400">new</span> <span class="text-amber-300">CGEAccordion</span>(<span class="text-emerald-300">'#faq'</span>, {<br>
+                                                &nbsp;&nbsp;exclusive: <span class="text-cyan-400">true</span>,<br>
+                                                &nbsp;&nbsp;urlSync: <span class="text-emerald-300">'hash'</span>,<br>
+                                                &nbsp;&nbsp;updateHash: <span class="text-cyan-400">true</span><br>
+                                                });
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-400 font-mono text-[11px]">Current Hash:</span>
+                            <span id="hash-active-display" class="font-bold text-cyan-600 font-mono text-xs px-2 py-0.5 rounded bg-cyan-50 border border-cyan-200/60">None</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="testActivateHash('hash-install')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">#hash-install</button>
+                            <button type="button" onclick="testActivateHash('hash-laravel')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">#hash-laravel</button>
+                            <button type="button" onclick="testActivateHash('hash-api')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">#hash-api</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Nested Hierarchies (Multi-Level Accordions) -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    04
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Nested Hierarchies (Multi-Level)</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">Scoped Event Delegation • Independent Parent/Child</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span>Tree Isolation</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Nested accordions operate without cross-talk; expanding a child will never collapse the parent container:
+                        </p>
+
+                        <!-- Parent Accordion -->
+                        <div id="demo-parent-accordion" data-cge-accordion data-cge-exclusive="true" class="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 bg-white shadow-2xs">
+                            <!-- Parent Item 1 -->
+                            <div class="cge-accordion-item group" data-cge-item="parent-core">
+                                <h3>
+                                    <button type="button" data-cge-trigger="parent-core" class="flex justify-between items-center w-full px-4 py-3.5 text-left font-bold text-xs sm:text-sm text-slate-800 hover:text-emerald-600 hover:bg-slate-50/70 transition cursor-pointer">
+                                        <span class="flex items-center gap-2.5">
+                                            <span class="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100">📦</span>
+                                            <span>Core Engine Architecture</span>
+                                        </span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 font-mono">2 Submodules</span>
+                                            <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition shrink-0">
+                                                <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </h3>
+                                <div data-cge-body="parent-core" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                    <div class="cge-content overflow-hidden min-h-0 text-xs text-slate-600">
+                                        <div class="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/40">
+                                            <p class="mb-3 text-[11px] text-slate-500 font-medium">Child modules nested inside parent body with independent state:</p>
+
+                                            <!-- Nested Child Accordion -->
+                                            <div id="demo-child-accordion" data-cge-accordion data-cge-exclusive="true" class="border-l-2 border-emerald-400 ml-2 pl-3 space-y-2">
+                                                <!-- Child Item 1 -->
+                                                <div class="cge-accordion-item bg-white p-2.5 rounded-md border border-slate-200/80 shadow-2xs hover:border-emerald-300/80 transition group/child" data-cge-item="child-grid">
+                                                    <button type="button" data-cge-trigger="child-grid" class="flex justify-between items-center w-full text-left font-semibold text-xs text-slate-800 hover:text-emerald-600 cursor-pointer">
+                                                        <span class="flex items-center gap-1.5">
+                                                            <span class="text-emerald-500 font-bold">↳</span>
+                                                            <span>CSS Grid Row Transition Engine</span>
+                                                        </span>
+                                                        <svg data-cge-icon class="w-3.5 h-3.5 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                                    </button>
+                                                    <div data-cge-body="child-grid" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                                        <div class="cge-content overflow-hidden min-h-0 text-[11px] text-slate-500">
+                                                            <div class="pt-2 leading-relaxed border-t border-slate-100 mt-2">
+                                                                Zero DOM height measurement prevents browser reflow cycles by leveraging CSS Grid row fraction interpolation (<code class="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">0fr &rarr; 1fr</code>).
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Child Item 2 -->
+                                                <div class="cge-accordion-item bg-white p-2.5 rounded-md border border-slate-200/80 shadow-2xs hover:border-emerald-300/80 transition group/child" data-cge-item="child-aria">
+                                                    <button type="button" data-cge-trigger="child-aria" class="flex justify-between items-center w-full text-left font-semibold text-xs text-slate-800 hover:text-emerald-600 cursor-pointer">
+                                                        <span class="flex items-center gap-1.5">
+                                                            <span class="text-emerald-500 font-bold">↳</span>
+                                                            <span>WAI-ARIA Accessibility Engine</span>
+                                                        </span>
+                                                        <svg data-cge-icon class="w-3.5 h-3.5 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                                    </button>
+                                                    <div data-cge-body="child-aria" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden">
+                                                        <div class="cge-content overflow-hidden min-h-0 text-[11px] text-slate-500">
+                                                            <div class="pt-2 leading-relaxed border-t border-slate-100 mt-2">
+                                                                Automatically injects and keeps in sync <code class="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">aria-expanded</code>, <code class="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">aria-controls</code>, and arrow key roving focus management.
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span class="text-slate-400 font-mono text-[11px]">Hierarchy: <span class="font-bold text-emerald-600 font-mono">Parent &gt; Child Scoped</span></span>
+                        <button type="button" onclick="testToggleParentTree()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Toggle Parent</button>
+                    </div>
+                </div>
+
+                <!-- Card 5: Standalone CGECollapse Toggles -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    05
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">Standalone CGECollapse Toggles</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">Isolated Toggles • Zero Parent Wrapper Required</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span>data-cge-collapse</span>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                            Trigger isolated collapsible cards, secret tokens, or detail drawers anywhere on the page without requiring an accordion group container:
+                        </p>
+
+                        <div class="space-y-4">
+                            <!-- Collapse Trigger Button 1 -->
+                            <div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">Production Secret API Key</div>
+                                        <div class="text-[10px] text-slate-400">Scoped to cluster deployment and analytics</div>
+                                    </div>
+                                    <button type="button" data-cge-collapse="#collapse-secret-token" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold border border-slate-200 shadow-2xs transition cursor-pointer">
+                                        <span>🔑 Reveal Key</span>
+                                        <svg data-cge-icon class="w-3.5 h-3.5 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                    </button>
+                                </div>
+                                <div id="collapse-secret-token" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden mt-0">
+                                    <div class="cge-content overflow-hidden min-h-0">
+                                        <div class="pt-3">
+                                            <div class="p-3 bg-amber-50/80 border border-amber-200/80 rounded-md text-xs font-mono text-amber-900 flex items-center justify-between shadow-2xs">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <span class="text-amber-500 font-bold shrink-0">KEY:</span>
+                                                    <span class="font-bold truncate">cge_live_9f81a7b64c20d4e5f321980a</span>
+                                                </div>
+                                                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0 border border-amber-300/60 font-mono">write:all</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Collapse Trigger Button 2 -->
+                            <div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">Advanced Network Transport</div>
+                                        <div class="text-[10px] text-slate-400">Configure keepalive timeouts and TLS settings</div>
+                                    </div>
+                                    <button type="button" data-cge-collapse="#collapse-advanced-config" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold border border-slate-200 shadow-2xs transition cursor-pointer">
+                                        <span>⚙️ Configure</span>
+                                        <svg data-cge-icon class="w-3.5 h-3.5 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/></svg>
+                                    </button>
+                                </div>
+                                <div id="collapse-advanced-config" class="cge-wrapper grid grid-rows-[0fr] transition-all duration-300 ease-out overflow-hidden mt-0">
+                                    <div class="cge-content overflow-hidden min-h-0">
+                                        <div class="pt-3">
+                                            <div class="p-3 bg-white border border-slate-200 rounded-md text-xs space-y-2 shadow-2xs">
+                                                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                                                    <span class="text-slate-600 font-medium">Keepalive Timeout:</span>
+                                                    <span class="font-mono text-slate-800 font-bold text-[11px]">60 seconds</span>
+                                                </div>
+                                                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                                                    <span class="text-slate-600 font-medium">HTTP/3 QUIC (UDP 443):</span>
+                                                    <span class="font-mono text-emerald-600 font-bold text-[11px] flex items-center gap-1">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                        <span>Enabled</span>
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-slate-600 font-medium">TLS Strict Mode:</span>
+                                                    <span class="font-mono text-indigo-600 font-bold text-[11px]">TLS 1.3 (PFS)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span class="text-slate-400 font-mono text-[11px]">Class: <span class="font-bold text-amber-600 font-mono">new CGECollapse()</span></span>
+                        <button type="button" onclick="testProgrammaticCollapse()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200/60 transition cursor-pointer">Toggle via JS</button>
+                    </div>
+                </div>
+
+                <!-- Card 6: WAI-ARIA & Keyboard Navigation Inspector -->
+                <div class="p-6 rounded-lg bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center font-bold text-xs shadow-2xs">
+                                    06
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900 tracking-tight">WAI-ARIA & Keyboard Inspector</h3>
+                                    <span class="text-[10px] text-slate-400 font-mono">Accessible Patterns & Live ARIA State HUD</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200/60 font-mono flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                <span>A11y Standard</span>
+                            </span>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 border border-slate-200 rounded-md space-y-2 mb-4">
+                            <h4 class="font-bold text-slate-800 text-xs">WAI-ARIA Keyboard Controls</h4>
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-300 font-mono text-[10px] font-bold shadow-2xs">↓</kbd><span>Next Header</span></div>
+                                <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-300 font-mono text-[10px] font-bold shadow-2xs">↑</kbd><span>Previous Header</span></div>
+                                <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-300 font-mono text-[10px] font-bold shadow-2xs">Home</kbd><span>First Header</span></div>
+                                <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-300 font-mono text-[10px] font-bold shadow-2xs">End</kbd><span>Last Header</span></div>
+                            </div>
+                            <p class="text-slate-400 text-[10px]">Click any trigger above and use your keyboard arrow keys to navigate and toggle.</p>
+                        </div>
+
+                        <!-- Live Telemetry Inspector -->
+                        <div class="p-3.5 bg-slate-900 rounded-lg font-mono text-[11px] text-slate-300 shadow-inner border border-slate-800">
+                            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-2 flex items-center justify-between">
+                                <span>Live Accordion State Telemetry</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            </div>
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                                    <span class="text-slate-400">Active FAQ Item:</span>
+                                    <span id="telemetry-faq-item" class="text-emerald-400 font-bold">None</span>
+                                </div>
+                                <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                                    <span class="text-slate-400">Multi Open Items:</span>
+                                    <span id="telemetry-multi-items" class="text-violet-400 font-bold">[]</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-400">URL Hash:</span>
+                                    <span id="telemetry-hash-val" class="text-cyan-400 font-bold">#</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span class="text-slate-400 font-mono text-[11px]">Compliance: <span class="text-emerald-600 font-bold font-mono">WAI-ARIA 1.2 Compliant ✓</span></span>
+                        <span class="text-[10px] text-slate-400">Roving TabIndex Active</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
         <!-- Live Event Logger Panel -->
         <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs mb-10">
             <div class="flex items-center justify-between mb-3.5">
@@ -3737,7 +4454,8 @@
             { id: 'lightbox', name: 'CGELightbox', icon: '🖼️', group: 'media' },
             { id: 'datatable', name: 'CGEDataTable', icon: '📊', group: 'data' },
             { id: 'datagrid', name: 'CGEDataGrid', icon: '🔲', group: 'data' },
-            { id: 'tabs', name: 'CGETabs', icon: '📑', group: 'nav' }
+            { id: 'tabs', name: 'CGETabs', icon: '📑', group: 'nav' },
+            { id: 'accordion', name: 'CGEAccordion', icon: '🪗', group: 'nav' }
         ];
 
         window.currentTab = 'alert';
@@ -3797,7 +4515,8 @@
                 'section-alert', 'section-toast', 'section-modal',
                 'section-form', 'section-drawer', 'section-lightbox',
                 'section-action', 'section-select', 'section-dropzone',
-                'section-datatable', 'section-datagrid', 'section-tabs'
+                'section-datatable', 'section-datagrid', 'section-tabs',
+                'section-accordion'
             ];
             sections.forEach(secId => {
                 const el = document.getElementById(secId);
@@ -3824,6 +4543,13 @@
                     if (window.demoQueryTabs) window.demoQueryTabs.updateIndicator();
                     if (window.demoAjaxTabs) window.demoAjaxTabs.updateIndicator();
                 });
+            }
+
+            // Trigger CGEAccordion setup when activated
+            if (tab === 'accordion') {
+                if (typeof window.setupAccordionDemos === 'function') {
+                    window.setupAccordionDemos();
+                }
             }
 
             // Recalculate layout for visible DataTables
@@ -3960,6 +4686,9 @@
             if (detail?.rows?.length !== undefined) extra += ` <span class="text-indigo-300 font-mono">rows=${detail.rows.length}/${detail.total || detail.rows.length}</span>`;
             if (detail?.rules) extra += ` <span class="text-purple-300 font-mono">sort=${detail.rules.map(r=>r.key+':'+r.direction).join(',')}</span>`;
             if (detail?.page !== undefined) extra += ` <span class="text-amber-300 font-mono">p=${detail.page}</span>`;
+            // CGEAccordion details
+            if (detail?.itemId) extra += ` <span class="text-indigo-400 font-mono">item="${detail.itemId}"</span>`;
+            if (detail?.isOpen !== undefined) extra += ` <span class="${detail.isOpen ? 'text-emerald-400 font-bold' : 'text-slate-400'} font-mono">${detail.isOpen ? 'OPEN' : 'CLOSED'}</span>`;
 
             entry.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="text-teal-400 font-semibold">${name}</span>${extra}`;
             log.prepend(entry);
@@ -4050,6 +4779,21 @@
                     }
                 }
             });
+        });
+
+        // Attach listeners for CGEAccordion
+        ['open', 'close', 'toggle', 'destroy'].forEach(evt => {
+            document.addEventListener(`cge:accordion:${evt}`, (e) => {
+                logEvent(`cge:accordion:${evt}`, e.detail);
+                if (typeof updateAccordionTelemetry === 'function') {
+                    updateAccordionTelemetry(evt, e.detail);
+                }
+            });
+        });
+
+        // Attach listeners for CGECollapse
+        ['open', 'close', 'toggle'].forEach(evt => {
+            document.addEventListener(`cge:collapse:${evt}`, (e) => logEvent(`cge:collapse:${evt}`, e.detail));
         });
 
 
@@ -6156,14 +6900,178 @@
             }
         };
 
+        // =====================================================================
+        // CGEAccordion Interactive Sandbox Handlers
+        // =====================================================================
+        window.demoFaqAccordion = null;
+        window.demoMultiAccordion = null;
+        window.demoHashAccordion = null;
+        window.demoParentAccordion = null;
+        window.demoChildAccordion = null;
+        window.demoProgrammaticCollapse = null;
+
+        window.setupAccordionDemos = function() {
+            if (!window.CGEAccordion) return;
+
+            const faqEl = document.getElementById('demo-faq-accordion');
+            if (faqEl && !window.demoFaqAccordion) {
+                window.demoFaqAccordion = window.CGEAccordion.get(faqEl) || new window.CGEAccordion(faqEl, { exclusive: true });
+            }
+
+            const multiEl = document.getElementById('demo-multi-accordion');
+            if (multiEl && !window.demoMultiAccordion) {
+                window.demoMultiAccordion = window.CGEAccordion.get(multiEl) || new window.CGEAccordion(multiEl, { exclusive: false, storage: 'localStorage', storageKey: 'demo_acc_state' });
+            }
+
+            const hashEl = document.getElementById('demo-hash-accordion');
+            if (hashEl && !window.demoHashAccordion) {
+                window.demoHashAccordion = window.CGEAccordion.get(hashEl) || new window.CGEAccordion(hashEl, { urlSync: 'hash', updateHash: true });
+            }
+
+            const parentEl = document.getElementById('demo-parent-accordion');
+            if (parentEl && !window.demoParentAccordion) {
+                window.demoParentAccordion = window.CGEAccordion.get(parentEl) || new window.CGEAccordion(parentEl, { exclusive: true });
+            }
+
+            const childEl = document.getElementById('demo-child-accordion');
+            if (childEl && !window.demoChildAccordion) {
+                window.demoChildAccordion = window.CGEAccordion.get(childEl) || new window.CGEAccordion(childEl, { exclusive: true });
+            }
+
+            const secretColEl = document.getElementById('collapse-secret-token');
+            if (secretColEl && !window.demoProgrammaticCollapse && window.CGECollapse) {
+                window.demoProgrammaticCollapse = window.CGECollapse.get(secretColEl) || new window.CGECollapse(secretColEl);
+            }
+        };
+
+        window.updateAccordionTelemetry = function(evt, detail) {
+            if (detail?.instance?.element?.id === 'demo-faq-accordion') {
+                const el = document.getElementById('faq-active-item-display');
+                const telFaq = document.getElementById('telemetry-faq-item');
+                const active = Array.from(detail.instance.openItemIds).join(', ') || 'None';
+                if (el) el.textContent = active;
+                if (telFaq) telFaq.textContent = active;
+            } else if (detail?.instance?.element?.id === 'demo-multi-accordion') {
+                const telMulti = document.getElementById('telemetry-multi-items');
+                const storeDisplay = document.getElementById('multi-storage-display');
+                const openArr = Array.from(detail.instance.openItemIds);
+                if (telMulti) telMulti.textContent = JSON.stringify(openArr);
+                if (storeDisplay) storeDisplay.textContent = `Saved (${openArr.length} items)`;
+            } else if (detail?.instance?.element?.id === 'demo-hash-accordion') {
+                const hashDisplay = document.getElementById('hash-active-display');
+                const telHash = document.getElementById('telemetry-hash-val');
+                const hashVal = window.location.hash || '#';
+                if (hashDisplay) hashDisplay.textContent = hashVal;
+                if (telHash) telHash.textContent = hashVal;
+            }
+        };
+
+        window.testToggleItem = function(itemId) {
+            if (window.demoFaqAccordion) {
+                window.demoFaqAccordion.toggle(itemId);
+            }
+        };
+
+        window.testAccordionOpenAll = function() {
+            if (window.demoMultiAccordion) {
+                window.demoMultiAccordion.openAll();
+            }
+            if (window.demoFaqAccordion && !window.demoFaqAccordion.options.exclusive) {
+                window.demoFaqAccordion.openAll();
+            }
+            if (window.CGEToast) window.CGEToast.info('Expanded all eligible accordion panels.');
+        };
+
+        window.testAccordionCloseAll = function() {
+            if (window.demoMultiAccordion) {
+                window.demoMultiAccordion.closeAll();
+            }
+            if (window.demoFaqAccordion) {
+                window.demoFaqAccordion.closeAll();
+            }
+            if (window.CGEToast) window.CGEToast.info('Collapsed all panels.');
+        };
+
+        window.testClearStorage = function() {
+            try {
+                localStorage.removeItem('demo_acc_state');
+                if (window.demoMultiAccordion) {
+                    window.demoMultiAccordion.closeAll();
+                }
+                const storeDisplay = document.getElementById('multi-storage-display');
+                if (storeDisplay) storeDisplay.textContent = 'Cleared';
+                if (window.CGEToast) window.CGEToast.success('localStorage for CGEAccordion cleared!');
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        window.testActivateHash = function(hash) {
+            window.location.hash = hash;
+            const el = document.getElementById('hash-active-display');
+            if (el) el.textContent = '#' + hash;
+            if (window.demoHashAccordion) {
+                window.demoHashAccordion.open(hash);
+            }
+            if (window.CGEToast) window.CGEToast.info(`Activated URL hash: #${hash}`);
+        };
+
+        window.testToggleParentTree = function() {
+            if (window.demoParentAccordion) {
+                window.demoParentAccordion.toggle('parent-core');
+            }
+        };
+
+        window.testProgrammaticCollapse = function() {
+            if (window.demoProgrammaticCollapse) {
+                window.demoProgrammaticCollapse.toggle();
+            } else {
+                const el = document.getElementById('collapse-secret-token');
+                if (el && window.CGECollapse) {
+                    window.demoProgrammaticCollapse = new window.CGECollapse(el);
+                    window.demoProgrammaticCollapse.toggle();
+                }
+            }
+        };
+
+        let accordionDestroyed = false;
+        window.testAccordionDestroyToggle = function() {
+            const btn = document.getElementById('acc-destroy-btn');
+            const faqEl = document.getElementById('demo-faq-accordion');
+            if (!faqEl) return;
+
+            if (!accordionDestroyed) {
+                if (window.demoFaqAccordion) {
+                    window.demoFaqAccordion.destroy();
+                    window.demoFaqAccordion = null;
+                }
+                accordionDestroyed = true;
+                if (btn) {
+                    btn.textContent = 'Re-init Accordion';
+                    btn.className = 'px-3.5 py-2 rounded-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition cursor-pointer';
+                }
+                if (window.CGEToast) window.CGEToast.info('CGEAccordion FAQ instance destroyed.');
+            } else {
+                window.demoFaqAccordion = new window.CGEAccordion(faqEl, { exclusive: true });
+                accordionDestroyed = false;
+                if (btn) {
+                    btn.textContent = '.destroy()';
+                    btn.className = 'px-3.5 py-2 rounded-sm bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition cursor-pointer';
+                }
+                if (window.CGEToast) window.CGEToast.success('CGEAccordion FAQ instance re-initialized!');
+            }
+        };
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(window.setupDataGridDemos, 300);
                 setTimeout(window.setupTabsDemos, 300);
+                setTimeout(window.setupAccordionDemos, 300);
             });
         } else {
             setTimeout(window.setupDataGridDemos, 300);
             setTimeout(window.setupTabsDemos, 300);
+            setTimeout(window.setupAccordionDemos, 300);
         }
     </script>
 

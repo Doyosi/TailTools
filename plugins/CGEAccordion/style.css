@@ -1,0 +1,71 @@
+/**
+ * CGEAccordion & CGECollapse Plugin Styles
+ * Designed for Tailwind CSS v4.3+ and modern browsers.
+ * Leverages CSS Grid row transitions (`grid-template-rows: 0fr -> 1fr`)
+ * with zero JavaScript height or scrollHeight calculation.
+ */
+
+/* ==========================================================================
+   CSS Custom Properties & Default Configuration
+   ========================================================================== */
+:root {
+  --cge-accordion-duration: 300ms;
+  --cge-accordion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Grid Transition Engine (Pure CSS, Hardware Accelerated)
+   ========================================================================== */
+.cge-accordion-wrapper,
+.cge-wrapper,
+[data-cge-body] {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows var(--cge-accordion-duration) var(--cge-accordion-ease);
+}
+
+.cge-accordion-wrapper.grid-rows-\[1fr\],
+.cge-wrapper.grid-rows-\[1fr\],
+[data-cge-body].grid-rows-\[1fr\],
+.cge-accordion-wrapper.is-open,
+.cge-wrapper.is-open,
+.cge-accordion-wrapper[data-cge-open="true"],
+.cge-wrapper[data-cge-open="true"],
+[data-cge-body][data-cge-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+/* Direct child of grid must have overflow hidden and min-height 0 to collapse */
+.cge-accordion-content,
+.cge-content,
+.cge-accordion-wrapper > *,
+.cge-wrapper > *,
+[data-cge-body] > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Icon & Chevron Rotation Utilities
+   ========================================================================== */
+.cge-accordion-icon,
+.cge-icon,
+[data-cge-icon],
+[data-cge-accordion-icon] {
+  transition: transform var(--cge-accordion-duration) var(--cge-accordion-ease);
+}
+
+/* ==========================================================================
+   Tailwind CSS v4 Utility Declarations
+   ========================================================================== */
+@utility cge-accordion-transition {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility cge-accordion-open {
+  grid-template-rows: 1fr;
+}

@@ -1,4 +1,4 @@
-import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs, init, initTailTools } from 'tailtools';
+import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs, CGEAccordion, CGECollapse, init, initTailTools } from 'tailtools';
 import TailTools from 'tailtools';
 import Modal from 'tailtools/plugins/CGEModal';
 import Toast from 'tailtools/plugins/CGEToast';
@@ -12,16 +12,27 @@ import Dropzone from 'tailtools/plugins/CGEDropzone';
 import DataTable from 'tailtools/plugins/CGEDataTable';
 import DataGrid from 'tailtools/plugins/CGEDataGrid';
 import Tabs from 'tailtools/plugins/CGETabs';
+import Accordion from 'tailtools/plugins/CGEAccordion';
 import { CGESelect as ShortSelect, type CGESelectOptions } from 'tailtools/CGESelect';
 import { CGEDataTable as ShortDataTable, type CGEDataTableOptions } from 'tailtools/CGEDataTable';
 import { CGEDataGrid as ShortDataGrid, type CGEDataGridOptions } from 'tailtools/CGEDataGrid';
 import { CGETabs as ShortTabs, type CGETabsOptions } from 'tailtools/CGETabs';
+import { CGEAccordion as ShortAccordion, type CGEAccordionOptions, type CGECollapseOptions } from 'tailtools/CGEAccordion';
 import type { CGESelectEventMap } from '../../plugins/CGESelect/index.js';
 import type { CGEDropzoneOptions } from '../../plugins/CGEDropzone/index.js';
 
-const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs,
-  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, Tabs, ShortSelect, ShortDataTable, ShortDataGrid, ShortTabs];
+const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs, CGEAccordion, CGECollapse,
+  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, Tabs, Accordion, ShortSelect, ShortDataTable, ShortDataGrid, ShortTabs, ShortAccordion];
 void constructors;
+
+const accOpts: CGEAccordionOptions = { exclusive: true, urlSync: 'hash' };
+const accordion = new Accordion(document.createElement('div'), accOpts);
+accordion.open('item-1');
+accordion.toggle('item-2');
+const colOpts: CGECollapseOptions = { defaultOpen: false };
+const collapse = new CGECollapse(document.createElement('div'), colOpts);
+collapse.toggle();
+void [accordion, collapse];
 init(document); initTailTools(document.body);
 TailTools.init(document);
 const tabsOptions: CGETabsOptions = { urlSync: 'query', indicator: 'pill' };

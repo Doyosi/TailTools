@@ -273,6 +273,21 @@
     "./plugins/CGETabs/CGETabs.js": {
       "types": "./plugins/CGETabs/CGETabs.d.ts",
       "import": "./plugins/CGETabs/CGETabs.js"
+    },
+    "./plugins/CGEAccordion": {
+      "types": "./plugins/CGEAccordion/index.d.ts",
+      "import": "./plugins/CGEAccordion/index.js",
+      "default": "./plugins/CGEAccordion/index.js"
+    },
+    "./CGEAccordion": {
+      "types": "./plugins/CGEAccordion/index.d.ts",
+      "import": "./plugins/CGEAccordion/index.js",
+      "default": "./plugins/CGEAccordion/index.js"
+    },
+    "./plugins/CGEAccordion/style.css": "./plugins/CGEAccordion/style.css",
+    "./plugins/CGEAccordion/CGEAccordion.js": {
+      "types": "./plugins/CGEAccordion/CGEAccordion.d.ts",
+      "import": "./plugins/CGEAccordion/CGEAccordion.js"
     }
   }
 }
