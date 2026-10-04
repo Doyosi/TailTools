@@ -22,7 +22,7 @@ execFileSync('tar', ['-xf', join(temporary, archive.filename), '-C', modules]);
 const packed = join(modules, 'package');
 const pkg = JSON.parse(readFileSync(join(packed, 'package.json'), 'utf8'));
 const plugins = readdirSync(join(packed, 'plugins')).filter(name => name.startsWith('CGE'));
-assert.equal(plugins.length, 9);
+assert.equal(plugins.length, 11);
 const library = await import(pathToFileURL(join(packed, 'dist/tailtools.js')));
 assert.equal(typeof library.init, 'function');
 assert.equal(typeof library.default.init, 'function');

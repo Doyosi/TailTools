@@ -20,7 +20,8 @@ TailTools/
 │       ├── cge-lightbox/
 │       ├── cge-action-button/
 │       ├── cge-select/
-│       └── cge-dropzone/
+│       ├── cge-dropzone/
+│       └── cge-datatable/
 ├── ai-todos/
 │   ├── plans/                 # Architectural plans for each plugin
 │   └── todo-cheks/            # Step-by-step progress & phase checklists

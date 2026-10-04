@@ -96,6 +96,64 @@
       "types": "./plugins/CGEAlert/CGEAlert.d.ts",
       "import": "./plugins/CGEAlert/CGEAlert.js"
     },
+    "./plugins/CGEDataTable": {
+      "types": "./plugins/CGEDataTable/index.d.ts",
+      "import": "./plugins/CGEDataTable/index.js",
+      "default": "./plugins/CGEDataTable/index.js"
+    },
+    "./CGEDataTable": {
+      "types": "./plugins/CGEDataTable/index.d.ts",
+      "import": "./plugins/CGEDataTable/index.js",
+      "default": "./plugins/CGEDataTable/index.js"
+    },
+    "./plugins/CGEDataTable/style.css": "./plugins/CGEDataTable/style.css",
+    "./plugins/CGEDataTable/CGEDataTable.js": {
+      "types": "./plugins/CGEDataTable/CGEDataTable.d.ts",
+      "import": "./plugins/CGEDataTable/CGEDataTable.js"
+    },
+    "./plugins/CGEDataTable/modules/CGEFilter.js": {
+      "types": "./plugins/CGEDataTable/modules/CGEFilter.d.ts",
+      "import": "./plugins/CGEDataTable/modules/CGEFilter.js"
+    },
+    "./plugins/CGEDataTable/modules/CGESort.js": {
+      "types": "./plugins/CGEDataTable/modules/CGESort.d.ts",
+      "import": "./plugins/CGEDataTable/modules/CGESort.js"
+    },
+    "./plugins/CGEDataTable/modules/CGEPagination.js": {
+      "types": "./plugins/CGEDataTable/modules/CGEPagination.d.ts",
+      "import": "./plugins/CGEDataTable/modules/CGEPagination.js"
+    },
+    "./plugins/CGEDataTable/modules/CGEResponsive.js": {
+      "types": "./plugins/CGEDataTable/modules/CGEResponsive.d.ts",
+      "import": "./plugins/CGEDataTable/modules/CGEResponsive.js"
+    },
+    "./plugins/CGEDataGrid": {
+      "types": "./plugins/CGEDataGrid/index.d.ts",
+      "import": "./plugins/CGEDataGrid/index.js",
+      "default": "./plugins/CGEDataGrid/index.js"
+    },
+    "./CGEDataGrid": {
+      "types": "./plugins/CGEDataGrid/index.d.ts",
+      "import": "./plugins/CGEDataGrid/index.js",
+      "default": "./plugins/CGEDataGrid/index.js"
+    },
+    "./plugins/CGEDataGrid/style.css": "./plugins/CGEDataGrid/style.css",
+    "./plugins/CGEDataGrid/CGEDataGrid.js": {
+      "types": "./plugins/CGEDataGrid/CGEDataGrid.d.ts",
+      "import": "./plugins/CGEDataGrid/CGEDataGrid.js"
+    },
+    "./plugins/CGEDataGrid/modules/CGEFilter.js": {
+      "types": "./plugins/CGEDataGrid/modules/CGEFilter.d.ts",
+      "import": "./plugins/CGEDataGrid/modules/CGEFilter.js"
+    },
+    "./plugins/CGEDataGrid/modules/CGESort.js": {
+      "types": "./plugins/CGEDataGrid/modules/CGESort.d.ts",
+      "import": "./plugins/CGEDataGrid/modules/CGESort.js"
+    },
+    "./plugins/CGEDataGrid/modules/CGEPagination.js": {
+      "types": "./plugins/CGEDataGrid/modules/CGEPagination.d.ts",
+      "import": "./plugins/CGEDataGrid/modules/CGEPagination.js"
+    },
     "./plugins/CGEDrawer": {
       "types": "./plugins/CGEDrawer/index.d.ts",
       "import": "./plugins/CGEDrawer/index.js",

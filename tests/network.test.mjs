@@ -4,6 +4,12 @@ import { CGEForm } from '../plugins/CGEForm/CGEForm.js';
 import { CGEDropzone } from '../plugins/CGEDropzone/CGEDropzone.js';
 import { CGEActionButton } from '../plugins/CGEActionButton/CGEActionButton.js';
 import { CGELightbox } from '../plugins/CGELightbox/CGELightbox.js';
+import { CGEPagination } from '../plugins/CGEDataTable/modules/CGEPagination.js';
+import { CGEFilter } from '../plugins/CGEDataTable/modules/CGEFilter.js';
+import { CGEFilter as CGEDataGridFilter } from '../plugins/CGEDataGrid/modules/CGEFilter.js';
+import { CGESort as CGEDataGridSort } from '../plugins/CGEDataGrid/modules/CGESort.js';
+import { CGEPagination as CGEDataGridPagination } from '../plugins/CGEDataGrid/modules/CGEPagination.js';
+import { CGEDataGrid } from '../plugins/CGEDataGrid/CGEDataGrid.js';
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -89,3 +95,123 @@ test('Lightbox partial translations retain counter', () => {
   assert.equal(lb.options.translations.counter, ':current / :total');
   CGELightbox.instances.delete(lb);
 });
+
+test('CGEPagination computeWindow generates valid windows without duplicates', () => {
+  const p = new CGEPagination({ total: 60, perPage: 5 }); // 12 pages
+  for (let page = 1; page <= 12; page++) {
+    p.goTo(page);
+    const win = p.computeWindow();
+    const numbers = win.filter(x => typeof x === 'number');
+    for (let i = 1; i < numbers.length; i++) {
+      assert(numbers[i] > numbers[i - 1], `Page ${page} window has non-increasing or duplicate numbers: ${win.join(', ')}`);
+    }
+    assert.equal(win[0], 1);
+    assert.equal(win[win.length - 1], 12);
+  }
+});
+
+test('CGEFilter supports single and multi-select column filtering', () => {
+  const filter = new CGEFilter();
+  const rows = [
+    { id: 1, role: 'Admin', status: 'Active' },
+    { id: 2, role: 'Developer', status: 'Active' },
+    { id: 3, role: 'Editor', status: 'Suspended' },
+    { id: 4, role: 'Admin', status: 'Pending' },
+  ];
+
+  // Single select filter
+  filter.setColumnFilter('role', 'Admin');
+  let result = filter.filterRows(rows);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map(r => r.id), [1, 4]);
+
+  // Multi-select / array filter
+  filter.setColumnFilter('role', ['Developer', 'Editor']);
+  result = filter.filterRows(rows);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map(r => r.id), [2, 3]);
+
+  // Clear via 'all'
+  filter.setColumnFilter('role', 'all');
+  result = filter.filterRows(rows);
+  assert.equal(result.length, 4);
+});
+
+test('CGEDataGrid sub-modules filter, sort, and paginate data correctly', () => {
+  const filter = new CGEDataGridFilter();
+  const sort = new CGEDataGridSort();
+  const pagination = new CGEDataGridPagination({ perPage: 2 });
+
+  const cards = [
+    { id: 1, title: 'Tailwind v4 Setup', category: 'CSS', stars: 45 },
+    { id: 2, title: 'Laravel 12 Routing', category: 'PHP', stars: 120 },
+    { id: 3, title: 'Alpine Component', category: 'JS', stars: 85 },
+    { id: 4, title: 'Vite Build Plugins', category: 'JS', stars: 90 },
+  ];
+
+  // 1. Filter by category
+  filter.setFilter('category', 'JS');
+  let filtered = filter.filterData(cards);
+  assert.equal(filtered.length, 2);
+  assert.deepEqual(filtered.map(c => c.id), [3, 4]);
+
+  // 2. Global query match
+  filter.apply('Plugins');
+  filtered = filter.filterData(cards);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].id, 4);
+
+  // Clear filter
+  filter.clear();
+  filtered = filter.filterData(cards);
+  assert.equal(filtered.length, 4);
+
+  // 3. Sort by stars descending
+  sort.sortBy('stars', 'desc');
+  const sorted = sort.sortData(filtered);
+  assert.deepEqual(sorted.map(c => c.id), [2, 4, 3, 1]);
+
+  // 4. Paginate top 2
+  const paged = pagination.paginateData(sorted);
+  assert.equal(paged.length, 2);
+  assert.deepEqual(paged.map(c => c.id), [2, 4]);
+  assert.equal(pagination.lastPage, 2);
+  assert.deepEqual(pagination.getWindow(), [1, 2]);
+});
+
+test('CGEDataGrid supports dual renderers and selection state management', () => {
+  const grid = Object.create(CGEDataGrid.prototype);
+  grid.viewMode = 'grid';
+  grid.layoutMode = 'both';
+  grid.selectedIds = new Set();
+  grid.options = {
+    htmlCardKey: 'html_card',
+    htmlListKey: 'html_list',
+    ui: { cardSelected: 'cge-card-selected' },
+    translations: { 'confirm-bulk-delete': 'Delete :count?' }
+  };
+  grid.data = [
+    { id: 10, name: 'Alice', html_card: '<div class="card-grid">Alice Card</div>', html_list: '<div class="card-list">Alice List</div>' },
+    { id: 20, name: 'Bob', html_card: '<div class="card-grid">Bob Card</div>', html_list: '<div class="card-list">Bob List</div>' },
+  ];
+
+  // Verify selection methods
+  grid.getSelectedIds = CGEDataGrid.prototype.getSelectedIds;
+  grid.getSelectedItems = CGEDataGrid.prototype.getSelectedItems;
+
+  grid.selectedIds.add('10');
+  assert.deepEqual(grid.getSelectedIds(), ['10']);
+  assert.equal(grid.getSelectedItems().length, 1);
+  assert.equal(grid.getSelectedItems()[0].name, 'Alice');
+
+  grid.selectedIds.add('20');
+  assert.equal(grid.getSelectedIds().length, 2);
+  assert.equal(grid.getSelectedItems().length, 2);
+
+  grid.selectedIds.clear();
+  assert.equal(grid.getSelectedIds().length, 0);
+  assert.equal(grid.getSelectedItems().length, 0);
+});
+
+
+

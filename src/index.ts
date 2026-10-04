@@ -13,8 +13,26 @@ import { CGELightbox } from '../plugins/CGELightbox';
 import { CGEActionButton } from '../plugins/CGEActionButton';
 import { CGESelect } from '../plugins/CGESelect';
 import { CGEDropzone } from '../plugins/CGEDropzone';
+import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from '../plugins/CGEDataTable';
+import { CGEDataGrid } from '../plugins/CGEDataGrid';
 
-export { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone };
+export {
+  CGEModal,
+  CGEToast,
+  CGEAlert,
+  CGEForm,
+  CGEDrawer,
+  CGELightbox,
+  CGEActionButton,
+  CGESelect,
+  CGEDropzone,
+  CGEDataTable,
+  CGEDataGrid,
+  CGEFilter,
+  CGESort,
+  CGEPagination,
+  CGEResponsive,
+};
 
 /**
  * Automatically initializes all TailTools plugins on the page
@@ -48,6 +66,12 @@ export function initTailTools(root: Document | HTMLElement = document): void {
   // Initialize CGEDropzone declarative dropzones
   CGEDropzone.init(root);
 
+  // Initialize CGEDataTable declarative data tables
+  CGEDataTable.init(root);
+
+  // Initialize CGEDataGrid declarative data grids
+  CGEDataGrid.init(root);
+
   console.log('[TailTools] Initialized plugins successfully');
 }
 
@@ -67,6 +91,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     CGEActionButton,
     CGESelect,
     CGEDropzone,
+    CGEDataTable,
+    CGEDataGrid,
+    CGEFilter,
+    CGESort,
+    CGEPagination,
+    CGEResponsive,
   };
   (window as any).CGEModal = CGEModal;
   (window as any).CGEToast = CGEToast;
@@ -77,6 +107,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   (window as any).CGEActionButton = CGEActionButton;
   (window as any).CGESelect = CGESelect;
   (window as any).CGEDropzone = CGEDropzone;
+  (window as any).CGEDataTable = CGEDataTable;
+  (window as any).CGEDataGrid = CGEDataGrid;
+  (window as any).CGEFilter = CGEFilter;
+  (window as any).CGESort = CGESort;
+  (window as any).CGEPagination = CGEPagination;
+  (window as any).CGEResponsive = CGEResponsive;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => initTailTools());
@@ -96,5 +132,11 @@ export default {
   CGEActionButton,
   CGESelect,
   CGEDropzone,
+  CGEDataTable,
+  CGEDataGrid,
+  CGEFilter,
+  CGESort,
+  CGEPagination,
+  CGEResponsive,
 };
 

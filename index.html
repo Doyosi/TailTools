@@ -184,6 +184,49 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Group 4: Data -->
+                    <div class="relative" id="dropdown-data-wrapper">
+                        <button type="button" id="group-btn-data" onclick="toggleDropdown('data', event)" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-medium transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-300" id="group-dot-data"></span>
+                                <span>Data</span>
+                            </span>
+                            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 font-medium">2</span>
+                            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" id="group-arrow-data" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="group-menu-data" class="hidden absolute left-0 mt-1.5 w-68 rounded-lg bg-white border border-slate-200/90 shadow-xl py-1 z-50 transition-all">
+                            <!-- CGEDataTable -->
+                            <button type="button" id="tab-btn-datatable" onclick="switchTab('datatable')" class="w-full px-3 py-2 text-left flex items-start gap-2.5 hover:bg-slate-50 transition cursor-pointer group">
+                                <span class="text-sm p-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">📊</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-slate-900 text-xs flex items-center justify-between">
+                                        <span class="flex items-center gap-1.5">
+                                            <span>CGEDataTable</span>
+                                        </span>
+                                        <span class="active-check hidden text-indigo-600 font-bold">✓</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 leading-tight">Modular data grid & pagination</div>
+                                </div>
+                            </button>
+                            <!-- CGEDataGrid -->
+                            <button type="button" id="tab-btn-datagrid" onclick="switchTab('datagrid')" class="w-full px-3 py-2 text-left flex items-start gap-2.5 hover:bg-slate-50 transition cursor-pointer group">
+                                <span class="text-sm p-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">🔲</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-slate-900 text-xs flex items-center justify-between">
+                                        <span class="flex items-center gap-1.5">
+                                            <span>CGEDataGrid</span>
+                                            <span class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold text-[9px] border border-indigo-200/60">New</span>
+                                        </span>
+                                        <span class="active-check hidden text-indigo-600 font-bold">✓</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 leading-tight">Card grid, blog/users, view switch & select</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </nav>
 
                 <!-- Active Plugin Stepper Pill -->
@@ -209,7 +252,7 @@
                             <option value="modal">🪟 CGEModal</option>
                         </optgroup>
                         <optgroup label="Forms">
-                            <option value="dropzone">📂 CGEDropzone (New)</option>
+                            <option value="dropzone">📂 CGEDropzone</option>
                             <option value="select">🔽 CGESelect</option>
                             <option value="form">📝 CGEForm</option>
                             <option value="action">⚡ CGEActionButton</option>
@@ -217,6 +260,10 @@
                         <optgroup label="Media">
                             <option value="drawer">🗄️ CGEDrawer</option>
                             <option value="lightbox">🖼️ CGELightbox</option>
+                        </optgroup>
+                        <optgroup label="Data">
+                            <option value="datatable">📊 CGEDataTable</option>
+                            <option value="datagrid">🔲 CGEDataGrid (New)</option>
                         </optgroup>
                     </select>
                 </div>
@@ -2382,6 +2429,580 @@
                 </div>
 
             </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- TAB 10: CGEDataTable Modular Data Grid Engine                 -->
+        <!-- ============================================================= -->
+        <section id="section-datatable" class="hidden space-y-8">
+            <!-- Hero Header -->
+            <div class="p-6 rounded-sm bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 text-white shadow-sm border border-slate-800">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                            <span class="px-2 py-0.5 rounded-sm bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold border border-indigo-500/40">
+                                NEW IN TAILTOOLS
+                            </span>
+                            <span class="px-2 py-0.5 rounded-sm bg-violet-500/20 text-violet-300 font-mono text-[10px] font-bold border border-violet-500/40">
+                                MODULAR ARCHITECTURE
+                            </span>
+                            <span class="px-2 py-0.5 rounded-sm bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold border border-emerald-500/40">
+                                LARAVEL BLADE READY
+                            </span>
+                        </div>
+                        <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                            <span>📊</span> CGEDataTable
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+                            High-performance, tree-shakeable data grid engine built with a decoupled sub-module architecture:
+                            <code class="text-indigo-300 font-mono">CGEFilter</code>, <code class="text-violet-300 font-mono">CGESort</code>, <code class="text-emerald-300 font-mono">CGEPagination</code>, and <code class="text-cyan-300 font-mono">CGEResponsive</code>.
+                            Supports DOM tables, JSON arrays, Laravel paginated Ajax with/without metas, and server-rendered Blade HTML rows.
+                        </p>
+                    </div>
+
+                    <!-- Quick Action Chips -->
+                    <div class="flex flex-wrap md:flex-col gap-2 shrink-0">
+                        <button type="button" onclick="testFilterAdmin()" class="px-3 py-1.5 rounded-sm bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                            <span>🔍</span> Filter "Admin"
+                        </button>
+                        <button type="button" onclick="testSortBalanceDesc()" class="px-3 py-1.5 rounded-sm bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
+                            <span>⚡</span> Sort Balance (Desc)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Showcase 1: Interactive Primary Grid (DOM / JSON / In-Memory) -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200 shadow-xs">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                            <h3 class="text-base font-bold text-slate-900">1. Interactive Primary Grid & Layout Modes</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Search, column sort, sliding window pagination, and live adaptive responsive modes (Collapse & Scroll).
+                        </p>
+                    </div>
+
+                    <!-- Interactive Layout Mode Selector & Helpers -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center p-0.5 rounded-md bg-slate-100 border border-slate-200 text-xs">
+                            <button type="button" id="btn-mode-collapse" onclick="setDemoResponsiveMode('collapse')" class="px-2.5 py-1 rounded font-semibold transition cursor-pointer bg-white text-indigo-700 shadow-2xs border border-slate-200">
+                                📱 Collapse (+/-)
+                            </button>
+                            <button type="button" id="btn-mode-scroll" onclick="setDemoResponsiveMode('scroll')" class="px-2.5 py-1 rounded font-semibold transition cursor-pointer text-slate-600 hover:text-slate-900">
+                                📜 Scroll
+                            </button>
+                        </div>
+                        <button type="button" onclick="testSelectAllPrimary()" class="px-2.5 py-1.5 rounded-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold cursor-pointer transition">
+                            Select All
+                        </button>
+                        <button type="button" onclick="testClearSelectionPrimary()" class="px-2.5 py-1.5 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition">
+                            Clear
+                        </button>
+                        <button type="button" onclick="testDeleteSelectedPrimary()" class="px-2.5 py-1.5 rounded-sm bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                            Delete Selected
+                        </button>
+                        <button type="button" onclick="testAddMockRecord()" class="px-2.5 py-1.5 rounded-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold cursor-pointer transition">
+                            + Add Record
+                        </button>
+                        <button type="button" onclick="testResetPrimaryTable()" class="px-2.5 py-1.5 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold cursor-pointer transition">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Primary Interactive DataTable -->
+                <div class="w-full">
+                    <table id="demo-primary-table"
+                           data-cge-datatable
+                           data-cge-per-page="5"
+                           data-cge-responsive="collapse"
+                           data-cge-selectable="true"
+                           class="w-full text-xs">
+                        <thead>
+                            <tr>
+                                <th data-cge-key="customer" data-cge-priority="1">Customer</th>
+                                <th data-cge-key="role" data-cge-priority="3">Role</th>
+                                <th data-cge-key="status" data-cge-priority="2">Status</th>
+                                <th data-cge-key="spent" data-cge-type="currency" data-cge-priority="2">Total Spent</th>
+                                <th data-cge-key="joined" data-cge-type="date" data-cge-priority="3">Joined</th>
+                                <th data-cge-key="actions" data-cge-priority="1">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Seed Rows -->
+                            <tr data-cge-id="cust-101">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">SJ</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Sarah Jenkins</div>
+                                            <div class="text-[10px] text-slate-400">sarah.j@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">Admin</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span></td>
+                                <td data-cge-val="12450.00" class="font-mono font-bold text-slate-900">$12,450.00</td>
+                                <td>2025-01-14</td>
+                                <td>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button"
+                                                data-cge-action="delete"
+                                                data-cge-title="Delete Sarah Jenkins?"
+                                                data-cge-message="Customer record #101 will be removed from the database."
+                                                data-cge-success-toast="Sarah Jenkins removed!"
+                                                data-cge-simulate="700"
+                                                class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr data-cge-id="cust-102">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 font-bold flex items-center justify-center text-xs shrink-0">AR</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Alex Rivera</div>
+                                            <div class="text-[10px] text-slate-400">alex.r@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-200/60">Developer</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span></td>
+                                <td data-cge-val="8920.50" class="font-mono font-bold text-slate-900">$8,920.50</td>
+                                <td>2025-03-22</td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="delete"
+                                            data-cge-title="Delete Alex Rivera?"
+                                            data-cge-success-toast="Alex Rivera removed!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr data-cge-id="cust-103">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-xs shrink-0">MV</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Marcus Vance</div>
+                                            <div class="text-[10px] text-slate-400">marcus@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">Editor</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Pending</span></td>
+                                <td data-cge-val="340.00" class="font-mono font-bold text-slate-900">$340.00</td>
+                                <td>2025-06-10</td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="delete"
+                                            data-cge-title="Delete Marcus Vance?"
+                                            data-cge-success-toast="Marcus Vance removed!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr data-cge-id="cust-104">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-pink-100 text-pink-700 font-bold flex items-center justify-center text-xs shrink-0">ER</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Elena Rostova</div>
+                                            <div class="text-[10px] text-slate-400">elena.r@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-pink-50 text-pink-700 border border-pink-200/60">Designer</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span></td>
+                                <td data-cge-val="15400.00" class="font-mono font-bold text-slate-900">$15,400.00</td>
+                                <td>2024-11-05</td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="delete"
+                                            data-cge-title="Delete Elena Rostova?"
+                                            data-cge-success-toast="Elena Rostova removed!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr data-cge-id="cust-105">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-cyan-100 text-cyan-700 font-bold flex items-center justify-center text-xs shrink-0">DL</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">David Lin</div>
+                                            <div class="text-[10px] text-slate-400">david.l@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200/60">Support</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">Suspended</span></td>
+                                <td data-cge-val="95.00" class="font-mono font-bold text-slate-900">$95.00</td>
+                                <td>2025-08-19</td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="restore"
+                                            data-cge-title="Reactivate David Lin?"
+                                            data-cge-message="Customer account will be reinstated."
+                                            data-cge-success-toast="David Lin reactivated!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold cursor-pointer transition">
+                                        Reactivate
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr data-cge-id="cust-106">
+                                <td>
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-teal-100 text-teal-700 font-bold flex items-center justify-center text-xs shrink-0">CK</div>
+                                        <div>
+                                            <div class="font-semibold text-slate-900">Chloe Kim</div>
+                                            <div class="text-[10px] text-slate-400">chloe.k@tailtools.dev</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">Admin</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span></td>
+                                <td data-cge-val="6300.00" class="font-mono font-bold text-slate-900">$6,300.00</td>
+                                <td>2025-02-01</td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="delete"
+                                            data-cge-title="Delete Chloe Kim?"
+                                            data-cge-success-toast="Chloe Kim removed!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Showcase 2: Simulated Laravel Ajax LengthAwarePaginator -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200 shadow-xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-violet-500"></span>
+                            <h3 class="text-base font-bold text-slate-900">2. Simulated Laravel Ajax Pagination (`LengthAwarePaginator`)</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Simulates real backend API responses (<code class="font-mono text-indigo-600">data, current_page, last_page, total, per_page</code>) with network latency.
+                        </p>
+                    </div>
+
+                    <!-- Ajax Control Buttons -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" onclick="testSimulateAjaxPage(1)" class="px-2.5 py-1.5 rounded-sm bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 text-xs font-semibold cursor-pointer transition">
+                            Page 1
+                        </button>
+                        <button type="button" onclick="testSimulateAjaxPage(2)" class="px-2.5 py-1.5 rounded-sm bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 text-xs font-semibold cursor-pointer transition">
+                            Page 2
+                        </button>
+                        <button type="button" onclick="testSimulateAjaxPage(3)" class="px-2.5 py-1.5 rounded-sm bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 text-xs font-semibold cursor-pointer transition">
+                            Page 3
+                        </button>
+                        <button type="button" onclick="testSimulateAjaxSearch()" class="px-2.5 py-1.5 rounded-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold cursor-pointer transition">
+                            Remote Search "Pro"
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Query Monitor Box -->
+                <div class="p-3 mb-4 rounded-md bg-slate-900 text-slate-200 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-indigo-400 font-bold">GET</span>
+                        <span id="ajax-query-string" class="text-emerald-400">/api/v1/subscriptions?page=1&per_page=5</span>
+                    </div>
+                    <span id="ajax-latency-badge" class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700">600ms latency</span>
+                </div>
+
+                <!-- Container where Ajax table will be mounted -->
+                <div id="ajax-datatable-container" class="w-full"></div>
+            </div>
+
+            <!-- Showcase 3: Server-Rendered Blade HTML Row Injection (`data.full`) -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200 shadow-xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <h3 class="text-base font-bold text-slate-900">3. Server-Rendered Blade HTML Rows & Auto CGEActionButton</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Replaces <code class="font-mono text-indigo-600">&lt;tbody&gt;</code> with pre-rendered Blade HTML rows; verifies automated <code class="font-mono text-indigo-600">CGEActionButton.init()</code> binding!
+                        </p>
+                    </div>
+
+                    <button type="button" onclick="testInjectBladeRows()" class="px-3 py-1.5 rounded-sm bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                        <span>⚡</span> Inject Fresh Blade Rows
+                    </button>
+                </div>
+
+                <div class="w-full">
+                    <table id="demo-blade-table"
+                           data-cge-datatable
+                           data-cge-per-page="5"
+                           data-cge-responsive="collapse"
+                           data-cge-selectable="true"
+                           class="w-full text-xs">
+                        <thead>
+                            <tr>
+                                <th data-cge-key="license" data-cge-priority="1">License Key</th>
+                                <th data-cge-key="holder" data-cge-priority="1">Holder</th>
+                                <th data-cge-key="plan" data-cge-priority="2">Plan Tier</th>
+                                <th data-cge-key="status" data-cge-priority="2">Status</th>
+                                <th data-cge-key="actions" data-cge-priority="1">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blade-rows-tbody">
+                            <tr>
+                                <td class="font-mono text-slate-500">TT-9842-ENTERPRISE</td>
+                                <td class="font-semibold text-slate-900">Acme Cloud Corp</td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700">Enterprise</span></td>
+                                <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700">Active</span></td>
+                                <td>
+                                    <button type="button"
+                                            data-cge-action="delete"
+                                            data-cge-title="Revoke License TT-9842?"
+                                            data-cge-message="This will immediately deactivate all team seats."
+                                            data-cge-success-toast="License revoked successfully!"
+                                            data-cge-simulate="600"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                        Revoke
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Showcase 4: Decoupled Standalone Sub-Modules Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Sub-Module 1: CGEFilter Standalone -->
+                <div class="p-4 rounded-sm bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-base p-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">🔍</span>
+                            <h4 class="text-xs font-bold text-slate-900">CGEFilter (Standalone)</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-3">
+                            Debounced multi-mode matching on external inputs & lists.
+                        </p>
+                        <input type="text" id="standalone-filter-input" placeholder="Search team members..." class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 mb-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                        <ul id="standalone-filter-list" class="space-y-1 text-xs text-slate-700 max-h-24 overflow-y-auto">
+                            <li class="p-1 rounded bg-slate-50 border border-slate-100">Sarah Jenkins (Admin)</li>
+                            <li class="p-1 rounded bg-slate-50 border border-slate-100">Alex Rivera (Dev)</li>
+                            <li class="p-1 rounded bg-slate-50 border border-slate-100">Marcus Vance (Editor)</li>
+                            <li class="p-1 rounded bg-slate-50 border border-slate-100">Elena Rostova (Design)</li>
+                        </ul>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 text-[10px] text-indigo-600 font-mono mt-3">
+                        300ms built-in debounce
+                    </div>
+                </div>
+
+                <!-- Sub-Module 2: CGESort Standalone -->
+                <div class="p-4 rounded-sm bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-base p-1 rounded bg-violet-50 text-violet-600 border border-violet-100">⚡</span>
+                            <h4 class="text-xs font-bold text-slate-900">CGESort (Standalone)</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-2">
+                            Click headers to sort with natural type & SVG indicators.
+                        </p>
+                        <table id="standalone-sort-table" class="w-full text-[11px] border border-slate-200">
+                            <thead class="bg-slate-50 text-slate-600">
+                                <tr>
+                                    <th data-cge-key="item" class="p-1 text-left cursor-pointer">Item</th>
+                                    <th data-cge-key="qty" data-cge-type="number" class="p-1 text-right cursor-pointer">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr><td class="p-1">Servers</td><td class="p-1 text-right font-mono">14</td></tr>
+                                <tr><td class="p-1">Routers</td><td class="p-1 text-right font-mono">3</td></tr>
+                                <tr><td class="p-1">Gateways</td><td class="p-1 text-right font-mono">82</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 text-[10px] text-violet-600 font-mono mt-3">
+                        Type-aware auto detection
+                    </div>
+                </div>
+
+                <!-- Sub-Module 3: CGEPagination Standalone -->
+                <div class="p-4 rounded-sm bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-base p-1 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">📄</span>
+                            <h4 class="text-xs font-bold text-slate-900">CGEPagination (Standalone)</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-2">
+                            Sliding numerical window: <code class="text-emerald-700 font-mono">total=120</code>.
+                        </p>
+                        <div class="p-2 rounded bg-slate-50 border border-slate-200 text-center mb-2">
+                            <span id="standalone-pager-metrics" class="text-xs font-bold text-slate-800">Page 1 of 12</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button type="button" onclick="testStandalonePagerPrev()" class="px-2 py-1 rounded bg-white border border-slate-300 text-xs font-semibold cursor-pointer">← Prev</button>
+                            <button type="button" onclick="testStandalonePagerNext()" class="px-2 py-1 rounded bg-white border border-slate-300 text-xs font-semibold cursor-pointer">Next →</button>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 text-[10px] text-emerald-600 font-mono mt-3">
+                        Sliding window algorithm
+                    </div>
+                </div>
+
+                <!-- Sub-Module 4: CGEResponsive Standalone -->
+                <div class="p-4 rounded-sm bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-base p-1 rounded bg-cyan-50 text-cyan-600 border border-cyan-100">📱</span>
+                            <h4 class="text-xs font-bold text-slate-900">CGEResponsive (Adaptive)</h4>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mb-2">
+                            Priority column collapse & mobile card adapter.
+                        </p>
+                        <div class="space-y-1.5 text-[11px]">
+                            <div class="flex items-center justify-between p-1 rounded bg-slate-50">
+                                <span class="font-medium text-slate-600">Priority 1 (Name, Actions)</span>
+                                <span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">Always Visible</span>
+                            </div>
+                            <div class="flex items-center justify-between p-1 rounded bg-slate-50">
+                                <span class="font-medium text-slate-600">Priority 2 (Spent, Status)</span>
+                                <span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold text-[10px]">Hides &lt; 768px</span>
+                            </div>
+                            <div class="flex items-center justify-between p-1 rounded bg-slate-50">
+                                <span class="font-medium text-slate-600">Priority 3 (Role, Joined)</span>
+                                <span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-bold text-[10px]">Hides &lt; 540px</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 text-[10px] text-cyan-600 font-mono mt-3">
+                        ResizeObserver monitoring
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SECTION: CGEDataGrid Showcase (Card Grid & List Engine)       -->
+        <!-- ============================================================= -->
+        <section id="section-datagrid" class="hidden">
+            <!-- Hero -->
+            <div class="mb-10 text-center sm:text-left flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-xs mb-3 font-mono font-medium">
+                        <span>plugins/CGEDataGrid</span>
+                        <span class="text-indigo-300">•</span>
+                        <span>Modular Card Grid & List Engine</span>
+                    </div>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
+                        CGEDataGrid Interactive Showcase
+                    </h1>
+                    <p class="text-slate-600 text-sm sm:text-base max-w-3xl leading-relaxed">
+                        High-performance, reactive Card Grid & List engine tailored for Tailwind CSS v4 and Laravel Blade. Renders data items as rich cards (blog cards, user profiles, cloud clusters) instead of tabular rows. Supports dual view mode (Grid 🔲 / List ☰), direct Laravel API Resource Blade partials (<code class="font-mono bg-slate-100 text-indigo-700 px-1 py-0.5 rounded text-xs">html_card</code> / <code class="font-mono bg-slate-100 text-indigo-700 px-1 py-0.5 rounded text-xs">html_list</code>), multi-card selection with bulk actions, and seamless <code class="font-mono bg-slate-100 text-indigo-700 px-1 py-0.5 rounded text-xs">CGEActionButton</code> integration.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button type="button" onclick="testToggleDataGridView()" class="px-3 py-2 rounded-sm bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                        <span>🔲 / ☰</span>
+                        <span>Toggle Grid/List</span>
+                    </button>
+                    <button type="button" onclick="testAddBlogCard()" class="px-3 py-2 rounded-sm bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                        <span>＋</span>
+                        <span>Add Blog Card</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Showcase 1: Interactive Blog & Article Cards Grid (Dual JS Renderers) -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                            <h3 class="text-base font-bold text-slate-900">1. Tech Blog Articles Grid (Dual JS Renderers)</h3>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">layoutMode: 'both'</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Uses <code class="font-mono text-indigo-600">cardRendererGrid</code> in Grid view and <code class="font-mono text-indigo-600">cardRendererList</code> in List view. Includes category filter select, sort dropdown, and sliding pagination.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="blog-category-filter" data-cge-filter="category" class="px-2.5 py-1.5 text-xs rounded-sm border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="">All Categories</option>
+                            <option value="Frontend">Frontend</option>
+                            <option value="Architecture">Architecture</option>
+                            <option value="DevOps">DevOps</option>
+                            <option value="Security">Security</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="demo-blog-grid"></div>
+            </div>
+
+            <!-- Showcase 2: Student Directory (Direct Laravel API Resource Blade HTML + Multi-Card Selection) -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                            <h3 class="text-base font-bold text-slate-900">2. Student Directory (Direct Laravel Blade Resources & Multi-Select)</h3>
+                            <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">selectable: true</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Directly renders pre-compiled Blade partials (<code class="font-mono text-emerald-700">html_card</code> and <code class="font-mono text-emerald-700">html_list</code>) mimicking a real Laravel <code class="font-mono text-emerald-700">StudentResource</code>. Select cards with checkboxes, use the bulk action bar, or delete via CGEActionButton.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="testSelectAllStudents()" class="px-2.5 py-1.5 text-xs font-medium rounded-sm border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer transition">
+                            Select All
+                        </button>
+                        <button type="button" onclick="testClearStudentSelection()" class="px-2.5 py-1.5 text-xs font-medium rounded-sm border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer transition">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div id="demo-students-grid"></div>
+            </div>
+
+            <!-- Showcase 3: Simulated Laravel Ajax LengthAwarePaginator Cards -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-600"></span>
+                            <h3 class="text-base font-bold text-slate-900">3. Simulated Laravel LengthAwarePaginator Cards (Cloud Clusters)</h3>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200/60 font-mono">source: 'json' (60 items)</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">
+                            Demonstrates server-side pagination structure with 60 remote simulated cluster records, search filtering, and per-page switching.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="demo-clusters-grid"></div>
+            </div>
         </section>
 
         <!-- Live Event Logger Panel -->
@@ -2728,7 +3349,9 @@
             { id: 'form', name: 'CGEForm', icon: '📝', group: 'forms' },
             { id: 'action', name: 'CGEActionButton', icon: '⚡', group: 'forms' },
             { id: 'drawer', name: 'CGEDrawer', icon: '🗄️', group: 'media' },
-            { id: 'lightbox', name: 'CGELightbox', icon: '🖼️', group: 'media' }
+            { id: 'lightbox', name: 'CGELightbox', icon: '🖼️', group: 'media' },
+            { id: 'datatable', name: 'CGEDataTable', icon: '📊', group: 'data' },
+            { id: 'datagrid', name: 'CGEDataGrid', icon: '🔲', group: 'data' }
         ];
 
         window.currentTab = 'alert';
@@ -2744,7 +3367,7 @@
         // Toggle Grouped Dropdown Menus
         window.toggleDropdown = function(group, e) {
             if (e) e.stopPropagation();
-            ['feedback', 'forms', 'media'].forEach(g => {
+            ['feedback', 'forms', 'media', 'data'].forEach(g => {
                 const menu = document.getElementById(`group-menu-${g}`);
                 const arrow = document.getElementById(`group-arrow-${g}`);
                 if (g === group) {
@@ -2767,8 +3390,9 @@
         document.addEventListener('click', (e) => {
             if (!e.target.closest('#dropdown-feedback-wrapper') &&
                 !e.target.closest('#dropdown-forms-wrapper') &&
-                !e.target.closest('#dropdown-media-wrapper')) {
-                ['feedback', 'forms', 'media'].forEach(g => {
+                !e.target.closest('#dropdown-media-wrapper') &&
+                !e.target.closest('#dropdown-data-wrapper')) {
+                ['feedback', 'forms', 'media', 'data'].forEach(g => {
                     const menu = document.getElementById(`group-menu-${g}`);
                     const arrow = document.getElementById(`group-arrow-${g}`);
                     if (menu) menu.classList.add('hidden');
@@ -2785,7 +3409,8 @@
             const sections = [
                 'section-alert', 'section-toast', 'section-modal',
                 'section-form', 'section-drawer', 'section-lightbox',
-                'section-action', 'section-select', 'section-dropzone'
+                'section-action', 'section-select', 'section-dropzone',
+                'section-datatable', 'section-datagrid'
             ];
             sections.forEach(secId => {
                 const el = document.getElementById(secId);
@@ -2795,6 +3420,24 @@
             // 2. Reveal current section
             const targetSec = document.getElementById(`section-${tab}`);
             if (targetSec) targetSec.classList.remove('hidden');
+
+            // Trigger DataGrid setup when activated
+            if (tab === 'datagrid' && typeof window.setupDataGridDemos === 'function') {
+                window.setupDataGridDemos();
+            }
+
+            // Recalculate layout for visible DataTables
+            if (tab === 'datatable' && window.CGEDataTable) {
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('[data-cge-datatable]').forEach(el => {
+                        const inst = window.CGEDataTable.get(el);
+                        if (inst && inst.responsive) inst.responsive.refresh();
+                    });
+                    if (window.demoAjaxTableInstance && window.demoAjaxTableInstance.responsive) {
+                        window.demoAjaxTableInstance.responsive.refresh();
+                    }
+                });
+            }
 
             // 3. Update active plugin indicator in topbar
             const currentPlugin = allPlugins.find(p => p.id === tab);
@@ -2826,7 +3469,7 @@
 
             // 6. Highlight active group button
             const activeGroup = currentPlugin ? currentPlugin.group : null;
-            ['feedback', 'forms', 'media'].forEach(g => {
+            ['feedback', 'forms', 'media', 'data'].forEach(g => {
                 const groupBtn = document.getElementById(`group-btn-${g}`);
                 const dot = document.getElementById(`group-dot-${g}`);
                 if (g === activeGroup) {
@@ -2912,6 +3555,10 @@
             // CGESelect details
             if (detail?.query !== undefined) extra += ` <span class="text-cyan-300 font-mono">query="${detail.query}"</span>`;
             if (detail?.selectedItems) extra += ` <span class="text-indigo-300 font-mono">count=${detail.selectedItems.length}</span>`;
+            // CGEDataTable details
+            if (detail?.rows?.length !== undefined) extra += ` <span class="text-indigo-300 font-mono">rows=${detail.rows.length}/${detail.total || detail.rows.length}</span>`;
+            if (detail?.rules) extra += ` <span class="text-purple-300 font-mono">sort=${detail.rules.map(r=>r.key+':'+r.direction).join(',')}</span>`;
+            if (detail?.page !== undefined) extra += ` <span class="text-amber-300 font-mono">p=${detail.page}</span>`;
 
             entry.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="text-teal-400 font-semibold">${name}</span>${extra}`;
             log.prepend(entry);
@@ -2973,6 +3620,16 @@
         // Attach listeners for CGEDropzone
         ['add', 'progress', 'success', 'error', 'removed', 'complete'].forEach(evt => {
             document.addEventListener(`cge:dropzone:${evt}`, (e) => logEvent(`cge:dropzone:${evt}`, e.detail));
+        });
+
+        // Attach listeners for CGEDataTable
+        ['init', 'loading', 'rendered', 'filter', 'sort', 'page', 'refresh', 'error'].forEach(evt => {
+            document.addEventListener(`cge:datatable:${evt}`, (e) => logEvent(`cge:datatable:${evt}`, e.detail));
+        });
+
+        // Attach listeners for CGEDataGrid
+        ['init', 'render', 'viewmode', 'selection-change', 'data-loaded', 'bulk-delete', 'card-removed'].forEach(evt => {
+            document.addEventListener(`cge:datagrid:${evt}`, (e) => logEvent(`cge:datagrid:${evt}`, e.detail));
         });
 
         function updateActionResultUI(evt, detail) {
@@ -4087,6 +4744,767 @@
                 disEl.className = window.dzProgInstance.isDisabled ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold';
             }
         };
+
+        // =====================================================================
+        // CGEDataTable Demo Handlers & Simulated Laravel Ajax Engine
+        // =====================================================================
+        let mockCustomerId = 107;
+
+        window.testFilterAdmin = function() {
+            window.switchTab('datatable');
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table) {
+                table.filter.apply('Admin');
+                const searchInput = table.wrapperElement?.querySelector('[data-cge-filter-input]');
+                if (searchInput) searchInput.value = 'Admin';
+            }
+        };
+
+        window.testSortBalanceDesc = function() {
+            window.switchTab('datatable');
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table) {
+                table.sort.sortBy('spent', 'desc');
+            }
+        };
+
+        window.setDemoResponsiveMode = function(mode) {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table && table.responsive) {
+                table.responsive.setMode(mode);
+            }
+            ['collapse', 'scroll'].forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = "px-2.5 py-1 rounded font-semibold transition cursor-pointer bg-white text-indigo-700 shadow-2xs border border-slate-200";
+                    } else {
+                        btn.className = "px-2.5 py-1 rounded font-semibold transition cursor-pointer text-slate-600 hover:text-slate-900";
+                    }
+                }
+            });
+            if (window.CGEToast) {
+                window.CGEToast.info(`Layout mode changed to: [${mode.toUpperCase()}]`);
+            }
+        };
+
+        window.testAddMockRecord = function() {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (!table) return;
+
+            const id = mockCustomerId++;
+            const roles = ['Developer', 'Admin', 'Editor', 'Designer', 'Support'];
+            const names = ['Liam Torres', 'Sophia Zhang', 'Noah Patel', 'Mia Hansen'];
+            const role = roles[id % roles.length];
+            const name = names[id % names.length];
+            const spent = (Math.random() * 8000 + 500).toFixed(2);
+
+            const newRow = {
+                _id: `cust-${id}`,
+                customer: `
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0">${name.split(' ').map(n=>n[0]).join('')}</div>
+                        <div>
+                            <div class="font-semibold text-slate-900">${name} #${id}</div>
+                            <div class="text-[10px] text-slate-400">${name.toLowerCase().replace(' ', '.')}@tailtools.dev</div>
+                        </div>
+                    </div>
+                `,
+                role: `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">${role}</span>`,
+                status: `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span>`,
+                spent: `$${Number(spent).toLocaleString()}`,
+                joined: new Date().toISOString().slice(0, 10),
+                actions: `
+                    <button type="button"
+                            data-cge-action="delete"
+                            data-cge-title="Delete ${name}?"
+                            data-cge-success-toast="${name} removed!"
+                            data-cge-simulate="600"
+                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                        Delete
+                    </button>
+                `
+            };
+
+            table.rawRows.unshift(newRow);
+            table.refresh();
+
+            if (window.CGEToast) {
+                window.CGEToast.success(`Added ${name} to customer data grid!`);
+            }
+        };
+
+        window.testResetPrimaryTable = function() {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table) {
+                table.filter.clear();
+                table.sort.reset();
+                table.pagination.goTo(1);
+                table.clearSelection();
+                table.responsive.setMode('collapse');
+                window.setDemoResponsiveMode('collapse');
+            }
+        };
+
+        window.testSelectAllPrimary = function() {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table) table.selectAll();
+        };
+
+        window.testClearSelectionPrimary = function() {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (table) table.clearSelection();
+        };
+
+        window.testDeleteSelectedPrimary = async function() {
+            const table = window.CGEDataTable?.get('#demo-primary-table');
+            if (!table) return;
+            const count = table.selectedRowIds.size;
+            if (count === 0) {
+                if (window.CGEToast) window.CGEToast.info('No records currently selected.');
+                return;
+            }
+
+            let confirmed = true;
+            if (window.CGEAlert && typeof window.CGEAlert.delete === 'function') {
+                confirmed = await window.CGEAlert.delete('Delete Selected?', `Permanently remove ${count} selected records?`);
+            } else {
+                confirmed = window.confirm(`Permanently remove ${count} selected records?`);
+            }
+
+            if (confirmed) {
+                table.deleteSelected();
+                if (window.CGEToast) window.CGEToast.success(`${count} records removed from data grid!`);
+            }
+        };
+
+
+        // ---------------------------------------------------------------------
+        // Simulated Laravel LengthAwarePaginator Dataset (60 items)
+        // ---------------------------------------------------------------------
+        const MOCK_LARAVEL_DB = Array.from({ length: 60 }, (_, i) => {
+            const id = i + 1;
+            const plans = ['Pro Plan ($49/mo)', 'Enterprise ($199/mo)', 'Starter ($19/mo)', 'Team Cloud ($99/mo)'];
+            const users = ['Cloudflare CDN', 'Stripe Payments', 'GitHub Actions', 'Vercel Edge', 'Supabase DB', 'Tailwind Labs'];
+            const statuses = ['Active', 'Active', 'Past Due', 'Trialing'];
+            return {
+                id: `SUB-${1000 + id}`,
+                service: users[i % users.length] + ` (Node #${id})`,
+                plan: plans[i % plans.length],
+                renewal: `2026-1${(id % 2) + 1}-${String((id % 28) + 1).padStart(2, '0')}`,
+                status: statuses[i % statuses.length],
+                cost: `$${(29 + (id * 17) % 250)}.00`,
+                actions: `
+                    <button type="button"
+                            data-cge-action="delete"
+                            data-cge-title="Cancel Subscription SUB-${1000 + id}?"
+                            data-cge-message="Your team will lose access at the end of the billing period."
+                            data-cge-success-toast="Subscription SUB-${1000 + id} cancelled!"
+                            data-cge-simulate="700"
+                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                        Cancel
+                    </button>
+                `
+            };
+        });
+
+        window.demoAjaxTableInstance = null;
+
+        function simulateLaravelPaginatorResponse(page = 1, perPage = 5, search = '', sortBy = null, sortDir = 'asc') {
+            let filtered = [...MOCK_LARAVEL_DB];
+            if (search) {
+                const q = search.toLowerCase();
+                filtered = filtered.filter(item =>
+                    item.service.toLowerCase().includes(q) ||
+                    item.plan.toLowerCase().includes(q) ||
+                    item.status.toLowerCase().includes(q)
+                );
+            }
+            if (sortBy && sortBy in filtered[0]) {
+                filtered.sort((a, b) => {
+                    const cmp = String(a[sortBy]).localeCompare(String(b[sortBy]), undefined, { numeric: true });
+                    return sortDir === 'desc' ? -cmp : cmp;
+                });
+            }
+            const total = filtered.length;
+            const lastPage = Math.max(1, Math.ceil(total / perPage));
+            const clampedPage = Math.max(1, Math.min(page, lastPage));
+            const start = (clampedPage - 1) * perPage;
+            const data = filtered.slice(start, start + perPage);
+
+            return {
+                data,
+                current_page: clampedPage,
+                last_page: lastPage,
+                per_page: perPage,
+                total,
+                from: start + 1,
+                to: Math.min(total, start + perPage)
+            };
+        }
+
+        window.testSimulateAjaxPage = async function(pageNum) {
+            if (!window.demoAjaxTableInstance) return;
+            const qStr = `/api/v1/subscriptions?page=${pageNum}&per_page=5`;
+            const qEl = document.getElementById('ajax-query-string');
+            if (qEl) qEl.textContent = qStr;
+
+            window.demoAjaxTableInstance.setLoading(true);
+            await new Promise(r => setTimeout(r, 600));
+
+            const res = simulateLaravelPaginatorResponse(pageNum, 5);
+            window.demoAjaxTableInstance._handleServerResponse(res);
+            window.demoAjaxTableInstance.setLoading(false);
+        };
+
+        window.testSimulateAjaxSearch = async function() {
+            if (!window.demoAjaxTableInstance) return;
+            const qStr = `/api/v1/subscriptions?search=Pro&page=1&per_page=5`;
+            const qEl = document.getElementById('ajax-query-string');
+            if (qEl) qEl.textContent = qStr;
+
+            window.demoAjaxTableInstance.setLoading(true);
+            await new Promise(r => setTimeout(r, 600));
+
+            const res = simulateLaravelPaginatorResponse(1, 5, 'Pro');
+            window.demoAjaxTableInstance._handleServerResponse(res);
+            window.demoAjaxTableInstance.setLoading(false);
+        };
+
+        let bladeRowBatchCounter = 1;
+        window.testInjectBladeRows = function() {
+            const tbody = document.getElementById('blade-rows-tbody');
+            const table = window.CGEDataTable?.get('#demo-blade-table');
+            if (!tbody || !table) return;
+
+            const batch = bladeRowBatchCounter++;
+            const rowsHtml = `
+                <tr>
+                    <td class="font-mono text-slate-500">TT-BATCH-${batch}01</td>
+                    <td class="font-semibold text-slate-900">Vercel Edge Gateway #${batch}</td>
+                    <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-violet-50 text-violet-700">Team Cloud</span></td>
+                    <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700">Active</span></td>
+                    <td>
+                        <button type="button"
+                                data-cge-action="delete"
+                                data-cge-title="Revoke License TT-BATCH-${batch}01?"
+                                data-cge-message="Blade row rendered server-side and injected dynamically."
+                                data-cge-success-toast="License revoked successfully!"
+                                data-cge-simulate="600"
+                                class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                            Revoke
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="font-mono text-slate-500">TT-BATCH-${batch}02</td>
+                    <td class="font-semibold text-slate-900">Supabase Postgres Node #${batch}</td>
+                    <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700">Enterprise</span></td>
+                    <td><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700">Audit Pending</span></td>
+                    <td>
+                        <button type="button"
+                                data-cge-action="delete"
+                                data-cge-title="Revoke License TT-BATCH-${batch}02?"
+                                data-cge-message="Blade row rendered server-side and injected dynamically."
+                                data-cge-success-toast="License revoked successfully!"
+                                data-cge-simulate="600"
+                                class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                            Revoke
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            // Simulates server response with data.full
+            table._handleServerResponse({ full: rowsHtml, total: 2, current_page: 1, per_page: 5 });
+
+            if (window.CGEToast) {
+                window.CGEToast.success(`Injected Blade Rows Batch #${batch}! ActionButtons re-bound automatically.`);
+            }
+        };
+
+        // Standalone Sub-Modules Demos
+        window.standaloneFilterInst = null;
+        window.standaloneSortInst = null;
+        window.standalonePaginationInst = null;
+
+        function setupDataTableDemos() {
+            // Setup Ajax Paginator Container
+            const ajaxContainer = document.getElementById('ajax-datatable-container');
+            if (ajaxContainer && window.CGEDataTable && !window.demoAjaxTableInstance) {
+                window.demoAjaxTableInstance = new window.CGEDataTable(ajaxContainer, {
+                    source: 'json',
+                    perPage: 5,
+                    selectable: true,
+                    columns: [
+                        { key: 'id', label: 'Subscription ID', priority: 1 },
+                        { key: 'service', label: 'Service / Cluster', priority: 1 },
+                        { key: 'plan', label: 'Plan', priority: 2 },
+                        { key: 'renewal', label: 'Next Renewal', priority: 3, type: 'date' },
+                        { key: 'cost', label: 'Cost', priority: 2, type: 'currency' },
+                        { key: 'status', label: 'Status', priority: 3 },
+                        { key: 'actions', label: 'Actions', priority: 1 }
+                    ],
+                    data: MOCK_LARAVEL_DB.slice(0, 5)
+                });
+                window.demoAjaxTableInstance.pagination.setMetrics({ total: 60, perPage: 5, page: 1 });
+            }
+
+            // Standalone CGEFilter demo
+            const filterInput = document.getElementById('standalone-filter-input');
+            const filterList = document.getElementById('standalone-filter-list');
+            if (filterInput && filterList && window.CGEFilter) {
+                window.standaloneFilterInst = new window.CGEFilter({
+                    input: filterInput,
+                    debounce: 250,
+                    onChange: ({ global }) => {
+                        const q = global.toLowerCase();
+                        Array.from(filterList.children).forEach(li => {
+                            li.style.display = li.textContent.toLowerCase().includes(q) ? '' : 'none';
+                        });
+                    }
+                });
+            }
+
+            // Standalone CGESort demo
+            const sortTable = document.getElementById('standalone-sort-table');
+            if (sortTable && window.CGESort) {
+                window.standaloneSortInst = new window.CGESort({
+                    onChange: () => {
+                        const tbody = sortTable.querySelector('tbody');
+                        const rows = Array.from(tbody.querySelectorAll('tr')).map(tr => ({
+                            item: tr.children[0].innerText.trim(),
+                            qty: parseInt(tr.children[1].innerText.trim(), 10),
+                            _el: tr
+                        }));
+                        const sorted = window.standaloneSortInst.sortRows(rows, [
+                            { key: 'item', type: 'string' },
+                            { key: 'qty', type: 'number' }
+                        ]);
+                        tbody.innerHTML = '';
+                        sorted.forEach(r => tbody.appendChild(r._el));
+                    }
+                });
+                window.standaloneSortInst.attachHeaders(sortTable);
+            }
+
+            // Standalone CGEPagination demo
+            if (window.CGEPagination && !window.standalonePaginationInst) {
+                window.standalonePaginationInst = new window.CGEPagination({
+                    page: 1,
+                    perPage: 10,
+                    total: 120,
+                    onChange: ({ page, lastPage }) => {
+                        const el = document.getElementById('standalone-pager-metrics');
+                        if (el) el.textContent = `Page ${page} of ${lastPage}`;
+                    }
+                });
+            }
+        }
+
+        window.testStandalonePagerPrev = function() {
+            if (window.standalonePaginationInst) window.standalonePaginationInst.prev();
+        };
+
+        window.testStandalonePagerNext = function() {
+            if (window.standalonePaginationInst) window.standalonePaginationInst.next();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupDataTableDemos);
+        } else {
+            setTimeout(setupDataTableDemos, 250);
+        }
+
+        // =====================================================================
+        // CGEDataGrid Sandbox Demo Setup & Mock Datasets
+        // =====================================================================
+
+        // 1. Mock Blog Posts
+        const MOCK_BLOG_POSTS = [
+            {
+                id: 1,
+                title: 'Mastering Tailwind CSS v4 Cascading Layers',
+                category: 'Frontend',
+                author: 'Elena Rostova',
+                date: '2026-03-12',
+                cover: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=600&auto=format&fit=crop',
+                excerpt: 'Deep dive into @theme directives, zero-config imports, and modern CSS container query layouts.'
+            },
+            {
+                id: 2,
+                title: 'Laravel 12 High-Concurrency Distributed Architecture',
+                category: 'Architecture',
+                author: 'Marcus Vance',
+                date: '2026-03-16',
+                cover: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop',
+                excerpt: 'Architecting resilient Redis cluster backplanes, database sharding, and real-time event streaming.'
+            },
+            {
+                id: 3,
+                title: 'Zero-Trust Container Security in Kubernetes',
+                category: 'Security',
+                author: 'Sarah Jenkins',
+                date: '2026-03-20',
+                cover: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&auto=format&fit=crop',
+                excerpt: 'Implementing mutual TLS mesh, automated vulnerability scanning, and kernel-level runtime enforcement.'
+            },
+            {
+                id: 4,
+                title: 'Next-Gen Edge Deployments with HTTP/3 & Vite',
+                category: 'DevOps',
+                author: 'Alex Rivera',
+                date: '2026-03-25',
+                cover: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop',
+                excerpt: 'Sub-millisecond static asset hydration with global edge servers and Brotli compression.'
+            },
+            {
+                id: 5,
+                title: 'Building Reactive Native JavaScript UI Engines',
+                category: 'Frontend',
+                author: 'Liam Torres',
+                date: '2026-03-28',
+                cover: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop',
+                excerpt: 'Eliminate heavy runtime frameworks by leveraging DOM CustomEvents, micro-tasks, and ResizeObservers.'
+            },
+            {
+                id: 6,
+                title: 'Automated CI/CD Pipelines with GitHub Actions',
+                category: 'DevOps',
+                author: 'Sophia Zhang',
+                date: '2026-04-01',
+                cover: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=600&auto=format&fit=crop',
+                excerpt: 'Orchestrating multi-region deployment matrices, artifact caching, and zero-downtime rollouts.'
+            },
+            {
+                id: 7,
+                title: 'Cryptographic Identity & OAuth2 Federated Mesh',
+                category: 'Security',
+                author: 'Noah Patel',
+                date: '2026-04-03',
+                cover: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&auto=format&fit=crop',
+                excerpt: 'Token binding, decentralized PKI infrastructure, and biometric WebAuthn verification.'
+            },
+            {
+                id: 8,
+                title: 'Database Indexing Strategies for Terabyte Datasets',
+                category: 'Architecture',
+                author: 'Mia Hansen',
+                date: '2026-04-04',
+                cover: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=600&auto=format&fit=crop',
+                excerpt: 'Composite B-Trees, BRIN partitioning, and query execution plan tuning in modern Postgres.'
+            }
+        ];
+
+        // 2. Mock Students with direct Laravel Blade Pre-rendered Resource HTML
+        const MOCK_STUDENTS_RESOURCE = [
+            { id: 101, name: 'Lucas Montgomery', email: 'lucas.m@stanford.edu', major: 'Computer Science', gpa: '3.94', status: 'Honors', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop' },
+            { id: 102, name: 'Aria Takahashi', email: 'aria.t@mit.edu', major: 'Robotics Engineering', gpa: '4.00', status: 'Honors', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop' },
+            { id: 103, name: 'Ethan Caldwell', email: 'ethan.c@berkeley.edu', major: 'Data Science', gpa: '3.82', status: 'Active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop' },
+            { id: 104, name: 'Zara Al-Mansoor', email: 'zara.a@oxford.ac.uk', major: 'Cybernetics', gpa: '3.88', status: 'Active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop' },
+            { id: 105, name: 'Julian Vance', email: 'julian.v@harvard.edu', major: 'Applied Mathematics', gpa: '3.75', status: 'Active', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop' },
+            { id: 106, name: 'Maya Lin', email: 'maya.lin@cmu.edu', major: 'Human-Computer Interaction', gpa: '3.91', status: 'Honors', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop' },
+            { id: 107, name: 'Kaelen Thorne', email: 'k.thorne@cambridge.ac.uk', major: 'Quantum Computing', gpa: '3.97', status: 'Honors', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop' },
+            { id: 108, name: 'Chloe Dubois', email: 'chloe.d@sorbonne.fr', major: 'Cognitive Systems', gpa: '3.69', status: 'Probation', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop' }
+        ].map(s => {
+            const badgeClass = s.status === 'Honors' ? 'bg-amber-50 text-amber-700 border-amber-200/60' : s.status === 'Probation' ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-emerald-50 text-emerald-700 border-emerald-200/60';
+            return {
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                major: s.major,
+                status: s.status,
+                // Blade HTML card partial:
+                html_card: `
+                    <div class="cge-card relative bg-white dark:bg-slate-900 p-5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition flex flex-col justify-between" data-cge-id="${s.id}">
+                        <div class="flex items-start gap-3.5">
+                            <img src="${s.avatar}" alt="${s.name}" class="w-12 h-12 rounded-sm object-cover shrink-0 ring-2 ring-indigo-500/20" />
+                            <div class="min-w-0 flex-1">
+                                <h4 class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">${s.name}</h4>
+                                <p class="text-xs text-slate-500 truncate">${s.email}</p>
+                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-sm border ${badgeClass}">${s.status}</span>
+                                    <span class="text-[10px] font-mono text-slate-400">GPA: ${s.gpa}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                            <span class="text-slate-400 truncate max-w-[130px]">${s.major}</span>
+                            <button type="button"
+                                    data-cge-action="delete"
+                                    data-cge-title="Remove Student ${s.name}?"
+                                    data-cge-message="Student record will be unlinked from the university registry."
+                                    data-cge-success-toast="${s.name} removed successfully!"
+                                    data-cge-simulate="600"
+                                    class="text-rose-600 hover:underline font-semibold cursor-pointer">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `,
+                // Blade HTML list row partial:
+                html_list: `
+                    <div class="cge-card bg-white dark:bg-slate-900 px-5 py-3.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition flex items-center justify-between gap-4" data-cge-id="${s.id}">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <img src="${s.avatar}" alt="${s.name}" class="w-10 h-10 rounded-sm object-cover shrink-0" />
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">${s.name}</h4>
+                                <p class="text-xs text-slate-500 truncate">${s.email} • <span class="text-slate-400">${s.major}</span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 shrink-0">
+                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${badgeClass}">${s.status}</span>
+                            <button type="button"
+                                    data-cge-action="delete"
+                                    data-cge-title="Remove Student ${s.name}?"
+                                    data-cge-success-toast="${s.name} removed!"
+                                    data-cge-simulate="600"
+                                    class="text-rose-600 hover:underline text-xs font-semibold cursor-pointer">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `
+            };
+        });
+
+        // 3. Mock 60 Cloud Cluster items for Showcase 3
+        const MOCK_CLUSTERS_DB = Array.from({ length: 60 }, (_, i) => {
+            const id = i + 1;
+            const regions = ['us-east-1 (N. Virginia)', 'eu-central-1 (Frankfurt)', 'ap-southeast-1 (Singapore)', 'us-west-2 (Oregon)'];
+            const types = ['Production Kubernetes', 'Redis Shard Cluster', 'Postgres Primary', 'Elasticsearch Node'];
+            const healths = ['Healthy', 'Healthy', 'Healthy', 'Degraded', 'Syncing'];
+            const health = healths[id % healths.length];
+            const healthColor = health === 'Healthy' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : health === 'Degraded' ? 'bg-rose-50 text-rose-700 border-rose-200/60' : 'bg-amber-50 text-amber-700 border-amber-200/60';
+            return {
+                id: `CLS-${1000 + id}`,
+                title: `Node-${id} (${types[id % types.length]})`,
+                region: regions[id % regions.length],
+                nodes: 2 + (id % 12),
+                cpu: `${(15 + (id * 7) % 75)}%`,
+                ram: `${(20 + (id * 11) % 65)}%`,
+                health: health,
+                healthColor: healthColor,
+                updated: `2026-04-${String((id % 30) + 1).padStart(2, '0')}`
+            };
+        });
+
+        window.demoBlogGridInstance = null;
+        window.demoStudentsGridInstance = null;
+        window.demoClustersGridInstance = null;
+
+        window.setupDataGridDemos = function() {
+            if (!window.CGEDataGrid) return;
+
+            // 1. Setup Blog Articles Grid
+            const blogEl = document.getElementById('demo-blog-grid');
+            if (blogEl && !window.demoBlogGridInstance) {
+                window.demoBlogGridInstance = new window.CGEDataGrid(blogEl, {
+                    source: 'json',
+                    data: MOCK_BLOG_POSTS,
+                    layoutMode: 'both',
+                    viewMode: 'grid',
+                    perPage: 6,
+                    gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+
+                    // Dedicated Grid Card Renderer
+                    cardRendererGrid: (item) => `
+                        <article class="cge-card bg-white dark:bg-slate-900 rounded-sm border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between" data-cge-id="${item.id}">
+                            <div>
+                                <img src="${item.cover}" alt="${item.title}" class="w-full h-44 object-cover" />
+                                <div class="p-5">
+                                    <span class="px-2.5 py-0.5 rounded-sm text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60">${item.category}</span>
+                                    <h3 class="font-bold text-slate-900 dark:text-slate-100 text-sm mt-2 line-clamp-2">${item.title}</h3>
+                                    <p class="text-xs text-slate-500 mt-1 line-clamp-2">${item.excerpt}</p>
+                                </div>
+                            </div>
+                            <div class="px-5 pb-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                                <span>${item.date}</span>
+                                <button type="button"
+                                        data-cge-action="delete"
+                                        data-cge-title="Delete ${item.title}?"
+                                        data-cge-success-toast="Article deleted!"
+                                        data-cge-simulate="500"
+                                        class="text-rose-600 hover:underline font-semibold cursor-pointer">
+                                    Delete
+                                </button>
+                            </div>
+                        </article>
+                    `,
+
+                    // Dedicated List Row Renderer
+                    cardRendererList: (item) => `
+                        <article class="cge-card bg-white dark:bg-slate-900 p-4 rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition flex items-center justify-between gap-4" data-cge-id="${item.id}">
+                            <div class="flex items-center gap-4 min-w-0">
+                                <img src="${item.cover}" alt="${item.title}" class="w-16 h-16 rounded-sm object-cover shrink-0" />
+                                <div class="min-w-0">
+                                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">${item.category}</span>
+                                    <h3 class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate mt-1">${item.title}</h3>
+                                    <p class="text-xs text-slate-500 truncate">${item.excerpt}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 shrink-0 text-xs">
+                                <span class="text-slate-400 hidden sm:inline">${item.date}</span>
+                                <button type="button"
+                                        data-cge-action="delete"
+                                        data-cge-title="Delete ${item.title}?"
+                                        data-cge-success-toast="Article deleted!"
+                                        data-cge-simulate="500"
+                                        class="text-rose-600 hover:underline font-semibold cursor-pointer">
+                                    Delete
+                                </button>
+                            </div>
+                        </article>
+                    `
+                });
+
+                // Attach category filter select
+                const catFilter = document.getElementById('blog-category-filter');
+                if (catFilter) {
+                    window.demoBlogGridInstance.filter.attachFieldFilter('category', catFilter);
+                }
+            }
+
+            // 2. Setup Students Directory (Blade Pre-rendered HTML Resources)
+            const studentsEl = document.getElementById('demo-students-grid');
+            if (studentsEl && !window.demoStudentsGridInstance) {
+                window.demoStudentsGridInstance = new window.CGEDataGrid(studentsEl, {
+                    source: 'json',
+                    data: MOCK_STUDENTS_RESOURCE,
+                    layoutMode: 'both',
+                    viewMode: 'grid',
+                    selectable: true,
+                    perPage: 6,
+                    gridCols: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                });
+            }
+
+            // 3. Setup Simulated Ajax Clusters Grid
+            const clustersEl = document.getElementById('demo-clusters-grid');
+            if (clustersEl && !window.demoClustersGridInstance) {
+                window.demoClustersGridInstance = new window.CGEDataGrid(clustersEl, {
+                    source: 'json',
+                    data: MOCK_CLUSTERS_DB,
+                    layoutMode: 'both',
+                    viewMode: 'grid',
+                    perPage: 6,
+                    gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+                    cardRendererGrid: (c) => `
+                        <div class="cge-card bg-white dark:bg-slate-900 p-5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition flex flex-col justify-between" data-cge-id="${c.id}">
+                            <div>
+                                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
+                                    <span class="font-mono text-xs text-slate-400">${c.id}</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-sm border ${c.healthColor}">${c.health}</span>
+                                </div>
+                                <h4 class="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">${c.title}</h4>
+                                <p class="text-xs text-slate-500 mb-3">📍 ${c.region}</p>
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="p-2 rounded-sm bg-slate-50 dark:bg-slate-800 text-center">
+                                        <div class="text-[10px] text-slate-400">CPU Usage</div>
+                                        <div class="font-bold text-slate-800 dark:text-slate-200 font-mono">${c.cpu}</div>
+                                    </div>
+                                    <div class="p-2 rounded-sm bg-slate-50 dark:bg-slate-800 text-center">
+                                        <div class="text-[10px] text-slate-400">RAM Allocated</div>
+                                        <div class="font-bold text-slate-800 dark:text-slate-200 font-mono">${c.ram}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                                <span class="text-slate-400 font-mono">${c.nodes} Nodes</span>
+                                <button type="button"
+                                        data-cge-action="delete"
+                                        data-cge-title="Terminate Cluster ${c.id}?"
+                                        data-cge-message="All node workers will be decommissioned immediately."
+                                        data-cge-success-toast="Cluster ${c.id} decommissioned!"
+                                        data-cge-simulate="700"
+                                        class="px-2 py-1 rounded-sm bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                    Terminate
+                                </button>
+                            </div>
+                        </div>
+                    `,
+                    cardRendererList: (c) => `
+                        <div class="cge-card bg-white dark:bg-slate-900 px-5 py-3.5 rounded-sm border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition flex items-center justify-between gap-4" data-cge-id="${c.id}">
+                            <div class="flex items-center gap-4 min-w-0">
+                                <span class="font-mono text-xs text-slate-400 shrink-0">${c.id}</span>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">${c.title}</h4>
+                                    <p class="text-xs text-slate-500 truncate">📍 ${c.region} • CPU: <span class="font-mono">${c.cpu}</span> • RAM: <span class="font-mono">${c.ram}</span></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 shrink-0">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-sm border ${c.healthColor}">${c.health}</span>
+                                <button type="button"
+                                        data-cge-action="delete"
+                                        data-cge-title="Terminate Cluster ${c.id}?"
+                                        data-cge-success-toast="Cluster ${c.id} decommissioned!"
+                                        data-cge-simulate="700"
+                                        class="px-2 py-1 rounded-sm bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold cursor-pointer transition">
+                                    Terminate
+                                </button>
+                            </div>
+                        </div>
+                    `
+                });
+            }
+        };
+
+        let newBlogCounter = 9;
+        window.testAddBlogCard = function() {
+            if (!window.demoBlogGridInstance) return;
+            const id = newBlogCounter++;
+            const categories = ['Frontend', 'Architecture', 'DevOps', 'Security'];
+            const cat = categories[id % categories.length];
+            const newPost = {
+                id: id,
+                title: `Automated Pipeline & Security Pattern #${id}`,
+                category: cat,
+                author: 'System Bot',
+                date: new Date().toISOString().slice(0, 10),
+                cover: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop',
+                excerpt: 'Dynamic article card added in real-time to verify responsive grid layout and action button bindings.'
+            };
+            window.demoBlogGridInstance.data.unshift(newPost);
+            window.demoBlogGridInstance.refresh();
+            if (window.CGEToast) {
+                window.CGEToast.success(`Added "${newPost.title}" to blog cards grid!`);
+            }
+        };
+
+        window.testToggleDataGridView = function() {
+            if (!window.demoBlogGridInstance) return;
+            const nextMode = window.demoBlogGridInstance.viewMode === 'grid' ? 'list' : 'grid';
+            window.demoBlogGridInstance.setViewMode(nextMode);
+            if (window.CGEToast) {
+                window.CGEToast.info(`View mode switched to [${nextMode.toUpperCase()}]`);
+            }
+        };
+
+        window.testSelectAllStudents = function() {
+            if (window.demoStudentsGridInstance) {
+                window.demoStudentsGridInstance.selectAll();
+            }
+        };
+
+        window.testClearStudentSelection = function() {
+            if (window.demoStudentsGridInstance) {
+                window.demoStudentsGridInstance.clearSelection();
+            }
+        };
+
+        window.testDeleteSelectedStudents = function() {
+            if (window.demoStudentsGridInstance) {
+                window.demoStudentsGridInstance.deleteSelected();
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(window.setupDataGridDemos, 300);
+            });
+        } else {
+            setTimeout(window.setupDataGridDemos, 300);
+        }
     </script>
     <section class="max-w-6xl mx-auto p-6 mb-8 border border-slate-700 rounded-sm" id="maintenance-regressions">
         <h2 class="text-lg font-semibold mb-2">Maintenance regression checks</h2>

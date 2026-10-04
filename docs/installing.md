@@ -19,13 +19,15 @@ npm install /path/to/tailtools-0.0.0.tgz
 ## JavaScript / TypeScript
 
 ```javascript
-import TailTools, { CGEModal, CGESelect, initTailTools } from 'tailtools';
+import TailTools, { CGEModal, CGESelect, CGEDataTable, CGEDataGrid, initTailTools } from 'tailtools';
 // Root import exposes globals and auto-initializes in the browser.
 initTailTools(document.querySelector('#new-content')); // after injecting a subtree
 
 // Individual imports have no root auto-initialization side effect:
 import { CGEDropzone } from 'tailtools/plugins/CGEDropzone';
 import CGEAlert from 'tailtools/CGEAlert';
+import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from 'tailtools/plugins/CGEDataTable';
+import { CGEDataGrid } from 'tailtools/plugins/CGEDataGrid';
 ```
 
 Root/plugin declarations pass strict NodeNext and Bundler resolution with skipLibCheck disabled. Plugins require a DOM when used; importing the ESM package itself does not require a DOM.

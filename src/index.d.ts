@@ -7,6 +7,8 @@ export * from '../plugins/CGELightbox/index.js';
 export * from '../plugins/CGEModal/index.js';
 export * from '../plugins/CGESelect/index.js';
 export * from '../plugins/CGEToast/index.js';
+export * from '../plugins/CGEDataTable/index.js';
+export * from '../plugins/CGEDataGrid/index.js';
 export declare function initTailTools(root?: Document | HTMLElement): void;
 export declare const init: typeof initTailTools;
 
@@ -19,6 +21,8 @@ import { CGELightbox } from '../plugins/CGELightbox/index.js';
 import { CGEModal } from '../plugins/CGEModal/index.js';
 import { CGESelect } from '../plugins/CGESelect/index.js';
 import { CGEToast } from '../plugins/CGEToast/index.js';
+import { CGEDataTable } from '../plugins/CGEDataTable/index.js';
+import { CGEDataGrid } from '../plugins/CGEDataGrid/index.js';
 declare const TailTools: {
   init: typeof initTailTools;
   CGEActionButton: typeof CGEActionButton;
@@ -30,5 +34,7 @@ declare const TailTools: {
   CGEModal: typeof CGEModal;
   CGESelect: typeof CGESelect;
   CGEToast: typeof CGEToast;
+  CGEDataTable: typeof CGEDataTable;
+  CGEDataGrid: typeof CGEDataGrid;
 };
 export default TailTools;

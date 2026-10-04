@@ -1,4 +1,4 @@
-import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, init, initTailTools } from 'tailtools';
+import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, init, initTailTools } from 'tailtools';
 import TailTools from 'tailtools';
 import Modal from 'tailtools/plugins/CGEModal';
 import Toast from 'tailtools/plugins/CGEToast';
@@ -9,12 +9,16 @@ import Lightbox from 'tailtools/plugins/CGELightbox';
 import Action from 'tailtools/plugins/CGEActionButton';
 import Select from 'tailtools/plugins/CGESelect';
 import Dropzone from 'tailtools/plugins/CGEDropzone';
+import DataTable from 'tailtools/plugins/CGEDataTable';
+import DataGrid from 'tailtools/plugins/CGEDataGrid';
 import { CGESelect as ShortSelect, type CGESelectOptions } from 'tailtools/CGESelect';
+import { CGEDataTable as ShortDataTable, type CGEDataTableOptions } from 'tailtools/CGEDataTable';
+import { CGEDataGrid as ShortDataGrid, type CGEDataGridOptions } from 'tailtools/CGEDataGrid';
 import type { CGESelectEventMap } from '../../plugins/CGESelect/index.js';
 import type { CGEDropzoneOptions } from '../../plugins/CGEDropzone/index.js';
 
-const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone,
-  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, ShortSelect];
+const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid,
+  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, ShortSelect, ShortDataTable, ShortDataGrid];
 void constructors;
 init(document); initTailTools(document.body);
 TailTools.init(document);

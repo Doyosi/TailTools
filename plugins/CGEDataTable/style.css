@@ -1,0 +1,128 @@
+/**
+ * CGEDataTable Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+/* Hidden column utility in collapse mode */
+.cge-col-hidden {
+  display: none !important;
+}
+
+/* Sortable column header interactions */
+.cge-th-sortable {
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.cge-th-sortable:hover {
+  background-color: rgba(241, 245, 249, 0.8);
+}
+
+:is(.dark .cge-th-sortable:hover) {
+  background-color: rgba(30, 41, 59, 0.8);
+}
+
+.cge-th-sortable:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+}
+
+.cge-sorted-asc,
+.cge-sorted-desc {
+  color: #4f46e5 !important;
+}
+
+:is(.dark .cge-sorted-asc),
+:is(.dark .cge-sorted-desc) {
+  color: #818cf8 !important;
+}
+
+/* Child row accordion micro-animation */
+.cge-child-row {
+  animation: cge-child-row-appear 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cge-child-row-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cge-row-expanded {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+:is(.dark .cge-row-expanded) {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+/* Hidden column and toggle utilities */
+.cge-col-hidden,
+.cge-responsive-toggle.hidden {
+  display: none !important;
+}
+
+/* Row selection styles */
+.cge-row-selected {
+  background-color: rgba(238, 242, 255, 0.9) !important;
+}
+
+:is(.dark .cge-row-selected) {
+  background-color: rgba(49, 46, 129, 0.3) !important;
+}
+
+/* Checkbox column geometry & alignment */
+th[data-cge-key="_select"],
+td[data-cge-key="_select"] {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  text-align: center !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+th[data-cge-key="_select"] input[type="checkbox"],
+td[data-cge-key="_select"] input[type="checkbox"] {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Responsive toggle button */
+.cge-responsive-toggle {
+  vertical-align: middle;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.cge-responsive-toggle[aria-expanded="true"] {
+  background-color: rgba(224, 231, 255, 0.9);
+  color: #4338ca;
+}
+
+:is(.dark .cge-responsive-toggle[aria-expanded="true"]) {
+  background-color: rgba(49, 46, 129, 0.8);
+  color: #a5b4fc;
+}
+
+/* Horizontal Scroll Mode Container Shadows */
+.cge-table-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.cge-table-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.cge-table-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cge-table-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}

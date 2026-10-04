@@ -1,6 +1,8 @@
 @source "./plugins/**/*.js";
 @import "./plugins/CGEActionButton/style.css";
 @import "./plugins/CGEAlert/style.css";
+@import "./plugins/CGEDataGrid/style.css";
+@import "./plugins/CGEDataTable/style.css";
 @import "./plugins/CGEDrawer/style.css";
 @import "./plugins/CGEDropzone/style.css";
 @import "./plugins/CGEForm/style.css";

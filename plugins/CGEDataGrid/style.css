@@ -1,0 +1,80 @@
+/**
+ * CGEDataGrid Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+/* Card entry animation */
+.cge-grid-items .cge-card {
+  animation: cge-card-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cge-card-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card selected ring & highlight */
+.cge-card.cge-card-selected {
+  position: relative;
+  box-shadow: 0 0 0 2px #6366f1, 0 4px 12px -2px rgba(99, 102, 241, 0.15) !important;
+}
+
+:is(.dark .cge-card.cge-card-selected) {
+  box-shadow: 0 0 0 2px #818cf8, 0 4px 12px -2px rgba(129, 140, 248, 0.25) !important;
+}
+
+/* Checkbox positioning and micro-interaction */
+.cge-card-checkbox-wrapper {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.125rem;
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+:is(.dark .cge-card-checkbox-wrapper) {
+  background-color: rgba(15, 23, 42, 0.85);
+}
+
+.cge-card:hover .cge-card-checkbox-wrapper {
+  transform: scale(1.05);
+}
+
+/* View switcher transitions */
+.cge-view-list {
+  transition: all 0.2s ease-in-out;
+}
+
+.cge-view-grid {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Selection Bar Floating animation */
+.cge-datagrid-selection-bar {
+  animation: cge-selection-slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cge-selection-slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
