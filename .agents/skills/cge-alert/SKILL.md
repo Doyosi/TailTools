@@ -163,4 +163,8 @@ document.addEventListener('cge:alert:close', (e) => console.log('Closed'));
 
 Declarative confirmation uses a valid submit button with requestSubmit, supports external form-associated buttons, and removes temporary name/value inputs for other triggers. Repeated clicks while confirmation waits cannot bypass it. Dismissed async validators/preConfirm cannot deliver late confirmation. Alert owns scroll/focus only while its overlay is active; use dismiss/close and await the result Promise rather than assuming an instance destroy API.
 
-Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEAlert.d.ts](../../../../plugins/CGEAlert/CGEAlert.d.ts).
+Use the current compact Alert defaults: rounded-xl card, rounded-md controls, inline semantic icon and restrained shadows. Keep the other plugins’ existing visual defaults. The canonical API is [CGEAlert.d.ts](../../../plugins/CGEAlert/CGEAlert.d.ts).
+
+
+## Compact UI defaults (2026-10-05)
+The dialog uses an inline 40px semantic badge, 16px title and 13px body text, with 16px mobile / 20px desktop padding. Actions are 32px minimum on desktop and 36px below 640px; long labels wrap. The tinted footer is omitted when all action buttons are hidden by configuration. Icon:false removes the icon column. Default helper emphasis inherits the active theme. Existing button class options, light/dark/auto, size presets, validation, promises and declarative selectors stay unchanged. CSS provides visible keyboard focus and reduced-motion support. See [usage](../../../docs/CGEAlert/usage.md).

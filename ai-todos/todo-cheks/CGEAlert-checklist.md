@@ -70,3 +70,12 @@ Track the execution and verification phases for the `CGEAlert` plugin.
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+
+## 2026-10-05 compact UI refresh
+- [x] Inspect current skill/rules/rendering and record scoped visual plan.
+- [x] Compact layout, typography, inputs/buttons and themed styling.
+- [x] Update docs, skill and interactive showcase.
+- [x] Verify light/dark/mobile variants and existing behaviors; build/package checks and REPORTS.md.
+
+Completed: 27 Node / 116 Chrome, 11 visual variants at 320/390/1024 px, strict types, build, package and ESM/UMD compiled CSS checks. REPORTS.md records the measured 260→149 px desktop confirmation change.

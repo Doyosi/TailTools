@@ -71,3 +71,9 @@ Every call (`CGEAlert.fire()`, `CGEAlert.confirm()`, `CGEAlert.delete()`, etc.) 
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+
+## 2026-10-05 compact UI refresh
+Preserve static/promise APIs, themes, size presets, focus handling and validation. Replace the tall stacked icon/title layout with a compact inline header, tighten card/input/footer spacing and action sizes, use restrained shadows and semantic icon badges, improve long-content/mobile wrapping and keep custom button classes. Update four docs, canonical skill and REPORTS.md. Verify the existing interactive demo plus light/dark, iconless, prompt/type-to-confirm, three actions, loading and narrow screens visually; run existing behavior checks and distribution build/package checks.
+
+Completed 2026-10-05: compact inline header/actions, semantic light/dark badges, readable helpers, mobile wrapping and reduced motion delivered. 27 Node / 116 Chrome, 11 visual variants, strict types, build/package and ESM/UMD CSS verification passed; measured desktop confirmation height 259.75→149 px. See REPORTS.md.

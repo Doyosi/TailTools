@@ -116,3 +116,7 @@ if (deleteRes.isConfirmed) {
 Declarative confirmation uses a valid submit button with requestSubmit, supports external form-associated buttons, and removes temporary name/value inputs for other triggers. Repeated clicks while confirmation waits cannot bypass it. Dismissed async validators/preConfirm cannot deliver late confirmation. Alert owns scroll/focus only while its overlay is active; use dismiss/close and await the result Promise rather than assuming an instance destroy API.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+
+## Compact visual defaults
+Dialogs use an inline 40px semantic icon badge, a 16px title, 13px description, and tighter 16px mobile / 20px desktop body spacing. A softly tinted footer groups smaller actions; the card has a 12px radius and restrained shadow. Light/dark themes, size presets and custom button classes keep the same API.

@@ -309,3 +309,7 @@ declare global {
   }
 }
 ```
+
+
+## Visual compatibility
+The compact refresh changes default markup and styling only. Static helper signatures, promise result types, size/theme choices, data-cge-alert-action selectors, validation and lifecycle hooks remain unchanged. Consumer button class options still apply. The icon, header, body, input and action areas now carry cge-alert-* styling classes.

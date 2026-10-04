@@ -171,3 +171,22 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 const result = await CGEAlert.confirm('Continue?', 'Confirm this action.');
 if (result.isConfirmed) console.log('confirmed');
 ```
+
+
+## Compact confirmation in either theme
+```javascript
+const result = await CGEAlert.confirm('Publish article?', 'Visible to everyone in your workspace.', {
+  theme: 'light', // or 'dark' / 'auto'
+  confirmButtonText: 'Publish',
+  cancelButtonText: 'Keep editing'
+});
+```
+
+```html
+<button type="button" data-cge-alert="confirm" data-cge-title="Publish article?"
+  data-cge-message="Visible to everyone in your workspace." data-cge-confirm-text="Publish">
+  Review and publish
+</button>
+```
+
+Set icon:false for a text-only dialog, or showDenyButton:true for three actions. Long labels wrap automatically. Use the same API for the compact default; no migration is needed.

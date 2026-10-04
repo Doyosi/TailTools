@@ -2,6 +2,38 @@
 
 **Tarih:** 5 Ekim 2026
 
+## CGEAlert kompakt görsel yenileme — tamamlandı
+
+**Güncelleme:** 5 Ekim 2026. Kullanıcının fazla padding/boşluk ve büyük butonlara yönelik isteği uygulandı. Alert için yeni görsel düzen geliştirildi; static/promise API, validation, tema ve size seçenekleri korundu.
+
+- **Yerleşim:** Dikey ikon bloğu yerine 40 px semantic ikon + başlık/metin yan yana. Başlık 16 px, açıklama 13 px; body padding mobilde 16 px, desktopta 20 px. Kapatma düğmesi SVG ile sadeleştirildi ve uzun başlıklara yer ayrıldı.
+- **Butonlar:** Desktop minimum 32 px, dar ekranda minimum 36 px; yatay padding azaltıldı ve actions gap 8 px oldu. Uzun etiketler card sınırında sarılır; spinner yerleşimi korunur. Action bulunmayan dialog boş footer oluşturmaz.
+- **Görünüm:** 12 px card radius, 6 px kontrol radius, daha hafif backdrop/blur/gölge ve yumuşak footer ayrımı. İkon alanları light/dark semantik renklerle eşleşir. Custom button class ve custom icon seçenekleri kullanılmaya devam eder.
+- **Okunurluk/erişilebilirlik:** Light temada görünmeyen type-to-confirm beyaz vurgusu tema rengini devralacak biçimde düzeltildi. Long title/message/helper wrap, focus-visible outline ve reduced-motion stilleri eklendi.
+
+### Ölçülen fark
+
+Aynı title/message ve 448 px card genişliğindeki default desktop confirmation örneği:
+
+| Ölçü | Önce | Sonra |
+| --- | --- | --- |
+| Toplam card yüksekliği | 259.75 px | 149 px (~%43 azalma) |
+| Body padding | 28 px | 20 px |
+| Confirm buton yüksekliği | 36 px | 32 px |
+| Confirm buton genişliği | 83.97 px | 71.64 px |
+
+Bu ölçüler örnek confirmation içindir; daha uzun metin ve input/üç aksiyon yüksekliği içerikle birlikte artar.
+
+### Doğrulama ve belgeler
+
+- **27/27 Node**, strict **NodeNext/Bundler**, **116/116 Chrome** regresyonu geçti. Promise confirmation, prompt validation, type-to-confirm enabled/disabled, üç aksiyonun deny sonucu, custom renk/loading ve declarative cancel akışı doğrulandı.
+- [Alert UI kontrolü](tests/alert-ui.mjs) **320, 390, 1024 px** ekranlarda **11 light/dark/input/iconless/long-label/loading varyantı** için screenshot ve ölçüm üretti. Yatay taşma ve title/close overlap yok; görüntüler incelendi. Ekran görüntüleri ve measurements.json OS temp içinde tutulur, runner konumu yazdırır.
+- `npm run build` ve `npm run test:package` başarılı. Üretilen CSS ile **ESM/UMD** içinde kompakt Alert layout ve confirmation sonucu doğrulandı; uncaught JS hatası yok.
+- Alert README/usage/examples/api, canonical skill, plan/checklist, [test rehberi](tests/README.md) ve interactive demo açıklaması güncellendi. Public declaration değişikliği gerekmiyor.
+- Bu bakımın dosyalarında `git diff --check` temiz. Kapsam dışındaki mevcut README.md düzenlemesi korundu; genel diff kontrolü o dosyada trailing-whitespace uyarıları gösteriyor. Commit/push yapılmadı.
+
+Tekrar çalıştırma: test rehberindeki Playwright ortamı ile `node tests/run-browser.mjs --serve --alert-ui --bundle --compact`. Görsel kontrol Chrome'da yapıldı; diğer browser engine'leri ve gerçek ekran okuyucu oturumu bu turda test edilmedi.
+
 ## CGEAccordion / CGECollapse ve CGETabs incelemesi — tamamlandı
 
 **Güncelleme:** 5 Ekim 2026. AGENTS.md, mevcut architecture/workflow/documentation rules, iki pluginin canonical skill'leri, plan/checklist, kaynak kod, declaration ve docs incelendi. Mevcut public API, dosya yapısı, demo teması ve Accordion'ın CSS Grid geçiş motoru korundu. Sistem yeniden tasarlanmadı.

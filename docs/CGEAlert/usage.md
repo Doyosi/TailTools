@@ -213,3 +213,9 @@ document.addEventListener('cge:alert:close', (e) => {
 Declarative confirmation uses a valid submit button with requestSubmit, supports external form-associated buttons, and removes temporary name/value inputs for other triggers. Repeated clicks while confirmation waits cannot bypass it. Dismissed async validators/preConfirm cannot deliver late confirmation. Alert owns scroll/focus only while its overlay is active; use dismiss/close and await the result Promise rather than assuming an instance destroy API.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+
+## Layout and styling
+The default body padding is 16px below sm and 20px at sm+. Desktop actions have a 32px minimum height; below 640px the minimum is 36px. Long titles, descriptions, helper phrases and button labels wrap within the card. The close button stays clear of the title; icon:false removes the icon column. Dialogs without confirm/deny/cancel actions omit the footer. Type-to-confirm helper emphasis inherits the current theme so the required phrase is readable in light mode.
+
+Use the existing confirmButtonClass/cancelButtonClass/denyButtonClass options to customize button colors. Default palettes retain semantic colors with softer shadows. Explicit light/dark themes are supported independently of the page's .dark class. The stylesheet supplies visible keyboard focus and honors prefers-reduced-motion. There is no new density or layout option.

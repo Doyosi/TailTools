@@ -1,5 +1,7 @@
 # TailTools maintenance regression checks
 
+Use `node tests/run-browser.mjs --serve --alert-ui --compact` for the compact CGEAlert visual checks. It captures 11 light/dark/mobile/desktop variants at 320, 390 and 1024 px, measures overflow and close-button overlap, and checks input validation, type-to-confirm, three actions, loading/custom colors, no-action footer and declarative cancel. Screenshots and measurements are saved to OS temp. `--bundle` also loads the generated CSS and verifies compact Alert rendering/confirmation in both ESM and UMD.
+
 `npm test` runs Node request/API/documentation regressions, then strict TypeScript checks with NodeNext and Bundler. TypeScript is a development dependency.
 
 Run `npm run dev` and open `/tests/regressions.html`, or use the demo link. Scenarios cover all thirteen primary plugins plus CGECollapse, awaited clear, async teardown, native reset, submitters, ARIA and stacked overlays. Collection scenarios additionally cover AJAX races, stable IDs, local pagination, confirmation dismissal, responsive cleanup and recreation. Requests are mocked; no real upload/delete or Laravel server is used. Each scenario reports PASS/FAIL.

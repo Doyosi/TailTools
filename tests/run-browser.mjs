@@ -6,6 +6,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { verifyGridUI } from './grid-ui.mjs';
 import { verifyNavigationUI } from './navigation-ui.mjs';
+import { verifyAlertUI } from './alert-ui.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.TAILTOOLS_PLAYWRIGHT_MODULE || 'playwright');
 const baseline = process.argv.includes('--baseline');
@@ -40,6 +41,7 @@ try {
   console.log(JSON.stringify({ baseline, passed: results.filter(result => result.ok).length, total: results.length, errors,
     results: process.argv.includes('--compact') ? results.filter(result => !result.ok) : results }, null, 2));
   if (!baseline && (errors.length || results.some(result => !result.ok))) process.exitCode = 1;
+  if (process.argv.includes('--alert-ui')) console.log(JSON.stringify({ alertUI: await verifyAlertUI(browser, testUrl) }, null, 2));
   if (process.argv.includes('--demo')) {
     const demo = await browser.newPage();
     const demoErrors = [];
@@ -74,6 +76,8 @@ try {
       const bundleErrors = [];
       bundled.on('pageerror', error => bundleErrors.push(error.message));
       await bundled.goto(`${testUrl}/tests/regressions.html`);
+      await bundled.locator('link[rel="stylesheet"]').evaluateAll(links => links.forEach(link => link.remove()));
+      await bundled.addStyleTag({ url: `${testUrl}/dist/tailtools.css` });
       await bundled.evaluate(() => { document.body.innerHTML = '<form><select name="tags[]" data-cge-select multiple><option value="a">A</option><option value="b">B</option></select></form>'; });
       if (format === 'esm') await bundled.addScriptTag({ type: 'module', content: `import TailTools from '${testUrl}/dist/tailtools.js'; window.packedLibrary = TailTools;` });
       else {
@@ -83,7 +87,7 @@ try {
         await bundled.evaluate(() => { window.packedLibrary = window.TailTools; });
       }
       await bundled.waitForFunction(() => window.packedLibrary?.CGESelect);
-      const result = await bundled.evaluate(() => {
+      const result = await bundled.evaluate(async () => {
         const api = window.packedLibrary;
         api.init(document);
         const select = api.CGESelect.get(document.querySelector('select'));
@@ -110,11 +114,18 @@ try {
         tabs.show('two'); acc.open('one'); collapse.open();
         const navigation = tabs.activeTabId === 'two' && acc.isOpen('one') && collapse.isOpen();
         tabs.destroy(); acc.destroy(); collapse.destroy();
-        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections, navigation };
+        const alertResult = api.CGEAlert.confirm('Publish article?', 'Visible to everyone in your workspace.', { animationDriver: 'none' });
+        const alert = api.CGEAlert.currentAlert;
+        const compactAlert = !!alert.dialogEl.querySelector('.cge-alert-header [data-cge-alert-icon]')
+          && parseFloat(getComputedStyle(alert.dialogEl.querySelector('.cge-alert-body')).paddingLeft) === 20
+          && alert.confirmBtn.getBoundingClientRect().height <= 34;
+        alert.confirmBtn.click();
+        const alertConfirmed = (await alertResult).isConfirmed;
+        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections, navigation, compactAlert, alertConfirmed };
       });
       console.log(JSON.stringify({ bundle: format, ...result, errors: bundleErrors }));
       if (bundleErrors.length || JSON.stringify(result.plugins) !== JSON.stringify(expectedExports)
-        || !result.collections || !result.navigation || result.values.join(',') !== 'a,b') process.exitCode = 1;
+        || !result.collections || !result.navigation || !result.compactAlert || !result.alertConfirmed || result.values.join(',') !== 'a,b') process.exitCode = 1;
       await bundled.close();
     }
   }

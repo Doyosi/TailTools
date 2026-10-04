@@ -37,7 +37,7 @@ export class CGEAlert {
     'ok-button': 'OK',
     'input-placeholder': 'Type here...',
     'input-required-error': 'This field is required.',
-    'type-to-confirm-helper': 'Please type <strong class="text-white">:match</strong> to confirm.',
+    'type-to-confirm-helper': 'Please type <strong class="font-semibold">:match</strong> to confirm.',
     'type-to-confirm-mismatch': 'The text entered does not match.'
   };
 
@@ -85,14 +85,14 @@ export class CGEAlert {
    * Built-in default SVG icons for each archetype.
    */
   static ICONS = {
-    info: `<svg class="w-7 h-7 text-sky-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    success: `<svg class="w-7 h-7 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    warning: `<svg class="w-7 h-7 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`,
-    error: `<svg class="w-7 h-7 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    confirm: `<svg class="w-7 h-7 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
-    delete: `<svg class="w-7 h-7 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`,
-    restore: `<svg class="w-7 h-7 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>`,
-    prompt: `<svg class="w-7 h-7 text-cyan-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`
+    info: `<svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    success: `<svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    warning: `<svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`,
+    error: `<svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    confirm: `<svg class="w-5 h-5 text-indigo-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+    delete: `<svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`,
+    restore: `<svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>`,
+    prompt: `<svg class="w-5 h-5 text-cyan-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`
   };
 
   /**
@@ -154,21 +154,21 @@ export class CGEAlert {
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
         if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['confirm-button'];
         if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
-        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20';
+        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs';
         break;
 
       case 'delete':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
         if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['delete-button'];
         if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
-        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20';
+        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-xs';
         break;
 
       case 'restore':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
         if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['restore-button'];
         if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
-        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20';
+        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs';
         break;
 
       case 'prompt':
@@ -176,7 +176,7 @@ export class CGEAlert {
         if (!opts.input) opts.input = 'text';
         if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['confirm-button'];
         if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
-        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/20';
+        if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs';
         break;
 
       case 'info':
@@ -187,10 +187,10 @@ export class CGEAlert {
       default:
         if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['ok-button'];
         if (!opts.confirmButtonClass) {
-          if (arch === 'error') opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20';
-          else if (arch === 'success') opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20';
-          else if (arch === 'warning') opts.confirmButtonClass = 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-semibold shadow-lg shadow-amber-600/20';
-          else opts.confirmButtonClass = 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/20';
+          if (arch === 'error') opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-xs';
+          else if (arch === 'success') opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs';
+          else if (arch === 'warning') opts.confirmButtonClass = 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-semibold shadow-xs';
+          else opts.confirmButtonClass = 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs';
         }
         break;
     }
@@ -200,7 +200,7 @@ export class CGEAlert {
     if (!opts.cancelButtonClass) {
       opts.cancelButtonClass = isDark
         ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs';
+        : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 shadow-2xs';
     }
     if (!opts.denyButtonClass) {
       opts.denyButtonClass = isDark
@@ -273,7 +273,7 @@ export class CGEAlert {
     // 1. Overlay (Backdrop)
     const overlay = document.createElement('div');
     const overlayBg = isDark ? 'bg-slate-950/80' : 'bg-slate-900/40';
-    overlay.className = `cge-alert-overlay cge-alert-${activeTheme} fixed inset-0 ${overlayBg} backdrop-blur-xs pointer-events-auto flex items-center justify-center p-4 sm:p-6 overflow-y-auto`;
+    overlay.className = `cge-alert-overlay cge-alert-${activeTheme} fixed inset-0 ${overlayBg} backdrop-blur-xs pointer-events-auto flex items-center justify-center p-3 sm:p-5 overflow-y-auto`;
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', `${this.id}-title`);
@@ -285,7 +285,7 @@ export class CGEAlert {
       ? 'bg-slate-900 border border-slate-800 text-slate-100 shadow-2xl'
       : 'bg-white border border-slate-200/90 text-slate-900 shadow-2xl';
 
-    dialog.className = `cge-alert-dialog cge-alert-${activeTheme} relative w-full ${sizeClass} rounded-sm ${cardBgClass} p-6 sm:p-7 flex flex-col justify-between my-auto`;
+    dialog.className = `cge-alert-dialog cge-alert-${activeTheme} relative w-full ${sizeClass} rounded-xl ${cardBgClass} flex flex-col my-auto overflow-hidden`;
     this.dialogEl = dialog;
 
     // Close button (corner)
@@ -295,8 +295,8 @@ export class CGEAlert {
         ? 'text-slate-400 hover:text-white hover:bg-slate-800'
         : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100';
       closeBtnHtml = `
-        <button type="button" data-cge-alert-action="close" class="absolute top-4 right-4 w-8 h-8 rounded-sm flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="Close">
-          ✕
+        <button type="button" data-cge-alert-action="close" class="cge-alert-close absolute top-3 right-3 w-8 h-8 rounded-md flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="Close">
+          <svg aria-hidden="true" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       `;
     }
@@ -311,11 +311,20 @@ export class CGEAlert {
         const arch = this.options.archetype;
         iconSvg = CGEAlert.ICONS[arch] || CGEAlert.ICONS.info;
       }
-      const iconContainerClass = isDark
-        ? 'bg-slate-800/80 border border-slate-700/60 shadow-inner'
-        : 'bg-slate-50 border border-slate-200/90 shadow-2xs';
+      const tones = {
+        info: ['bg-sky-50 text-sky-600 ring-sky-100', 'bg-sky-400/10 text-sky-400 ring-sky-400/20'],
+        success: ['bg-emerald-50 text-emerald-600 ring-emerald-100', 'bg-emerald-400/10 text-emerald-400 ring-emerald-400/20'],
+        restore: ['bg-emerald-50 text-emerald-600 ring-emerald-100', 'bg-emerald-400/10 text-emerald-400 ring-emerald-400/20'],
+        warning: ['bg-amber-50 text-amber-600 ring-amber-100', 'bg-amber-400/10 text-amber-400 ring-amber-400/20'],
+        error: ['bg-rose-50 text-rose-600 ring-rose-100', 'bg-rose-400/10 text-rose-400 ring-rose-400/20'],
+        delete: ['bg-rose-50 text-rose-600 ring-rose-100', 'bg-rose-400/10 text-rose-400 ring-rose-400/20'],
+        confirm: ['bg-indigo-50 text-indigo-600 ring-indigo-100', 'bg-indigo-400/10 text-indigo-400 ring-indigo-400/20'],
+        prompt: ['bg-cyan-50 text-cyan-600 ring-cyan-100', 'bg-cyan-400/10 text-cyan-400 ring-cyan-400/20']
+      };
+      const tone = tones[this.options.archetype] || tones.info;
+      const iconContainerClass = tone[isDark ? 1 : 0];
       iconHtml = `
-        <div class="w-12 h-12 rounded-sm ${iconContainerClass} flex items-center justify-center mb-4 shrink-0">
+        <div data-cge-alert-icon aria-hidden="true" class="cge-alert-icon ${typeof this.options.icon === 'string' ? '' : 'cge-alert-icon-default'} w-10 h-10 rounded-lg ${iconContainerClass} ring-1 ring-inset flex items-center justify-center shrink-0">
           ${iconSvg}
         </div>
       `;
@@ -325,13 +334,13 @@ export class CGEAlert {
     const titleText = this.options.title || '';
     const titleColor = isDark ? 'text-white' : 'text-slate-900';
     const messageColor = isDark ? 'text-slate-300' : 'text-slate-600';
-    const titleHtml = titleText ? `<h2 id="${this.id}-title" class="text-lg sm:text-xl font-bold ${titleColor} mb-2 tracking-tight">${titleText}</h2>` : '';
+    const titleHtml = titleText ? `<h2 id="${this.id}-title" class="cge-alert-title text-base font-semibold ${titleColor} ${this.options.showCloseButton ? 'pr-7' : ''} ${this.options.html || this.options.message ? 'mb-1.5' : 'mb-0'} leading-6 tracking-tight">${titleText}</h2>` : '';
     
     let messageHtml = '';
     if (this.options.html) {
-      messageHtml = `<div class="text-xs sm:text-sm ${messageColor} leading-relaxed">${this.options.html}</div>`;
+      messageHtml = `<div class="cge-alert-message text-[13px] ${messageColor} leading-5">${this.options.html}</div>`;
     } else if (this.options.message) {
-      messageHtml = `<p class="text-xs sm:text-sm ${messageColor} leading-relaxed">${this.options.message}</p>`;
+      messageHtml = `<p class="cge-alert-message text-[13px] ${messageColor} leading-5">${this.options.message}</p>`;
     }
 
     // Input slot (Prompt or High Security RequireInput)
@@ -343,10 +352,10 @@ export class CGEAlert {
         ? 'bg-slate-950 border-slate-800 text-white'
         : 'bg-slate-50 border-slate-300 text-slate-900';
       inputSlotHtml = `
-        <div class="mt-4 space-y-2">
-          <p class="text-xs ${helperColor}">${helper}</p>
+        <div class="cge-alert-input-slot mt-3.5 space-y-2">
+          <p class="cge-alert-helper text-xs ${helperColor} leading-5">${helper}</p>
           <input type="text" data-cge-alert-input autocomplete="off" spellcheck="false" placeholder="${this.options.inputPlaceholder || this.options.requireInput}"
-            class="w-full px-3.5 py-2.5 rounded-sm border ${inputClass} text-xs font-mono focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition">
+            class="w-full px-3 py-2 rounded-md border ${inputClass} text-[13px] font-mono focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition">
           <div data-cge-alert-error class="text-[11px] text-rose-500 font-medium hidden"></div>
         </div>
       `;
@@ -355,13 +364,14 @@ export class CGEAlert {
     }
 
     // Button Cluster
-    const borderSep = isDark ? 'border-slate-800/80' : 'border-slate-100';
-    let buttonsHtml = `<div class="mt-6 pt-4 border-t ${borderSep} flex flex-wrap items-center justify-end gap-2.5 sm:gap-3">`;
+    const borderSep = isDark ? 'border-slate-800/80 bg-slate-950/25' : 'border-slate-200/70 bg-slate-50/70';
+    const buttonBase = 'cge-alert-button inline-flex items-center justify-center min-h-8 gap-1.5 px-3 py-1.5 rounded-md text-[13px] leading-[18px] font-medium transition cursor-pointer';
+    let buttonsHtml = `<div class="cge-alert-actions px-4 py-3 sm:px-5 border-t ${borderSep} flex flex-wrap items-center justify-end gap-2">`;
 
     if (this.options.showCancelButton) {
       const cancelText = this.options.cancelButtonText || this.translations['cancel-button'];
       buttonsHtml += `
-        <button type="button" data-cge-alert-action="cancel" class="px-4 py-2.5 rounded-sm text-xs font-medium transition cursor-pointer ${this.options.cancelButtonClass}">
+        <button type="button" data-cge-alert-action="cancel" class="${buttonBase} ${this.options.cancelButtonClass}">
           ${cancelText}
         </button>
       `;
@@ -370,7 +380,7 @@ export class CGEAlert {
     if (this.options.showDenyButton) {
       const denyText = this.options.denyButtonText || this.translations['deny-button'];
       buttonsHtml += `
-        <button type="button" data-cge-alert-action="deny" class="px-4 py-2.5 rounded-sm text-xs font-medium transition cursor-pointer ${this.options.denyButtonClass}">
+        <button type="button" data-cge-alert-action="deny" class="${buttonBase} ${this.options.denyButtonClass}">
           ${denyText}
         </button>
       `;
@@ -380,22 +390,27 @@ export class CGEAlert {
       const confirmText = this.options.confirmButtonText || this.translations['confirm-button'];
       const initialDisabled = Boolean(this.options.requireInput);
       buttonsHtml += `
-        <button type="button" data-cge-alert-action="confirm" ${initialDisabled ? 'disabled' : ''} class="inline-flex items-center justify-center px-5 py-2.5 rounded-sm text-xs font-semibold transition cursor-pointer ${this.options.confirmButtonClass} ${initialDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
+        <button type="button" data-cge-alert-action="confirm" ${initialDisabled ? 'disabled' : ''} class="${buttonBase} font-semibold ${this.options.confirmButtonClass} ${initialDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
           <span data-cge-alert-btn-text>${confirmText}</span>
-          <span data-cge-alert-spinner style="display: none;" class="hidden ml-2 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span data-cge-alert-spinner style="display: none;" class="hidden shrink-0 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
         </button>
       `;
     }
 
     buttonsHtml += '</div>';
+    if (!this.options.showCancelButton && !this.options.showDenyButton && !this.options.showConfirmButton) buttonsHtml = '';
 
     // Assemble Card Content
     dialog.innerHTML = `
       ${closeBtnHtml}
-      <div>
-        ${iconHtml}
-        ${titleHtml}
-        ${messageHtml}
+      <div class="cge-alert-body p-4 sm:p-5">
+        <div class="cge-alert-header flex items-start gap-3">
+          ${iconHtml}
+          <div class="min-w-0 flex-1 ${!titleText && this.options.showCloseButton ? 'pr-8' : ''}">
+            ${titleHtml}
+            ${messageHtml}
+          </div>
+        </div>
         ${inputSlotHtml}
       </div>
       ${buttonsHtml}
@@ -422,12 +437,12 @@ export class CGEAlert {
     const placeholder = this.options.inputPlaceholder || this.translations['input-placeholder'];
     const val = this.options.inputValue || '';
     const baseClass = isDark
-      ? 'w-full px-3.5 py-2.5 rounded-sm bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition'
-      : 'w-full px-3.5 py-2.5 rounded-sm bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-2xs';
+      ? 'w-full px-3 py-2 rounded-md bg-slate-950 border border-slate-800 text-white text-[13px] focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition'
+      : 'w-full px-3 py-2 rounded-md bg-slate-50 border border-slate-300 text-slate-900 text-[13px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-2xs';
 
     if (type === 'textarea') {
       return `
-        <div class="mt-4 space-y-1.5">
+        <div class="cge-alert-input-slot mt-3.5 space-y-1.5">
           <textarea data-cge-alert-input rows="3" placeholder="${placeholder}"
             class="${baseClass} resize-y leading-relaxed">${val}</textarea>
           <div data-cge-alert-error class="text-[11px] text-rose-500 font-medium hidden"></div>
@@ -450,7 +465,7 @@ export class CGEAlert {
         });
       }
       return `
-        <div class="mt-4 space-y-1.5">
+        <div class="cge-alert-input-slot mt-3.5 space-y-1.5">
           <select data-cge-alert-input class="${baseClass} cursor-pointer">
             ${optionsHtml}
           </select>
@@ -461,7 +476,7 @@ export class CGEAlert {
 
     // Standard inputs (text, email, password, number)
     return `
-      <div class="mt-4 space-y-1.5">
+      <div class="cge-alert-input-slot mt-3.5 space-y-1.5">
         <input type="${type}" data-cge-alert-input value="${val}" placeholder="${placeholder}"
           class="${baseClass}">
         <div data-cge-alert-error class="text-[11px] text-rose-500 font-medium hidden"></div>
