@@ -9,6 +9,8 @@
  * @package TailTools
  */
 
+import { captureAttributes, ownsNode, readHash, registeredInstance, setPanelAccess, applyDuration } from '../shared/navigation.js';
+
 export class CGEAccordion {
   /**
    * Active CGEAccordion instances indexed by element and id.
@@ -67,6 +69,8 @@ export class CGEAccordion {
       return CGEAccordion.instances.get(element);
     }
 
+    this._restorers = [captureAttributes(element)];
+    this._frames = new Set();
     this.element = element;
     this.id = element.id || `cge-accordion-${++CGEAccordion._counter}`;
     if (!element.id) {
@@ -143,8 +147,8 @@ export class CGEAccordion {
 
     return {
       ...CGEAccordion.defaults,
-      ...userOptions,
       ...dataOpts,
+      ...userOptions,
       ui: {
         ...CGEAccordion.defaults.ui,
         ...(userOptions.ui || {})
@@ -165,8 +169,7 @@ export class CGEAccordion {
 
     // Filter to direct items belonging strictly to this accordion container
     const directItemEls = allItemEls.filter(el => {
-      const closest = el.closest('[data-cge-accordion], .cge-accordion');
-      return closest === this.element;
+      return ownsNode(this.element, el, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances);
     });
 
     let autoItemIndex = 0;
@@ -177,7 +180,10 @@ export class CGEAccordion {
         `item-${autoItemIndex}`;
 
       // Discover trigger
-      let trigger = itemEl.querySelector('[data-cge-trigger], .cge-trigger');
+      const findOwned = selector => Array.from(itemEl.querySelectorAll(selector)).find(node =>
+        node.closest('[data-cge-item], .cge-accordion-item') === itemEl &&
+        ownsNode(this.element, node, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances));
+      let trigger = findOwned('[data-cge-trigger], .cge-trigger');
       if (!trigger) {
         // Fallback: look for direct button or first interactive element
         const buttons = Array.from(itemEl.querySelectorAll('button, [role="button"]'));
@@ -188,7 +194,7 @@ export class CGEAccordion {
       }
 
       // Discover wrapper / body
-      let wrapper = itemEl.querySelector('[data-cge-body], .cge-wrapper, .cge-accordion-wrapper');
+      let wrapper = findOwned('[data-cge-body], .cge-wrapper, .cge-accordion-wrapper');
       if (!wrapper) {
         // If trigger's parent is an h1-h6, wrapper is next sibling of header
         if (trigger && trigger.parentElement && /^H[1-6]$/i.test(trigger.parentElement.tagName)) {
@@ -201,13 +207,16 @@ export class CGEAccordion {
       // Discover content
       let content = null;
       if (wrapper) {
-        content = wrapper.querySelector('[data-cge-content], .cge-content') || wrapper.firstElementChild;
+        content = wrapper.querySelector(':scope > [data-cge-content], :scope > .cge-content') || wrapper.firstElementChild;
       }
 
       // Discover icon inside trigger or item
-      const icon = itemEl.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon');
+      const icon = trigger?.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon') || null;
 
-      if (trigger && wrapper) {
+      if (trigger && wrapper && !this.items.some(item => item.id === itemId)) {
+        this._restorers.push(captureAttributes(itemEl, trigger, wrapper, content, icon));
+        applyDuration(wrapper, [icon], this.options.duration);
+        if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) trigger.type = 'button';
         // Generate missing IDs for ARIA linkage
         const triggerId = trigger.id || `cge-acc-trig-${this.id}-${itemId}`;
         const panelId = wrapper.id || `cge-acc-panel-${this.id}-${itemId}`;
@@ -226,7 +235,7 @@ export class CGEAccordion {
         // Apply base UI styling classes
         this._applyBaseUI(itemEl, trigger, wrapper, content, icon);
 
-        const isOpen = itemEl.hasAttribute('data-cge-open') ||
+        const isOpen = (itemEl.hasAttribute('data-cge-open') && itemEl.getAttribute('data-cge-open') !== 'false') ||
           itemEl.classList.contains('is-open') ||
           itemEl.classList.contains('open') ||
           trigger.getAttribute('aria-expanded') === 'true';
@@ -308,9 +317,7 @@ export class CGEAccordion {
   _bindEvents() {
     this.element.addEventListener('click', this._onTriggerClick);
 
-    if (this.options.keyboard) {
-      this.element.addEventListener('keydown', this._onKeydown);
-    }
+    this.element.addEventListener('keydown', this._onKeydown);
 
     if (this.options.urlSync === 'hash' && typeof window !== 'undefined') {
       window.addEventListener('hashchange', this._onHashChange);
@@ -323,10 +330,11 @@ export class CGEAccordion {
    */
   _restoreInitialState() {
     let initialIds = [];
+    let storedState = false;
 
     // 1. URL Hash has highest precedence if urlSync is enabled
     if (this.options.urlSync === 'hash' && typeof window !== 'undefined' && window.location.hash) {
-      const hashId = window.location.hash.replace(/^#/, '');
+      const hashId = readHash();
       const match = this.items.find(item => item.id === hashId || item.wrapper.id === hashId);
       if (match) {
         initialIds = [match.id];
@@ -336,22 +344,24 @@ export class CGEAccordion {
     // 2. Storage persistence if enabled and no hash match
     if (initialIds.length === 0 && this.options.storage) {
       const stored = this._loadStoredState();
-      if (Array.isArray(stored) && stored.length > 0) {
+      if (Array.isArray(stored)) {
         initialIds = stored.filter(id => this.items.some(i => i.id === id));
+        storedState = true;
       }
     }
 
     // 3. defaultOpen configuration if provided
-    if (initialIds.length === 0 && this.options.defaultOpen) {
+    if (initialIds.length === 0 && !storedState && this.options.defaultOpen) {
       const def = this.options.defaultOpen;
       initialIds = Array.isArray(def) ? def : [def];
     }
 
     // 4. Initial DOM open markup
-    if (initialIds.length === 0 && this.openItemIds.size > 0) {
+    if (initialIds.length === 0 && !storedState && this.openItemIds.size > 0) {
       initialIds = Array.from(this.openItemIds);
     }
 
+    initialIds = [...new Set(initialIds)].filter(id => this.items.some(item => item.id === id));
     // Respect exclusive mode: if exclusive, only keep at most 1 item
     if (this.options.exclusive && initialIds.length > 1) {
       initialIds = [initialIds[0]];
@@ -373,12 +383,15 @@ export class CGEAccordion {
     }
 
     // Scroll into view if requested via hash
-    if (initialIds.length > 0 && this.options.scrollIntoView && this.options.urlSync === 'hash') {
+    if (initialIds.length > 0 && this.options.scrollIntoView && this.options.urlSync === 'hash' && readHash()) {
       const firstOpened = this.items.find(i => i.id === initialIds[0]);
       if (firstOpened) {
-        requestAnimationFrame(() => {
+        const frame = requestAnimationFrame(() => {
+          this._frames.delete(frame);
+          if (this._destroyed) return;
           firstOpened.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
+        this._frames.add(frame);
       }
     }
   }
@@ -399,8 +412,8 @@ export class CGEAccordion {
     if (!item) return;
 
     // Verify the item belongs directly to this container
-    const closestAcc = trigger.closest('[data-cge-accordion], .cge-accordion');
-    if (closestAcc !== this.element) return;
+    if (trigger.matches(':disabled, [aria-disabled="true"]')) return;
+    if (!ownsNode(this.element, trigger, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances)) return;
 
     e.preventDefault();
     this.toggle(item.id);
@@ -412,19 +425,20 @@ export class CGEAccordion {
    */
   _handleKeydown(e) {
     if (this._destroyed) return;
+    if (!this.options.keyboard && e.key !== 'Enter' && e.key !== ' ') return;
 
     const activeEl = document.activeElement;
     if (!activeEl) return;
 
     // Check if focused element is one of our direct triggers
-    const currentIndex = this.items.findIndex(i => i.trigger === activeEl || i.trigger.contains(activeEl));
+    const available = this.items.filter(item => !item.trigger.matches(':disabled, [aria-disabled="true"]'));
+    const currentIndex = available.findIndex(i => i.trigger === activeEl || i.trigger.contains(activeEl));
     if (currentIndex === -1) return;
 
     // Stop child accordion triggers from triggering parent navigation
-    const closestAcc = activeEl.closest('[data-cge-accordion], .cge-accordion');
-    if (closestAcc !== this.element) return;
+    if (!ownsNode(this.element, activeEl, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances)) return;
 
-    const total = this.items.length;
+    const total = available.length;
     let nextIndex = -1;
 
     switch (e.key) {
@@ -453,7 +467,7 @@ export class CGEAccordion {
         // Space/Enter toggles non-native button triggers
         if (activeEl.tagName.toLowerCase() !== 'button') {
           e.preventDefault();
-          this.toggle(this.items[currentIndex].id);
+          this.toggle(available[currentIndex].id);
         }
         return;
 
@@ -461,8 +475,8 @@ export class CGEAccordion {
         return;
     }
 
-    if (nextIndex !== -1 && this.items[nextIndex]) {
-      this.items[nextIndex].trigger.focus();
+    if (nextIndex !== -1 && available[nextIndex]) {
+      available[nextIndex].trigger.focus();
     }
   }
 
@@ -472,7 +486,7 @@ export class CGEAccordion {
    */
   _handleHashChange() {
     if (this._destroyed || this.options.urlSync !== 'hash' || typeof window === 'undefined') return;
-    const hash = window.location.hash.replace(/^#/, '');
+    const hash = readHash();
     if (!hash) return;
 
     const match = this.items.find(item => item.id === hash || item.wrapper.id === hash);
@@ -499,6 +513,7 @@ export class CGEAccordion {
       for (const openId of Array.from(this.openItemIds)) {
         if (openId !== itemId) {
           this._closeItemInternal(openId);
+          if (this._destroyed) return this;
         }
       }
     }
@@ -511,13 +526,14 @@ export class CGEAccordion {
 
     // URL sync update
     if (this.options.urlSync === 'hash' && this.options.updateHash && typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `#${itemId}`);
+      window.history.replaceState(window.history.state, '', `#${encodeURIComponent(itemId)}`);
     }
 
     // Trigger hooks and events
     if (typeof this.options.onOpen === 'function') {
       this.options.onOpen(itemId, item.el);
     }
+    if (this._destroyed) return this;
     if (typeof this.options.onToggle === 'function') {
       this.options.onToggle(itemId, true, item.el);
     }
@@ -543,6 +559,7 @@ export class CGEAccordion {
     if (typeof this.options.onClose === 'function') {
       this.options.onClose(itemId, item.el);
     }
+    if (this._destroyed) return;
     if (typeof this.options.onToggle === 'function') {
       this.options.onToggle(itemId, false, item.el);
     }
@@ -657,6 +674,9 @@ export class CGEAccordion {
     const ui = this.options.ui;
 
     item.isOpen = isOpen;
+    setPanelAccess(wrapper, isOpen, trigger);
+    wrapper.setAttribute('data-cge-open', String(isOpen));
+    if (!isOpen) wrapper.classList.remove('open', 'is-open');
 
     // ARIA expanded state
     trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -720,9 +740,9 @@ export class CGEAccordion {
    */
   _loadStoredState() {
     if (!this.options.storage || typeof window === 'undefined') return null;
-    const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
     const key = this.options.storageKey || `cge_accordion_${this.id}`;
     try {
+      const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
       const data = store.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch {
@@ -736,9 +756,9 @@ export class CGEAccordion {
    */
   _saveStoredState() {
     if (!this.options.storage || typeof window === 'undefined') return;
-    const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
     const key = this.options.storageKey || `cge_accordion_${this.id}`;
     try {
+      const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
       store.setItem(key, JSON.stringify(Array.from(this.openItemIds)));
     } catch {
       // Storage quota or privacy mode exception handling
@@ -778,6 +798,7 @@ export class CGEAccordion {
    * @private
    */
   _dispatch(eventName, detail = {}) {
+    if (this._destroyed) return;
     const eventData = { instance: this, ...detail };
 
     // 1. Instance event emitter
@@ -824,16 +845,9 @@ export class CGEAccordion {
       window.removeEventListener('hashchange', this._onHashChange);
     }
 
-    // Clean up DOM attributes
-    this.element.removeAttribute('data-cge-accordion-ready');
-    for (const item of this.items) {
-      item.trigger.removeAttribute('aria-expanded');
-      item.trigger.removeAttribute('aria-controls');
-      item.wrapper.removeAttribute('role');
-      item.wrapper.removeAttribute('aria-labelledby');
-      item.wrapper.removeAttribute('aria-hidden');
-      item.el.removeAttribute('data-cge-open');
-    }
+    for (const frame of this._frames) cancelAnimationFrame(frame);
+    this._frames.clear();
+    for (const restore of this._restorers.reverse()) restore();
 
     // Clear registry
     CGEAccordion.instances.delete(this.element);
@@ -861,6 +875,7 @@ export class CGEAccordion {
     const elements = Array.from(
       context.querySelectorAll('[data-cge-accordion], .cge-accordion')
     );
+    if (context instanceof HTMLElement && context.matches('[data-cge-accordion], .cge-accordion')) elements.unshift(context);
 
     const instances = [];
     for (const el of elements) {
@@ -877,11 +892,7 @@ export class CGEAccordion {
    * @returns {CGEAccordion | null}
    */
   static get(elementOrId) {
-    if (typeof elementOrId === 'string') {
-      const el = document.querySelector(elementOrId);
-      return CGEAccordion.instances.get(el) || CGEAccordion.instances.get(elementOrId) || null;
-    }
-    return CGEAccordion.instances.get(elementOrId) || null;
+    return registeredInstance(CGEAccordion.instances, elementOrId);
   }
 }
 
@@ -938,89 +949,72 @@ export class CGECollapse {
       return CGECollapse.instances.get(element);
     }
 
-    this.options = { ...CGECollapse.defaults, ...options, ui: { ...CGECollapse.defaults.ui, ...(options.ui || {}) } };
-    this.id = element.id || `cge-collapse-${++CGECollapse._counter}`;
     this._listeners = new Map();
     this._destroyed = false;
-
-    // Resolve trigger vs wrapper
+    this._restorers = [];
     this._resolveElements(element);
-
-    this._onClick = this._handleClick.bind(this);
-    if (this.trigger) {
-      this.trigger.addEventListener('click', this._onClick);
+    const existing = CGECollapse.instances.get(this.wrapper);
+    if (existing) {
+      for (const trigger of this.triggers) existing._bindTrigger(trigger);
+      existing._applyVisualState(existing.isOpen());
+      return existing;
     }
-
-    // Initial state
+    this.id = this.wrapper.id || 'cge-collapse-' + (++CGECollapse._counter);
+    const ds = element.dataset;
+    const data = {};
+    if (ds.cgeDefaultOpen !== undefined) data.defaultOpen = ds.cgeDefaultOpen === 'true';
+    if (ds.cgeDuration !== undefined) data.duration = Number(ds.cgeDuration);
+    if (ds.cgeStorage !== undefined) data.storage = ds.cgeStorage === 'false' ? false : ds.cgeStorage;
+    if (ds.cgeStorageKey) data.storageKey = ds.cgeStorageKey;
+    this.options = { ...CGECollapse.defaults, ...data, ...options, ui: { ...CGECollapse.defaults.ui, ...(options.ui || {}) } };
+    this._restorers.push(captureAttributes(this.wrapper, this.content));
+    this.wrapper.id = this.id;
+    const ui = this.options.ui;
+    this._addClasses(this.wrapper, ui.wrapper);
+    this._addClasses(this.content, ui.content);
+    this.wrapper.setAttribute('role', 'region');
+    applyDuration(this.wrapper, [], this.options.duration);
+    this._onClick = this._handleClick.bind(this);
+    this._onKeydown = e => {
+      if (!this._destroyed && e.currentTarget.tagName !== 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) this._handleClick(e);
+    };
+    const triggers = this.triggers;
+    this.triggers = [];
+    for (const trigger of triggers) this._bindTrigger(trigger);
+    this.trigger = this.triggers[0] || null;
+    this.icon = this.trigger?.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon') || null;
     this._restoreInitialState();
-
     CGECollapse.instances.set(this.wrapper, this);
-    if (this.trigger) CGECollapse.instances.set(this.trigger, this);
     CGECollapse.instances.set(this.id, this);
   }
 
-  /**
-   * Determines trigger, wrapper, content, and icon.
-   * @private
-   */
   _resolveElements(element) {
-    let trigger = null;
-    let wrapper = null;
+    const target = element.getAttribute('data-cge-collapse') || element.getAttribute('data-cge-toggle');
+    const resolve = value => value ? document.getElementById(value.startsWith('#') ? value.slice(1) : value) : null;
+    this.wrapper = target ? resolve(target) : element;
+    if (!this.wrapper) throw new Error('[CGECollapse] Target panel was not found.');
+    this.content = this.wrapper.querySelector(':scope > [data-cge-content], :scope > .cge-content') || this.wrapper.firstElementChild;
+    this.triggers = Array.from(document.querySelectorAll('[data-cge-collapse], [data-cge-toggle], [aria-controls]')).filter(trigger =>
+      trigger !== this.wrapper && resolve(trigger.getAttribute('data-cge-collapse') || trigger.getAttribute('data-cge-toggle') || trigger.getAttribute('aria-controls')) === this.wrapper);
+  }
 
-    if (element.hasAttribute('data-cge-collapse') || element.hasAttribute('data-cge-toggle')) {
-      const targetSelector = element.getAttribute('data-cge-collapse') ||
-        element.getAttribute('data-cge-toggle') ||
-        element.getAttribute('aria-controls') ||
-        element.getAttribute('href');
-
-      if (targetSelector && targetSelector.startsWith('#')) {
-        wrapper = document.querySelector(targetSelector);
-        trigger = element;
-      } else if (targetSelector && document.getElementById(targetSelector)) {
-        wrapper = document.getElementById(targetSelector);
-        trigger = element;
-      }
+  _bindTrigger(trigger) {
+    if (this.triggers.includes(trigger)) return;
+    const icon = trigger.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon');
+    this._restorers.push(captureAttributes(trigger, icon));
+    this.triggers.push(trigger);
+    if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) trigger.type = 'button';
+    if (trigger.tagName !== 'BUTTON') {
+      trigger.setAttribute('role', 'button');
+      if (!trigger.hasAttribute('tabindex')) trigger.tabIndex = 0;
     }
-
-    if (!wrapper) {
-      // Element is the wrapper itself
-      wrapper = element;
-      const selector = `[data-cge-collapse="#${wrapper.id}"], [data-cge-toggle="#${wrapper.id}"], [aria-controls="${wrapper.id}"]`;
-      trigger = document.querySelector(selector);
-    }
-
-    this.wrapper = wrapper;
-    this.trigger = trigger;
-    this.content = wrapper.querySelector('[data-cge-content], .cge-content') || wrapper.firstElementChild;
-    this.icon = trigger ? trigger.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon') : null;
-
-    // Base classes and ARIA
-    const ui = this.options.ui;
-    if (ui.wrapper) {
-      if (!wrapper.className.includes('grid-rows-')) {
-        this._addClasses(wrapper, ui.wrapper);
-      }
-      if (!wrapper.classList.contains('overflow-hidden')) {
-        wrapper.classList.add('overflow-hidden');
-      }
-    }
-    if (this.content) {
-      if (ui.content) this._addClasses(this.content, ui.content);
-      if (!this.content.classList.contains('min-h-0')) this.content.classList.add('min-h-0');
-      if (!this.content.classList.contains('overflow-hidden')) this.content.classList.add('overflow-hidden');
-    }
-    if (this.icon && ui.icon) {
-      this._addClasses(this.icon, ui.icon);
-    }
-
-    if (trigger) {
-      if (trigger.tagName.toLowerCase() !== 'button') {
-        trigger.setAttribute('role', 'button');
-        if (!trigger.hasAttribute('tabindex')) trigger.setAttribute('tabindex', '0');
-      }
-      trigger.setAttribute('aria-controls', wrapper.id);
-    }
-    wrapper.setAttribute('role', 'region');
+    trigger.setAttribute('aria-controls', this.wrapper.id);
+    this._addClasses(trigger, this.options.ui.trigger);
+    this._addClasses(icon, this.options.ui.icon);
+    if (icon) applyDuration(this.wrapper, [icon], this.options.duration);
+    trigger.addEventListener('click', this._onClick);
+    trigger.addEventListener('keydown', this._onKeydown);
+    CGECollapse.instances.set(trigger, this);
   }
 
   _addClasses(el, classes) {
@@ -1037,22 +1031,25 @@ export class CGECollapse {
 
   _restoreInitialState() {
     let isOpen = this.options.defaultOpen ||
+      this.wrapper.classList.contains('grid-rows-[1fr]') ||
       this.wrapper.classList.contains('open') ||
       this.wrapper.classList.contains('is-open') ||
       (this.trigger && this.trigger.getAttribute('aria-expanded') === 'true');
 
     if (this.options.storage && typeof window !== 'undefined') {
-      const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
-      const key = this.options.storageKey || `cge_collapse_${this.id}`;
-      const saved = store.getItem(key);
-      if (saved !== null) isOpen = saved === 'true';
+      try {
+        const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
+        const key = this.options.storageKey || `cge_collapse_${this.id}`;
+        const saved = store.getItem(key);
+        if (saved !== null) isOpen = saved === 'true';
+      } catch {}
     }
 
     this._applyVisualState(isOpen);
   }
 
   _handleClick(e) {
-    if (this._destroyed) return;
+    if (this._destroyed || e.currentTarget.matches(':disabled, [aria-disabled="true"]')) return;
     e.preventDefault();
     this.toggle();
   }
@@ -1064,6 +1061,7 @@ export class CGECollapse {
     this._saveStorage(true);
 
     if (typeof this.options.onOpen === 'function') this.options.onOpen(this);
+    if (this._destroyed) return this;
     if (typeof this.options.onToggle === 'function') this.options.onToggle(true, this);
     this._dispatch('open', { isOpen: true });
     this._dispatch('toggle', { isOpen: true });
@@ -1078,6 +1076,7 @@ export class CGECollapse {
     this._saveStorage(false);
 
     if (typeof this.options.onClose === 'function') this.options.onClose(this);
+    if (this._destroyed) return this;
     if (typeof this.options.onToggle === 'function') this.options.onToggle(false, this);
     this._dispatch('close', { isOpen: false });
     this._dispatch('toggle', { isOpen: false });
@@ -1096,42 +1095,30 @@ export class CGECollapse {
   _applyVisualState(isOpen) {
     this._isOpen = isOpen;
     const ui = this.options.ui;
-
-    if (this.trigger) {
-      this.trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      if (ui.activeTrigger) {
-        if (isOpen) this._addClasses(this.trigger, ui.activeTrigger);
-        else this._removeClasses(this.trigger, ui.activeTrigger);
-      }
+    setPanelAccess(this.wrapper, isOpen, this.trigger);
+    this.wrapper.setAttribute('data-cge-open', String(isOpen));
+    if (!isOpen) this.wrapper.classList.remove('open', 'is-open');
+    for (const trigger of this.triggers) {
+      trigger.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) this._addClasses(trigger, ui.activeTrigger);
+      else this._removeClasses(trigger, ui.activeTrigger);
+      const icon = trigger.querySelector('[data-cge-icon], [data-cge-accordion-icon], .cge-icon');
+      this._removeClasses(icon, isOpen ? 'rotate-0' : ui.activeIcon);
+      this._addClasses(icon, isOpen ? ui.activeIcon : 'rotate-0');
     }
-
-    if (isOpen) {
-      this._removeClasses(this.wrapper, 'grid-rows-[0fr]');
-      this._addClasses(this.wrapper, ui.activeWrapper || 'grid-rows-[1fr]');
-      this.wrapper.setAttribute('aria-hidden', 'false');
-    } else {
-      this._removeClasses(this.wrapper, ui.activeWrapper || 'grid-rows-[1fr]');
-      this._addClasses(this.wrapper, 'grid-rows-[0fr]');
-      this.wrapper.setAttribute('aria-hidden', 'true');
-    }
-
-    if (this.icon) {
-      const activeIconClass = ui.activeIcon || 'rotate-180';
-      if (isOpen) {
-        this._removeClasses(this.icon, 'rotate-0');
-        this._addClasses(this.icon, activeIconClass);
-      } else {
-        this._removeClasses(this.icon, activeIconClass);
-        this._addClasses(this.icon, 'rotate-0');
-      }
+    this._removeClasses(this.wrapper, isOpen ? 'grid-rows-[0fr]' : (ui.activeWrapper || 'grid-rows-[1fr]'));
+    this._addClasses(this.wrapper, isOpen ? (ui.activeWrapper || 'grid-rows-[1fr]') : 'grid-rows-[0fr]');
+    if (this.options.animation) {
+      if (isOpen) this._addClasses(this.content, this.options.animation);
+      else this._removeClasses(this.content, this.options.animation);
     }
   }
 
   _saveStorage(isOpen) {
     if (!this.options.storage || typeof window === 'undefined') return;
-    const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
     const key = this.options.storageKey || `cge_collapse_${this.id}`;
     try {
+      const store = this.options.storage === 'sessionStorage' ? window.sessionStorage : window.localStorage;
       store.setItem(key, String(isOpen));
     } catch {
       // Storage quota or privacy mode exception handling
@@ -1155,6 +1142,7 @@ export class CGECollapse {
   }
 
   _dispatch(eventName, detail = {}) {
+    if (this._destroyed) return;
     const eventData = { instance: this, ...detail };
 
     if (this._listeners.has(eventName)) {
@@ -1182,16 +1170,13 @@ export class CGECollapse {
     if (this._destroyed) return;
     this._destroyed = true;
 
-    if (this.trigger) {
-      this.trigger.removeEventListener('click', this._onClick);
-      this.trigger.removeAttribute('aria-expanded');
-      this.trigger.removeAttribute('aria-controls');
+    for (const trigger of this.triggers) {
+      trigger.removeEventListener('click', this._onClick);
+      trigger.removeEventListener('keydown', this._onKeydown);
+      CGECollapse.instances.delete(trigger);
     }
-    this.wrapper.removeAttribute('role');
-    this.wrapper.removeAttribute('aria-hidden');
-
+    for (const restore of this._restorers.reverse()) restore();
     CGECollapse.instances.delete(this.wrapper);
-    if (this.trigger) CGECollapse.instances.delete(this.trigger);
     CGECollapse.instances.delete(this.id);
     this._listeners.clear();
   }
@@ -1204,23 +1189,21 @@ export class CGECollapse {
       context.querySelectorAll('[data-cge-collapse], [data-cge-toggle]')
     );
 
+    if (context instanceof HTMLElement && context.matches('[data-cge-collapse], [data-cge-toggle]')) elements.unshift(context);
     const instances = [];
     for (const el of elements) {
       // Don't auto-init if it's inside an accordion group trigger
       if (el.closest('[data-cge-accordion], .cge-accordion')) continue;
-      if (!CGECollapse.instances.has(el)) {
-        instances.push(new CGECollapse(el, options));
-      }
+      const target = el.getAttribute('data-cge-collapse') || el.getAttribute('data-cge-toggle');
+      if (!target || !document.getElementById(target.replace(/^#/, ''))) continue;
+      const instance = new CGECollapse(el, options);
+      if (!instances.includes(instance)) instances.push(instance);
     }
     return instances;
   }
 
   static get(elementOrId) {
-    if (typeof elementOrId === 'string') {
-      const el = document.querySelector(elementOrId);
-      return CGECollapse.instances.get(el) || CGECollapse.instances.get(elementOrId) || null;
-    }
-    return CGECollapse.instances.get(elementOrId) || null;
+    return registeredInstance(CGECollapse.instances, elementOrId);
   }
 }
 

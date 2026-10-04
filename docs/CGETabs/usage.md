@@ -101,11 +101,8 @@ const tabs = new CGETabs('#my-tabs', {
 
 Example:
 ```javascript
-tabs.on('cge:tabs:show', (detail) => {
-  if (detail.tabId === 'billing' && !userHasPermission) {
-    detail.instance.show('profile');
-    // or prevent tab switch
-  }
+tabs.element.addEventListener('cge:tabs:show', (event) => {
+  if (event.detail.tabId === 'billing' && !userHasPermission) event.preventDefault();
 });
 
 // DOM CustomEvent
@@ -123,7 +120,7 @@ document.addEventListener('cge:tabs:shown', (e) => {
 ### Hash Mode (`urlSync: 'hash'`)
 - When the user selects the "Billing" tab, the browser URL becomes `https://example.com/account#billing`.
 - Page reloading automatically restores the `#billing` tab.
-- Browser Back and Forward buttons seamlessly switch tabs without page reloads.
+- With `historyMode: 'push'`, Back and Forward switch tabs without reloads. The default replace mode does not create new history entries.
 
 ### Query Param Mode (`urlSync: 'query'`)
 - Useful when deep linking within dashboard sub-sections: `https://example.com/admin/settings?tab=security`.
@@ -135,7 +132,17 @@ document.addEventListener('cge:tabs:shown', (e) => {
 
 When an Ajax tab is selected:
 1. An animated loading spinner is displayed inside the panel.
-2. In-flight requests are tracked with `AbortController` (rapid tab switching automatically cancels obsolete requests).
+2. In-flight requests are tracked per tab with `AbortController`; a new request for the same tab cancels its predecessor.
 3. On completion, the HTML partial is injected into the panel.
 4. **CGE Auto-Lifecycle Bridge:**
    `CGETabs` automatically detects and initializes nested TailTools plugins (`CGEActionButton`, `CGEForm`, `CGESelect`, `CGEModal`, `CGEDrawer`, `CGEDropzone`, `CGEDataTable`, `CGEDataGrid`) inside the freshly loaded panel, and dispatches the global `cge:tabs:loaded` event.
+
+
+## Precise configuration and loading behavior
+Options resolve as defaults → `data-cge-tabs` JSON → individual attributes → explicit JavaScript options. `ui.tabList`, `ui.tab` and `ui.panelContainer` apply when explicitly configured; their default layout stays in consumer markup. The panel-container slot applies to the shared immediate parent of all owned panels. Other state/indicator/loading slots retain their existing defaults. `animationIn` can contain multiple whitespace-separated classes.
+
+AJAX controllers are tracked per tab. Reloading a tab cancels its previous request, and late responses from canceled requests cannot replace current content. Switching to a different panel allows the first panel's independent request to finish and cache; `destroy()` aborts all requests. `cacheAjax: false` reloads on reactivation. A failed forced reload invalidates the previous loaded marker/cache so later activation can recover. The panel uses `aria-busy` and the loader uses `role="status"`; HTTP errors display `role="alert"` and a delegated Retry button. Translation strings are rendered as text. Endpoint HTML is trusted application/Blade markup.
+
+Use `TailTools.init(panel)` once for the lifecycle bridge when available. Otherwise the bridge calls standalone scoped init APIs, with document delegates for ActionButton/Lightbox. Both paths include Tabs, Accordion and Collapse. Registry-backed child instances (including Select WeakMap entries) are destroyed before AJAX replacement and on Tabs destroy. Original panel nodes are restored; call init again if restored markup requires child-plugin initialization.
+
+Horizontal tablists with default visible overflow use `overflow-x: auto`. Existing explicit overflow styles are preserved, and destroy restores the original style. Keyboard focus scrolls off-screen tabs into view; the indicator is remeasured after focus. Failed child initialization destroys partial instances, clears loaded/cache state and exposes the normal error/retry flow.

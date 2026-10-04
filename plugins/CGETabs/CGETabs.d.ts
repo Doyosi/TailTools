@@ -20,6 +20,7 @@ export interface CGETabsAjaxConfig {
 }
 
 export interface CGETabsUIConfig {
+  /** Base layout slots apply when explicitly configured; markup owns their default styling. */
   tabList?: string;
   tab?: string;
   activeTab?: string;
@@ -62,14 +63,19 @@ export interface CGETabsOptions {
   manual?: boolean;
   transition?: boolean;
   animationIn?: string;
-  onShow?: ((tabId: string, panel: HTMLElement | null, trigger: HTMLElement) => void) | null;
-  onShown?: ((tabId: string, panel: HTMLElement | null, trigger: HTMLElement) => void) | null;
-  onAjaxStart?: ((tabId: string, panel: HTMLElement) => void) | null;
-  onAjaxLoaded?: ((tabId: string, panel: HTMLElement, response: string) => void) | null;
-  onAjaxError?: ((tabId: string, error: any) => void) | null;
+  onShow?: (((tabId: string, panel: HTMLElement | null, trigger: HTMLElement) => void) | null) | null;
+  onShown?: (((tabId: string, panel: HTMLElement | null, trigger: HTMLElement) => void) | null) | null;
+  onAjaxStart?: (((tabId: string, panel: HTMLElement) => void) | null) | null;
+  onAjaxLoaded?: (((tabId: string, panel: HTMLElement, response: string) => void) | null) | null;
+  onAjaxError?: (((tabId: string, error: any) => void) | null) | null;
   ui?: CGETabsUIConfig;
   translations?: CGETabsTranslations;
 }
+
+export type CGETabsResolvedOptions = Omit<Required<CGETabsOptions>, 'ui' | 'translations'> & {
+  ui: Required<CGETabsUIConfig>;
+  translations: Required<CGETabsTranslations>;
+};
 
 export interface CGETabsShowEventDetail {
   tabId: string;
@@ -119,7 +125,7 @@ export declare class CGETabs {
 
   element: HTMLElement;
   id: string;
-  options: Required<CGETabsOptions>;
+  options: CGETabsResolvedOptions;
   activeTabId: string | null;
   tabs: CGETabsItem[];
   tabList: HTMLElement | null;
@@ -127,6 +133,7 @@ export declare class CGETabs {
 
   constructor(target: string | HTMLElement, options?: CGETabsOptions);
 
+  /** Returns true for the active tab without repeating events or reloading content. */
   show(tabId: string, options?: { focus?: boolean; updateHistory?: boolean }): boolean;
   next(): boolean;
   prev(): boolean;

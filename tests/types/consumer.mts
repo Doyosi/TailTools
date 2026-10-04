@@ -25,19 +25,25 @@ const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELight
   Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, Tabs, Accordion, ShortSelect, ShortDataTable, ShortDataGrid, ShortTabs, ShortAccordion];
 void constructors;
 
-const accOpts: CGEAccordionOptions = { exclusive: true, urlSync: 'hash' };
+const accOpts: CGEAccordionOptions = { exclusive: true, urlSync: 'hash', onOpen: null };
 const accordion = new Accordion(document.createElement('div'), accOpts);
 accordion.open('item-1');
 accordion.toggle('item-2');
-const colOpts: CGECollapseOptions = { defaultOpen: false };
+const colOpts: CGECollapseOptions = { defaultOpen: false, onToggle: null };
 const collapse = new CGECollapse(document.createElement('div'), colOpts);
 collapse.toggle();
 void [accordion, collapse];
+const accordionIcon: string = accordion.options.ui.icon;
+const collapseControls: HTMLElement[] = collapse.triggers;
+void [accordionIcon, collapseControls];
 init(document); initTailTools(document.body);
 TailTools.init(document);
-const tabsOptions: CGETabsOptions = { urlSync: 'query', indicator: 'pill' };
+const tabsOptions: CGETabsOptions = { urlSync: 'query', indicator: 'pill', onShow: null };
 const tabs = new Tabs(document.createElement('div'), tabsOptions);
 tabs.show('profile');
+const tabLoadingLabel: string = tabs.options.translations.loading;
+const tabBaseClass: string = tabs.options.ui.tab;
+void [tabLoadingLabel, tabBaseClass];
 tabs.on('cge:tabs:show', detail => { const tabId: string = detail.tabId; void tabId; });
 // @ts-expect-error invalid event
 tabs.on('cge:tabs:invalid', () => {});

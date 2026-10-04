@@ -7,7 +7,7 @@ Ultra-smooth, accessible accordion and collapsible panel plugin engineered for T
 ## Key Features
 
 - **Zero `scrollHeight` Dependency (CSS Grid Transition Engine):**
-  Uses native CSS Grid row animation (`grid-template-rows: 0fr -> 1fr`). Transitions are GPU accelerated, silky smooth, and responsive across dynamic viewports without layout thrashing.
+  Uses native CSS Grid row animation (`grid-template-rows: 0fr -> 1fr`). Transitions adapt to dynamic content without JavaScript height or scrollHeight measurements.
 - **Dual Exposure:**
   - `CGEAccordion`: Group manager for multi-item accordions with exclusive or multi-expand behavior.
   - `CGECollapse`: Standalone helper for isolated toggles without group wrappers.
@@ -146,3 +146,11 @@ CGECollapse.init();
 - [Practical Examples & Patterns](examples.md)
 - [Laravel Blade Components](laravel-blade.md)
 - [Complete TypeScript API](api.md)
+
+
+## Initialization and cleanup
+Programmatic roots need no `data-cge-accordion` marker. Use distinct item IDs per group and mark nested groups declaratively (or initialize each nested programmatic instance first). `init(root)` includes a matching root and skips already registered accordions. `get()` accepts an element, literal ID or selector; invalid selectors return null.
+
+Closed panels use `inert` and `aria-hidden` while retaining CSS Grid animation. Closing a focused panel returns focus to its trigger. Disabled triggers are skipped by keyboard navigation. `duration` controls wrapper/icon transition duration; the stylesheet honors reduced motion. `destroy()` restores original owned attributes, classes and styles, cancels queued scrolling and permits recreation without replacing consumer nodes.
+
+Standalone Collapse controls targeting one panel share an instance, synchronized ARIA and icons. Import `CGECollapse` as a named export from `tailtools` or `tailtools/CGEAccordion`; there is no separate Collapse directory.

@@ -69,3 +69,15 @@
 @utility cge-accordion-open {
   grid-template-rows: 1fr;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-cge-open],
+  [data-cge-accordion-ready] [data-cge-icon],
+  [data-cge-accordion-ready] [data-cge-accordion-icon],
+  [data-cge-accordion-ready] .cge-icon,
+  [data-cge-collapse] [data-cge-icon],
+  [data-cge-toggle] [data-cge-icon] {
+    transition-duration: 0ms !important;
+  }
+  [data-cge-open] > * { animation: none !important; }
+}

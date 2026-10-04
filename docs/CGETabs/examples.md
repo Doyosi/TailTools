@@ -193,3 +193,18 @@ document.getElementById('wizard-prev-btn').addEventListener('click', () => {
   wizard.prev();
 });
 ```
+
+
+## Cancel activation and force a reload
+```javascript
+const tabs = new CGETabs('#account-tabs', { urlSync: 'query', historyMode: 'push' });
+tabs.element.addEventListener('cge:tabs:show', event => {
+  if (event.detail.tabId === 'billing' && !userHasPermission) event.preventDefault();
+});
+await tabs.loadAjaxTab('billing', true); // bypass cache; old request is canceled
+// Before removing the container:
+tabs.destroy();
+```
+Instance `.on()` callbacks receive detail objects. Cancel activation through the DOM event, which exposes `preventDefault()`. Preserve unique tab IDs within each group and scope initialization to the inserted subtree.
+
+For narrow screens, keep the tablist as a single horizontal row and allow its automatic scroll area to expose the last tab. Arrow/Home/End navigation brings the focused control into view without resizing the panels.

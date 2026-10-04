@@ -118,3 +118,16 @@ tabs.destroy();
     </x-cge-tab-panel>
 </x-cge-tabs>
 ```
+
+
+## Maintenance contracts (2026-10-05)
+- Options: defaults → data-cge-tabs JSON → individual attributes → explicit JS. Programmatic roots need no marker; mark nested groups or initialize their independent instances first. Preselected aria-selected=true participates in initial state. Disabled tabs are skipped; manual arrows move focus, Enter/Space activate. Buttons default to type=button.
+- get accepts element, literal ID or selector; unknown/malformed lookups return undefined. init(root) includes/reuses matching roots.
+- Encoded hashes decode correctly; hash and query writes preserve history.state and unrelated URL parts. historyMode:push creates Back/Forward steps; replace is default. CSS honors reduced motion and scopes fade fallback to tab panels.
+- show(activeId) may update focus/history but emits no repeated activation and makes no request. Explicit reload: await loadAjaxTab(id,true). animationIn supports multiple classes. ui.tabList/tab/panelContainer are opt-in base layout slots; consumer markup retains default styling.
+- Controllers are per tab. A new same-tab request aborts the previous one; requests for other panels may finish/cache. Late canceled responses are ignored. cacheAjax:false reloads on reactivation. Failed forced reload invalidates cache and permits retry. Loading uses aria-busy/status, errors use alert. Translations render as text; returned HTML is trusted Blade/application markup.
+- Initialize AJAX children once with TailTools.init(panel), otherwise correct standalone APIs (document delegates for ActionButton/Lightbox). Includes Accordion/Collapse/Tabs. Destroy registry-backed children before replacing AJAX markup and on Tabs destroy; restore original panel nodes/attributes and cancel requests/observer. Re-init restored child markup when needed.
+- on/off use full cge:tabs:* names and detail objects. Cancel activation on DOM cge:tabs:show via event.preventDefault(); instance detail has no preventDefault method.
+- See [usage](../../../docs/CGETabs/usage.md), [API](../../../docs/CGETabs/api.md) and [maintenance report](../../../REPORTS.md).
+
+Horizontal lists use automatic overflow scrolling unless consumer CSS already specifies overflow. Keyboard focus brings the last tab into view; destroy restores the original style. Partial child-init failure tears down children and clears loaded/cache state before showing Retry. Runtime resolved options expose complete UI/translation defaults; callbacks accept null.

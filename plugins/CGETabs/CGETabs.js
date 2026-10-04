@@ -9,6 +9,9 @@
  * @package TailTools
  */
 
+import { captureAttributes, ownsNode, readHash, registeredInstance } from '../shared/navigation.js';
+import { escapeHTML } from '../shared/collection.js';
+
 export class CGETabs {
   /**
    * Active CGETabs instances indexed by element and id.
@@ -80,6 +83,8 @@ export class CGETabs {
       return CGETabs.instances.get(element);
     }
 
+    this._restorers = [captureAttributes(element)];
+    this._originalContent = new Map();
     this.element = element;
     this.id = element.id || `cge-tabs-${++CGETabs._counter}`;
     if (!element.id) {
@@ -135,11 +140,7 @@ export class CGETabs {
    * @returns {CGETabs | undefined}
    */
   static get(elementOrId) {
-    if (typeof elementOrId === 'string') {
-      const el = document.getElementById(elementOrId);
-      return CGETabs.instances.get(el || elementOrId);
-    }
-    return CGETabs.instances.get(elementOrId);
+    return registeredInstance(CGETabs.instances, elementOrId) || undefined;
   }
 
   /**
@@ -220,6 +221,8 @@ export class CGETabs {
     if (ds.cgeTransition !== undefined) dataAttrOptions.transition = ds.cgeTransition !== 'false';
     if (ds.cgeAnimationIn) dataAttrOptions.animationIn = ds.cgeAnimationIn;
 
+    // Base layout classes remain consumer-owned unless explicitly configured.
+    this._baseUI = { ...(jsonOptions.ui || {}), ...(userOptions.ui || {}) };
     return {
       ...CGETabs.defaults,
       ...jsonOptions,
@@ -248,27 +251,47 @@ export class CGETabs {
    * @private
    */
   _discoverDOM() {
+    const owns = node => ownsNode(this.element, node, '[data-cge-tabs]', CGETabs.instances);
     // Locate or identify tablist
-    this.tabList = this.element.querySelector('[role="tablist"]') ||
-                   this.element.querySelector('[data-cge-tablist]') ||
+    this.tabList = Array.from(this.element.querySelectorAll('[role="tablist"], [data-cge-tablist]')).find(owns) ||
                    this.element.firstElementChild;
 
     if (this.tabList) {
+      this._restorers.push(captureAttributes(this.tabList));
+      this._applyClasses(this.tabList, this._baseUI.tabList);
+      if (this.options.orientation === 'horizontal' && getComputedStyle(this.tabList).overflowX === 'visible') {
+        this.tabList.style.overflowX = 'auto';
+      }
       this.tabList.setAttribute('role', 'tablist');
       this.tabList.setAttribute('aria-orientation', this.options.orientation);
     }
 
     // Find all triggers belonging directly to this tabs instance (exclude nested [data-cge-tabs])
     const allTriggers = Array.from(this.element.querySelectorAll('[data-cge-tab]'));
-    const triggers = allTriggers.filter(btn => btn.closest('[data-cge-tabs]') === this.element);
+    const triggers = allTriggers.filter(owns);
 
     // Find all panels belonging directly to this tabs instance
     const allPanels = Array.from(this.element.querySelectorAll('[data-cge-panel]'));
-    const panels = allPanels.filter(p => p.closest('[data-cge-tabs]') === this.element);
+    const panels = allPanels.filter(owns);
+    const panelContainer = panels[0]?.parentElement;
+    if (panelContainer && panels.every(panel => panel.parentElement === panelContainer) && this._baseUI.panelContainer) {
+      this._restorers.push(captureAttributes(panelContainer));
+      this._applyClasses(panelContainer, this._baseUI.panelContainer);
+    }
 
-    this.tabs = triggers.map(trigger => {
+    this._initialSelected = new Set(triggers.filter(trigger => trigger.getAttribute('aria-selected') === 'true'));
+    const seen = new Set();
+    this.tabs = triggers.filter(trigger => {
+      const id = trigger.getAttribute('data-cge-tab');
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }).map(trigger => {
       const tabId = trigger.getAttribute('data-cge-tab');
       const panel = panels.find(p => p.getAttribute('data-cge-panel') === tabId) || null;
+      this._restorers.push(captureAttributes(trigger, panel));
+      this._applyClasses(trigger, this._baseUI.tab);
+      if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) trigger.type = 'button';
 
       // Assign IDs for ARIA linkage
       if (!trigger.id) {
@@ -318,6 +341,7 @@ export class CGETabs {
     }
 
     let indicator = this.tabList.querySelector('[data-cge-tabs-indicator], .cge-tabs-indicator, [data-cge-indicator]');
+    if (indicator) this._restorers.push(captureAttributes(indicator));
     if (!indicator) {
       indicator = document.createElement('div');
       indicator.setAttribute('data-cge-tabs-indicator', '');
@@ -365,6 +389,7 @@ export class CGETabs {
 
     if (this.options.urlSync === 'hash') {
       window.addEventListener('hashchange', this._onLocationChange);
+      window.addEventListener('popstate', this._onLocationChange);
     } else if (this.options.urlSync === 'query') {
       window.addEventListener('popstate', this._onLocationChange);
     }
@@ -375,8 +400,15 @@ export class CGETabs {
    * @private
    */
   _handleTriggerClick(e) {
+    if (this._destroyed) return;
+    const retry = e.target.closest('[data-cge-tab-retry]');
+    if (retry && this.tabs.some(tab => tab.id === retry.dataset.cgeTabRetry && tab.panel?.contains(retry))) {
+      e.preventDefault();
+      this.loadAjaxTab(retry.dataset.cgeTabRetry, true);
+      return;
+    }
     const trigger = e.target.closest('[data-cge-tab]');
-    if (!trigger || trigger.closest('[data-cge-tabs]') !== this.element) return;
+    if (!trigger || !this.tabs.some(tab => tab.trigger === trigger)) return;
 
     e.preventDefault();
     const tabId = trigger.getAttribute('data-cge-tab');
@@ -391,12 +423,13 @@ export class CGETabs {
    * @private
    */
   _handleKeydown(e) {
+    if (this._destroyed) return;
     const isVertical = this.options.orientation === 'vertical';
     const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight';
     const prevKey = isVertical ? 'ArrowUp' : 'ArrowLeft';
 
     const activeEl = document.activeElement;
-    const isTriggerFocused = activeEl && activeEl.getAttribute('data-cge-tab') && activeEl.closest('[data-cge-tabs]') === this.element;
+    const isTriggerFocused = this.tabs.some(tab => tab.trigger === activeEl);
     if (!isTriggerFocused) return;
 
     const availableTabs = this.tabs.filter(t => !this._isTabDisabled(t.id));
@@ -421,7 +454,7 @@ export class CGETabs {
     } else if (e.key === 'End') {
       e.preventDefault();
       targetTab = availableTabs[availableTabs.length - 1];
-    } else if (this.options.manual && (e.key === 'Enter' || e.key === ' ')) {
+    } else if ((this.options.manual || activeEl.tagName !== 'BUTTON') && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       if (currentTabId && !this._isTabDisabled(currentTabId)) {
         this.show(currentTabId, { focus: true });
@@ -431,7 +464,7 @@ export class CGETabs {
 
     if (targetTab) {
       if (this.options.manual) {
-        targetTab.trigger.focus();
+        this._focusTrigger(targetTab.trigger);
       } else {
         this.show(targetTab.id, { focus: true });
       }
@@ -443,6 +476,22 @@ export class CGETabs {
    * @private
    */
   _handleResize() {
+    this.updateIndicator();
+  }
+
+  _focusTrigger(trigger) {
+    trigger.focus();
+    if (!this.tabList) return;
+    const list = this.tabList.getBoundingClientRect();
+    const tab = trigger.getBoundingClientRect();
+    const vertical = this.options.orientation === 'vertical';
+    const size = vertical ? this.tabList.clientHeight : this.tabList.clientWidth;
+    if (!size) return;
+    const start = vertical ? list.top + this.tabList.clientTop : list.left + this.tabList.clientLeft;
+    const leading = vertical ? tab.top : tab.left;
+    const trailing = vertical ? tab.bottom : tab.right;
+    const delta = trailing > start + size ? trailing - start - size : Math.min(0, leading - start);
+    if (delta) this.tabList.scrollBy({ [vertical ? 'top' : 'left']: delta, behavior: 'instant' });
     this.updateIndicator();
   }
 
@@ -494,7 +543,7 @@ export class CGETabs {
     // 4. Pre-marked active trigger in DOM
     const activeTrigger = this.tabs.find(t => {
       const hasClass = t.trigger.classList.contains('active') || t.trigger.classList.contains('cge-tab-active');
-      const hasAria = t.trigger.getAttribute('aria-selected') === 'true';
+      const hasAria = this._initialSelected.has(t.trigger);
       return (hasClass || hasAria) && !this._isTabDisabled(t.id);
     });
     if (activeTrigger) {
@@ -515,7 +564,7 @@ export class CGETabs {
     if (typeof window === 'undefined') return null;
 
     if (this.options.urlSync === 'hash') {
-      const hash = window.location.hash.replace(/^#/, '').trim();
+      const hash = readHash();
       return hash || null;
     }
 
@@ -538,11 +587,11 @@ export class CGETabs {
 
     // Synchronize to URL
     if (this.options.urlSync === 'hash') {
-      const targetHash = `#${tabId}`;
+      const targetHash = `#${encodeURIComponent(tabId)}`;
       if (window.location.hash !== targetHash) {
         const method = this.options.historyMode === 'push' ? 'pushState' : 'replaceState';
         try {
-          window.history[method](null, '', targetHash);
+          window.history[method](window.history.state, '', targetHash);
         } catch (e) {}
       }
     } else if (this.options.urlSync === 'query') {
@@ -552,7 +601,7 @@ export class CGETabs {
         url.searchParams.set(key, tabId);
         const method = this.options.historyMode === 'push' ? 'pushState' : 'replaceState';
         try {
-          window.history[method](null, '', url.toString());
+          window.history[method](window.history.state, '', url.toString());
         } catch (e) {}
       }
     }
@@ -602,6 +651,11 @@ export class CGETabs {
     }
 
     const previousTabId = this.activeTabId;
+    if (previousTabId === tabId) {
+      if (options.focus) this._focusTrigger(targetTab.trigger);
+      if (options.updateHistory !== false) this._syncState(tabId);
+      return true;
+    }
 
     // Dispatch cancelable cge:tabs:show event
     const showEvent = this._emit('cge:tabs:show', {
@@ -612,7 +666,7 @@ export class CGETabs {
       instance: this
     }, true);
 
-    if (showEvent.defaultPrevented) {
+    if (showEvent.defaultPrevented || this._destroyed || this.activeTabId !== previousTabId) {
       return false;
     }
 
@@ -620,6 +674,7 @@ export class CGETabs {
     if (typeof this.options.onShow === 'function') {
       this.options.onShow(tabId, targetTab.panel, targetTab.trigger);
     }
+    if (this._destroyed || this.activeTabId !== previousTabId) return false;
 
     // Update active tab ID
     this.activeTabId = tabId;
@@ -641,7 +696,7 @@ export class CGETabs {
       }
 
       if (isDisabled && this.options.ui.disabledTab) {
-        const disabledClasses = this.options.ui.disabledTab.split(' ').filter(Boolean);
+        const disabledClasses = this.options.ui.disabledTab.split(/\s+/).filter(Boolean);
         t.trigger.classList.add(...disabledClasses);
       }
     });
@@ -657,11 +712,11 @@ export class CGETabs {
 
         // Apply transition animation if enabled
         if (this.options.transition && this.options.animationIn) {
-          const animClass = this.options.animationIn;
-          t.panel.classList.remove(animClass);
+          const animClasses = this.options.animationIn.split(/\s+/).filter(Boolean);
+          t.panel.classList.remove(...animClasses);
           // Reflow to restart CSS animation
           void t.panel.offsetWidth;
-          t.panel.classList.add(animClass);
+          t.panel.classList.add(...animClasses);
         }
       } else {
         t.panel.setAttribute('hidden', '');
@@ -674,7 +729,7 @@ export class CGETabs {
 
     // 4. Focus trigger if requested
     if (options.focus) {
-      targetTab.trigger.focus();
+      this._focusTrigger(targetTab.trigger);
     }
 
     // 5. Update history & storage
@@ -780,7 +835,7 @@ export class CGETabs {
    * Recalculates and animates dynamic indicator position and dimension.
    */
   updateIndicator() {
-    if (!this.indicatorEl || !this.tabList) return;
+    if (this._destroyed || !this.indicatorEl || !this.tabList) return;
 
     const activeTrigger = this.getTab(this.activeTabId);
     if (!activeTrigger || activeTrigger.offsetParent === null) {
@@ -835,6 +890,7 @@ export class CGETabs {
    * @returns {Promise<void>}
    */
   async loadAjaxTab(tabId, force = false) {
+    if (this._destroyed) return;
     const tab = this.tabs.find(t => t.id === tabId);
     if (!tab || !tab.panel) return;
     await this._loadAjaxContent(tabId, tab.panel, tab.trigger, force);
@@ -849,6 +905,7 @@ export class CGETabs {
    * @private
    */
   async _loadAjaxContent(tabId, panelEl, triggerEl, force = false) {
+    if (this._destroyed) return;
     if (!force && this._ajaxLoaded.has(tabId) && this.options.cacheAjax) {
       return;
     }
@@ -868,15 +925,20 @@ export class CGETabs {
 
     const controller = new AbortController();
     this._abortControllers.set(tabId, controller);
+    if (!this._originalContent.has(panelEl)) this._originalContent.set(panelEl, Array.from(panelEl.childNodes));
+    this._destroyPanelPlugins(panelEl);
+    panelEl.setAttribute('aria-busy', 'true');
+    panelEl.removeAttribute('data-cge-ajax-loaded');
+    this._ajaxLoaded.delete(tabId);
 
     // Render loading indicator inside panel
     panelEl.innerHTML = `
-      <div class="${this.options.ui.loadingContainer}">
+      <div class="${escapeHTML(this.options.ui.loadingContainer)}" role="status">
         <svg class="animate-spin w-6 h-6 text-indigo-600 dark:text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span class="text-xs font-medium">${this._t('loading')}</span>
+        <span class="text-xs font-medium">${escapeHTML(this._t('loading'))}</span>
       </div>
     `;
 
@@ -884,6 +946,7 @@ export class CGETabs {
     if (typeof this.options.onAjaxStart === 'function') {
       this.options.onAjaxStart(tabId, panelEl);
     }
+    if (this._destroyed || controller.signal.aborted) return;
 
     try {
       let html = '';
@@ -922,42 +985,41 @@ export class CGETabs {
         }
       }
 
-      if (this._destroyed || controller.signal.aborted) return;
+      if (this._destroyed || controller.signal.aborted || this._abortControllers.get(tabId) !== controller) return;
 
       panelEl.innerHTML = html;
       panelEl.setAttribute('data-cge-ajax-loaded', 'true');
       this._ajaxLoaded.add(tabId);
-      this._abortControllers.delete(tabId);
+      panelEl.removeAttribute('aria-busy');
 
       // Auto-lifecycle bridge for nested plugins
       this._bridgeLifecycle(panelEl, tabId);
+      if (this._destroyed || controller.signal.aborted || this._abortControllers.get(tabId) !== controller) return;
+      this._abortControllers.delete(tabId);
 
       this._emit('cge:tabs:ajax-loaded', { tabId, panel: panelEl, response: html, instance: this });
       if (typeof this.options.onAjaxLoaded === 'function') {
         this.options.onAjaxLoaded(tabId, panelEl, html);
       }
     } catch (error) {
-      if (controller.signal.aborted || this._destroyed) return;
+      if (controller.signal.aborted || this._destroyed || this._abortControllers.get(tabId) !== controller) return;
       this._abortControllers.delete(tabId);
+      panelEl.removeAttribute('aria-busy');
+      panelEl.removeAttribute('data-cge-ajax-loaded');
+      this._ajaxLoaded.delete(tabId);
+      this._destroyPanelPlugins(panelEl);
 
       panelEl.innerHTML = `
-        <div class="${this.options.ui.errorContainer}">
-          <p class="text-sm font-medium">${this._t('ajax-error')}</p>
-          <button type="button" data-cge-tab-retry="${tabId}" class="cge-tabs-retry-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition cursor-pointer">
+        <div class="${escapeHTML(this.options.ui.errorContainer)}" role="alert">
+          <p class="text-sm font-medium">${escapeHTML(this._t('ajax-error'))}</p>
+          <button type="button" data-cge-tab-retry="${escapeHTML(tabId)}" class="cge-tabs-retry-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition cursor-pointer">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span>${this._t('retry')}</span>
+            <span>${escapeHTML(this._t('retry'))}</span>
           </button>
         </div>
       `;
-
-      const retryBtn = panelEl.querySelector(`[data-cge-tab-retry="${tabId}"]`);
-      if (retryBtn) {
-        retryBtn.addEventListener('click', () => {
-          this.loadAjaxTab(tabId, true);
-        }, { once: true });
-      }
 
       this._emit('cge:tabs:ajax-error', { tabId, error, instance: this });
       if (typeof this.options.onAjaxError === 'function') {
@@ -970,47 +1032,38 @@ export class CGETabs {
    * Rebinds child plugins within freshly injected Ajax panel markup.
    * @private
    */
+  _pluginClasses() {
+    return [...new Set(['CGETabs', 'CGEAccordion', 'CGECollapse', 'CGEForm', 'CGESelect',
+      'CGEModal', 'CGEDrawer', 'CGEDropzone', 'CGEDataTable', 'CGEDataGrid'].map(name =>
+      window.TailTools?.[name] || window[name]).filter(Boolean))];
+  }
+
+  _destroyPanelPlugins(panel) {
+    // Discover by DOM node: works for Map and WeakMap registries, including selects.
+    const instances = new Set();
+    const nodes = [panel, ...panel.querySelectorAll('*')].reverse();
+    for (const node of nodes) for (const Plugin of this._pluginClasses()) {
+      const instance = Plugin.instances?.get(node);
+      if (instance && instance !== this) instances.add(instance);
+    }
+    for (const instance of instances) instance.destroy?.();
+  }
+
   _bridgeLifecycle(panelEl, tabId) {
-    if (typeof window === 'undefined') return;
-
-    // 1. Global library init
+    if (this._destroyed) return;
     if (window.TailTools?.init) {
-      try { window.TailTools.init(panelEl); } catch (e) {}
+      window.TailTools.init(panelEl);
+    } else {
+      for (const Plugin of this._pluginClasses()) {
+        if (Plugin === window.CGESelect) Plugin.init?.('select[data-cge-select]', {}, panelEl);
+        else Plugin.init?.(panelEl);
+      }
+      // These plugins use one document-level delegate, not a root argument.
+      window.CGEActionButton?.init?.();
+      window.CGELightbox?.init?.();
     }
-
-    // 2. Individual plugins auto-init
-    if (window.CGEActionButton?.init) {
-      try { window.CGEActionButton.init(panelEl); } catch (e) {}
-    }
-    if (window.CGEForm?.init) {
-      try { window.CGEForm.init(panelEl); } catch (e) {}
-    }
-    if (window.CGESelect?.init) {
-      try { window.CGESelect.init('select[data-cge-select]', {}, panelEl); } catch (e) {}
-    }
-    if (window.CGEModal?.init) {
-      try { window.CGEModal.init(panelEl); } catch (e) {}
-    }
-    if (window.CGEDrawer?.init) {
-      try { window.CGEDrawer.init(panelEl); } catch (e) {}
-    }
-    if (window.CGEDropzone?.init) {
-      try { window.CGEDropzone.init(panelEl); } catch (e) {}
-    }
-    if (window.CGEDataTable?.init) {
-      try { window.CGEDataTable.init(panelEl); } catch (e) {}
-    }
-    if (window.CGEDataGrid?.init) {
-      try { window.CGEDataGrid.init(panelEl); } catch (e) {}
-    }
-    if (window.CGELightbox?.init) {
-      try { window.CGELightbox.init(panelEl); } catch (e) {}
-    }
-
-    // 3. Dispatch global lifecycle notification
     document.dispatchEvent(new CustomEvent('cge:tabs:loaded', {
-      detail: { tabId, panel: panelEl, instance: this },
-      bubbles: true
+      detail: { tabId, panel: panelEl, instance: this }, bubbles: true
     }));
   }
 
@@ -1073,11 +1126,11 @@ export class CGETabs {
    */
   _applyClasses(element, toAdd, toRemove) {
     if (toRemove) {
-      const removeList = toRemove.split(' ').filter(Boolean);
+      const removeList = toRemove.split(/\s+/).filter(Boolean);
       element.classList.remove(...removeList);
     }
     if (toAdd) {
-      const addList = toAdd.split(' ').filter(Boolean);
+      const addList = toAdd.split(/\s+/).filter(Boolean);
       element.classList.add(...addList);
     }
   }
@@ -1129,10 +1182,14 @@ export class CGETabs {
     }
 
     // Clean up instances registry
-    CGETabs.instances.delete(this.element);
-    if (this.element.id) {
-      CGETabs.instances.delete(this.element.id);
+    for (const [panel, children] of this._originalContent) {
+      this._destroyPanelPlugins(panel);
+      panel.replaceChildren(...children);
     }
+    this._originalContent.clear();
+    for (const restore of this._restorers.reverse()) restore();
+    CGETabs.instances.delete(this.element);
+    CGETabs.instances.delete(this.id);
 
     // Dispatch destroyed event
     this._emit('cge:tabs:destroyed', { instance: this });

@@ -139,3 +139,9 @@ High-performance, accessible tabs and segmented control plugin designed for Tail
 5. Create AI consumer skills (`.agents/skills/cge-tabs/SKILL.md` and `.agents/skills/cge-tabs-skill.md`).
 6. Add interactive testing section to `index.html`.
 7. Verify all test suites (`npm run test`, `npm run test:package`).
+
+
+## Scoped maintenance — 2026-10-04
+Preserve public API, visual defaults and CSS Grid transitions. Verify programmatic and nested ownership, keyboard/hidden-panel access, initial/URL/storage state, duration and reduced motion, scoped init/get and DOM restoration. For Tabs verify AJAX cancellation/cache/retry and nested plugin lifecycle. Update declarations, four docs, consumer skill, browser/package checks and REPORTS.md.
+
+Completed 2026-10-05. Scoped fixes, docs/skills/types and 30 navigation regressions delivered. Validation: 27 Node / 116 Chrome, native mobile/desktop demo, NodeNext/Bundler, build, ESM/UMD and npm archive; see REPORTS.md.

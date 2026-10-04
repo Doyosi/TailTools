@@ -22,11 +22,15 @@ export interface CGEAccordionOptions {
   duration?: number;
   animation?: string | false;
   keyboard?: boolean;
-  onOpen?: (itemId: string, itemEl: HTMLElement) => void;
-  onClose?: (itemId: string, itemEl: HTMLElement) => void;
-  onToggle?: (itemId: string, isOpen: boolean, itemEl: HTMLElement) => void;
+  onOpen?: ((itemId: string, itemEl: HTMLElement) => void) | null;
+  onClose?: ((itemId: string, itemEl: HTMLElement) => void) | null;
+  onToggle?: ((itemId: string, isOpen: boolean, itemEl: HTMLElement) => void) | null;
   ui?: CGEAccordionUIOptions;
 }
+
+export type CGEAccordionResolvedOptions = Omit<Required<CGEAccordionOptions>, 'ui'> & {
+  ui: Required<CGEAccordionUIOptions>;
+};
 
 export interface CGEAccordionItem {
   id: string;
@@ -53,7 +57,7 @@ export declare class CGEAccordion {
   static defaults: CGEAccordionOptions;
   element: HTMLElement;
   id: string;
-  options: CGEAccordionOptions;
+  options: CGEAccordionResolvedOptions;
   items: CGEAccordionItem[];
   openItemIds: Set<string>;
 
@@ -91,11 +95,15 @@ export interface CGECollapseOptions {
   animation?: string | false;
   storage?: 'localStorage' | 'sessionStorage' | false;
   storageKey?: string | null;
-  onOpen?: (instance: CGECollapse) => void;
-  onClose?: (instance: CGECollapse) => void;
-  onToggle?: (isOpen: boolean, instance: CGECollapse) => void;
+  onOpen?: ((instance: CGECollapse) => void) | null;
+  onClose?: ((instance: CGECollapse) => void) | null;
+  onToggle?: ((isOpen: boolean, instance: CGECollapse) => void) | null;
   ui?: CGECollapseUIOptions;
 }
+
+export type CGECollapseResolvedOptions = Omit<Required<CGECollapseOptions>, 'ui'> & {
+  ui: Required<CGECollapseUIOptions>;
+};
 
 export interface CGECollapseEventDetail {
   instance: CGECollapse;
@@ -109,9 +117,11 @@ export declare class CGECollapse {
   static defaults: CGECollapseOptions;
   wrapper: HTMLElement;
   trigger: HTMLElement | null;
+  /** All controls targeting the same panel share this instance and state. */
+  triggers: HTMLElement[];
   content: HTMLElement | null;
   icon: HTMLElement | null;
-  options: CGECollapseOptions;
+  options: CGECollapseResolvedOptions;
   id: string;
 
   constructor(target: string | HTMLElement, options?: CGECollapseOptions);

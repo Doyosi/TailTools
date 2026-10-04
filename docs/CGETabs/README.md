@@ -96,3 +96,13 @@ tabs.prev();
 - [Code Examples](examples.md) - Comprehensive HTML, Tailwind CSS, and Laravel Blade implementations.
 - [Laravel Blade Integration](laravel-blade.md) - Reusable Blade components and server-rendered partial patterns.
 - [API Reference](api.md) - Complete TypeScript declarations and contract definitions.
+
+
+## State, accessibility and teardown
+Programmatic roots need no declarative marker. Nested groups must have `data-cge-tabs` or be initialized as independent programmatic instances first. Initial `aria-selected="true"` is preserved when resolving the first tab. Keyboard navigation skips disabled triggers; manual mode moves focus before activation. Native buttons default to `type="button"` inside forms.
+
+Hashes are encoded/decoded and URL writes preserve the host application's `history.state`. Use `historyMode: 'push'` to create Back/Forward steps. Reduced-motion preferences disable panel, indicator and loading animations. Calling `show()` on the already active tab updates requested focus/history without repeating events or requests; use `loadAjaxTab(id, true)` for an explicit reload.
+
+`destroy()` aborts requests, disconnects observers and restores original owned attributes and panel nodes. Child plugins in replaced AJAX markup are destroyed before replacement and on teardown. This does not destroy independent static nested components that remain in the original DOM.
+
+Horizontal tab lists gain scrolling when content overflows, so focused tabs remain reachable on narrow screens. Explicit overflow styling is respected.

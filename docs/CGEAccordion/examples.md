@@ -186,3 +186,21 @@ CGEAccordion works seamlessly alongside Alpine.js reactive components:
   </div>
 </div>
 ```
+
+
+## Multiple controls and scoped setup
+```html
+<div id="details-region">
+  <button type="button" data-cge-collapse="#details" data-cge-duration="180">Details</button>
+  <button type="button" data-cge-collapse="#details">Toggle details again</button>
+  <div id="details"><div><input name="notes" aria-label="Notes"></div></div>
+</div>
+```
+```javascript
+import { CGECollapse } from 'tailtools/CGEAccordion';
+const [details] = CGECollapse.init(document.getElementById('details-region'));
+details.open(); // both controls update; the panel becomes keyboard accessible
+console.log(details.triggers.length); // 2
+details.destroy(); // restores the original controls and panel attributes
+```
+Destroy nested instances before destroying their parent when managing independent programmatic lifecycles.

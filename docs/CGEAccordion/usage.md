@@ -172,3 +172,13 @@ collapse.on('toggle', ({ isOpen }) => {
 // Static initialization:
 CGECollapse.init();
 ```
+
+
+## State and lifecycle details
+Options resolve as defaults → data attributes → explicit JavaScript options. Initial Accordion state resolves from a matching decoded hash, persisted array (including an empty array), `defaultOpen` and DOM markup. Invalid IDs are filtered before enforcing `exclusive`/`alwaysOpen`. `data-cge-open="false"` does not mark an item open. `updateHash` writes an encoded hash on opening and preserves `history.state`.
+
+`keyboard: false` disables directional navigation; Enter/Space still activate non-button controls. Native buttons without a type become `type="button"` for form safety. Storage read/write failures are ignored. Use stable container IDs or an explicit `storageKey` to persist across page reloads.
+
+`CGECollapse.triggers` lists all controls for the panel; `trigger` remains the first control. `init(root)` includes a matching trigger root and skips missing targets. Direct construction with an unresolved target throws a clear error. Collapse accepts `data-cge-default-open`, `data-cge-duration`, `data-cge-storage` and `data-cge-storage-key` on the construction target; explicit JS options override them. Initial open markup includes `grid-rows-[1fr]` or `aria-expanded="true"`. Its duration, animation, storage and DOM restoration behave like Accordion. A newly inserted control can be bound by calling `CGECollapse.init(newControl)`.
+
+Lifecycle callbacks may destroy their instance. Opening a sibling stops if a close callback destroys the accordion; Collapse stops after callback-driven destroy and preserves the restored DOM.

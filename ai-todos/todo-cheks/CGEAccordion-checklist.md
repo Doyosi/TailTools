@@ -11,3 +11,12 @@ Tracking all development phases for `CGEAccordion` and `CGECollapse` in TailTool
 - [x] Phase 7: Interactive test sandbox in `index.html` and validation
 - [x] Phase 8: Documentation in `docs/CGEAccordion/` (README, usage, examples, api, laravel-blade)
 - [x] Phase 9: AI skill creation in `.agents/skills/cge-accordion/SKILL.md`
+
+
+## Maintenance — 2026-10-04
+- [x] Read AGENTS, rules, skills and implementation; scoped plan recorded.
+- [x] Fix verified ownership, state, accessibility and lifecycle defects.
+- [x] Update declarations, docs and canonical skill.
+- [x] Run browser regressions, strict types, build and package checks; update REPORTS.md.
+
+Completed 2026-10-05: 27/27 Node, 116/116 Chrome, native demo at 390/1024 px, strict NodeNext/Bundler, library/demo build, ESM/UMD and real npm archive verified. Findings recorded in REPORTS.md.

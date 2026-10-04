@@ -1,6 +1,44 @@
 # TailTools inceleme ve bakım raporu
 
-**Tarih:** 4 Ekim 2026
+**Tarih:** 5 Ekim 2026
+
+## CGEAccordion / CGECollapse ve CGETabs incelemesi — tamamlandı
+
+**Güncelleme:** 5 Ekim 2026. AGENTS.md, mevcut architecture/workflow/documentation rules, iki pluginin canonical skill'leri, plan/checklist, kaynak kod, declaration ve docs incelendi. Mevcut public API, dosya yapısı, demo teması ve Accordion'ın CSS Grid geçiş motoru korundu. Sistem yeniden tasarlanmadı.
+
+### Bulgular ve uygulanan düzeltmeler
+
+| Alan | Sorun / geliştirme | Uygulanan bakım |
+| --- | --- | --- |
+| Accordion ve Tabs kurulumu | İşaretleyicisiz programmatic root öğeleri bulamıyordu; nested discovery parent/child öğeleri karıştırabiliyordu. | Root sınırına göre ownership kontrolü, nested grup izolasyonu, duplicate item/tab ID filtreleme ve Accordion içerik/icon keşfinin kapsamlandırılması. |
+| Accordion state | `data-cge-open="false"` açık sayılıyordu; saklanan boş array varsayılan açık duruma yeniliyordu; geçersiz default ID alwaysOpen'ı bozabiliyordu. | Açık/kapalı markup, storage önceliği ve ID doğrulaması düzeltildi; exclusive swap/alwaysOpen korundu. Explicit JS seçenekleri data attributes üzerine yazılır. |
+| Accordion erişilebilirliği | Kapalı panellerin içindeki inputlar odak alabiliyordu; disabled trigger'lar arrow navigation'a giriyordu. | `inert` + aria-hidden, kapanan panelden trigger'a odak dönüşü, disabled öğeleri atlayan navigation. keyboard:false yalnızca yön navigasyonunu kapatır; non-button Enter/Space korunur. |
+| Collapse controls | Aynı paneli hedefleyen ikinci trigger yeni instance oluşturup registry'yi değiştirebiliyordu; eksik target butonun panel sanılmasına yol açıyordu. | Tek shared instance, `triggers` listesi ve tüm kontrollerde ARIA/icon eşitleme. Dynamic trigger binding ve matching root init; discovery eksik target'ı atlar, direct construction açık hata verir. |
+| Collapse Blade / options | Başlangıç açık Grid markup kaybolabiliyordu; duration/animation seçenekleri kullanılmıyordu; storage erişimi hata verebiliyordu. | Open markup ve deklaratif default/duration/storage seçenekleri, gerçek wrapper/icon duration ve animation, güvenli storage read/write. Blade örneği eşitlendi. |
+| Tabs state / keyboard | Discovery ilk aria-selected değerini sıfırlıyordu; automatic mode non-button Enter/Space eksikti; aynı aktif tab gereksiz event/request başlatıyordu. | Orijinal preselection korunur; native/manual keyboard davranışı düzeltildi. Aktif tab tekrar gösterildiğinde focus/history güncellenebilir, event/request tekrarlanmaz; explicit reload API korunur. |
+| Dar ekran Tabs | Son tab düğmesi liste dışına taşarak kısmen görünür kalabiliyordu. | Horizontal list, mevcut overflow stili belirtilmemişse kendi scroll alanını kullanır. Odaklanan tab yerel liste sınırları içinde görünür hale getirilir; indicator odak sonrası yeniden ölçülür. |
+| URL durumu | Encoded hash eşleşmiyordu; URL yazımları host history.state'i siliyordu; Tabs hash için popstate dinlemiyordu. | Encode/decode, mevcut history.state'i koruma ve hash/query browser navigation. Query güncellenirken diğer parametreler/hash korunur. |
+| Tabs AJAX | Failed forced reload eski loaded/cache işaretini koruyordu; retry ID ve çeviriler doğrudan HTML/selector içine giriyordu; destroy sonrası explicit load request başlatabiliyordu. | Cache invalidation/recovery, escaped loading/error text ve quoted ID destekleyen delegated Retry; busy/status/alert semantics. Controller kimliği ile cancellation koruması güçlendirildi; destroy sonrası network/DOM çalışması engellendi. |
+| Tabs child lifecycle | Global init yanında standalone init de çalışıyordu; ActionButton'a yanlış argüman veriliyordu; yenilenen panellerin child instance'ları temizlenmiyordu. | Tek global veya fallback init yolu, doğru API imzaları, Tabs/Accordion/Collapse dahil bridge; registry-backed child teardown (Select WeakMap dahil), partial init failure temizliği. |
+| Destroy / recreation | Orijinal class/style/ARIA/ID/hidden durumu geri yüklenmiyordu; başlangıç scroll RAF'ı kalabiliyordu; callback içinde destroy sonrası mutasyon sürebiliyordu. | Yalnız owned attribute snapshot/restore; Tabs AJAX panelinin orijinal node kimlikleri korunur. RAF/request/observer cleanup ve callback destroy guard'ları eklendi. Static nested component'lerin bağımsız lifecycle'ı korunur. |
+| Styling / dağıtım / tipler | Global animate-fade-in fallback diğer bileşenleri etkileyebiliyordu; reduced-motion eksikti; public styles girişinde Accordion import'u yoktu; bazı UI slots ve callback tipleri runtime ile uyuşmuyordu. | Fade fallback tab paneline scoped; reduced-motion, styles.css import'u, opt-in base UI slots ve multi-class animation desteği. Resolved option tipleri, nullable callbacks ve shared Collapse declarations doğrulandı. |
+
+### Belgeler ve doğrulama
+
+- İki pluginin README/usage/examples/api ve Laravel Blade rehberleri güncellendi. Event cancellation örneği gerçek DOM `preventDefault()` sözleşmesine düzeltildi; canonical skills, plan/checklist ve [test rehberi](tests/README.md) eşitlendi.
+- **27/27 Node testi** ve strict TypeScript **NodeNext/Bundler** kontrolleri geçti. API reference/declaration eşitliği ve compatibility link kontrolleri temiz.
+- **116/116 Chrome regresyonu** geçti; [navigation-regressions.js](tests/navigation-regressions.js) içinde **30 yeni senaryo** bulunur. Mocked Fetch/Axios; stale response, cache/retry, partial child-init failure, blocked storage, inert focus, callback destroy, DOM restoration ve scoped setup test edildi.
+- Gerçek `index.html` demosunda **390 ve 1024 px** Tabs/Accordion görünümü, native Arrow/Home/End ve Collapse Space, son tab'ın tamamen görünür olması, gecikmeli AJAX success/error/retry, reduced-motion ve destroy/recreation geçti. Ekran görüntüleri incelendi; runner OS temp konumunu yazdırır. Grid demo page/All/6 kontrolü de geçti.
+- `npm run build` library/demo üretimi başarılı. **ESM ve UMD** sürümlerinde deklaratif Accordion/Collapse/Tabs ve mevcut collection/FormData testleri geçti; **18 CGE export** doğrulandı, uncaught JS hatası yok.
+- `npm run test:package` gerçek npm arşivinde **13 ana plugin + CGECollapse companion** ve strict consumer tiplerini doğruladı. `git diff --check` temiz. Commit/push yapılmadı.
+
+Tekrar çalıştırma: `npm test`, `npm run build`, `npm run test:package` ve test rehberindeki Playwright ortamıyla `node tests/run-browser.mjs --serve --demo --bundle --compact`.
+
+### Kullanım notları ve sınırlar
+
+AJAX istekleri tab başına takip edilir: aynı tab'a yeni request eskisini iptal eder; başka tab'a geçildiğinde önceki panel kendi içeriğini tamamlayıp cache'e alabilir. `cacheAjax:false` yeniden aktivasyonda reload yapar. Başlangıç panel node'ları destroy ile geri gelir; bu içerik için child-plugin init gerekiyorsa tekrar init çağrılır. Bağımsız static nested instance'ları kaldırırken child → parent sırası kullanılır.
+
+Doğrulama Chrome ve taklit HTTP yanıtlarıyla yapıldı. Canlı Laravel endpoint'i, ekran okuyucu davranışı, diğer browser engine'leri ve tüm touch gesture kombinasyonları bu bakımda test edilmedi.
 
 ## Grid pagination ve loading uyumu — tamamlandı
 

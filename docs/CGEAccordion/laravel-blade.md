@@ -134,6 +134,7 @@ Create `resources/views/components/cge-collapse.blade.php`:
 <div>
     <button type="button"
             data-cge-collapse="#{{ $id }}"
+            data-cge-default-open="{{ $open ? 'true' : 'false' }}"
             class="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-800 transition cursor-pointer">
         <span>{{ $triggerText }}</span>
         <svg data-cge-icon class="w-3.5 h-3.5 transition-transform duration-300 {{ $open ? 'rotate-180' : '' }}" viewBox="0 0 20 20" fill="currentColor">

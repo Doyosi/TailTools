@@ -5,11 +5,12 @@ import { createRequire } from 'node:module';
 import { execFileSync, spawn } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { verifyGridUI } from './grid-ui.mjs';
+import { verifyNavigationUI } from './navigation-ui.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.TAILTOOLS_PLAYWRIGHT_MODULE || 'playwright');
 const baseline = process.argv.includes('--baseline');
 const expectedExports = [...readdirSync('plugins').filter(name => name.startsWith('CGE')),
-  'CGEFilter', 'CGESort', 'CGEPagination', 'CGEResponsive'].sort();
+  'CGECollapse', 'CGEFilter', 'CGESort', 'CGEPagination', 'CGEResponsive'].sort();
 const testUrl = process.env.TAILTOOLS_TEST_URL || 'http://127.0.0.1:5184';
 const server = process.argv.includes('--serve') ? spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', new URL(testUrl).port, '--strictPort'], { windowsHide: true, stdio: 'ignore' }) : null;
 if (server) {
@@ -62,6 +63,7 @@ try {
     await demo.locator('#demo-clusters-grid .cge-datagrid-perpage').selectOption('6');
     await demo.waitForFunction(() => !window.demoClustersGridInstance.loading && window.demoClustersGridInstance.data.length === 6);
     console.log(JSON.stringify({ ajaxGrid }));
+    console.log(JSON.stringify({ navigationUI: await verifyNavigationUI(demo) }, null, 2));
     console.log(JSON.stringify({ demoPlugins: plugins, demoErrors }, null, 2));
     if (demoErrors.length || JSON.stringify(plugins.sort()) !== JSON.stringify(expectedExports)) process.exitCode = 1;
   }
@@ -98,11 +100,21 @@ try {
         const collections = grid?.data.length === 1 && table?.rawRows.length === 1
           && root.textContent.includes('Grid') && tableRoot.textContent.includes('Table');
         grid?.destroy(); table?.destroy();
-        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections };
+        document.body.insertAdjacentHTML('beforeend', '<div data-cge-tabs><div data-cge-tablist><button data-cge-tab="one">One</button><button data-cge-tab="two">Two</button></div><section data-cge-panel="one">One panel</section><section data-cge-panel="two">Two panel</section></div><div data-cge-accordion><section data-cge-item="one"><button data-cge-trigger>One</button><div data-cge-body><div>Body</div></div></section></div><button data-cge-collapse="#packed-collapse">Toggle</button><div id="packed-collapse"><div>Collapse</div></div>');
+        api.init(document);
+        const tabsRoot = document.querySelector('[data-cge-tabs]');
+        const accRoot = document.querySelector('[data-cge-accordion]');
+        const tabs = api.CGETabs.get(tabsRoot);
+        const acc = api.CGEAccordion.get(accRoot);
+        const collapse = api.CGECollapse.get('packed-collapse');
+        tabs.show('two'); acc.open('one'); collapse.open();
+        const navigation = tabs.activeTabId === 'two' && acc.isOpen('one') && collapse.isOpen();
+        tabs.destroy(); acc.destroy(); collapse.destroy();
+        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections, navigation };
       });
       console.log(JSON.stringify({ bundle: format, ...result, errors: bundleErrors }));
       if (bundleErrors.length || JSON.stringify(result.plugins) !== JSON.stringify(expectedExports)
-        || !result.collections || result.values.join(',') !== 'a,b') process.exitCode = 1;
+        || !result.collections || !result.navigation || result.values.join(',') !== 'a,b') process.exitCode = 1;
       await bundled.close();
     }
   }

@@ -153,3 +153,15 @@ col.toggle();
     @endforeach
 </div>
 ```
+
+
+## Maintenance contracts (2026-10-05)
+- Options: defaults → data attributes → explicit JS. Programmatic roots need no marker; mark nested groups with data-cge-accordion or initialize independent children first. Use distinct item IDs within a group.
+- init(root) includes a matching root; get accepts element, literal ID or selector and returns null for invalid lookups. Accordion init creates only missing instances.
+- Closed panels are inert and aria-hidden; closing a focused panel returns focus to its trigger. Disabled triggers are skipped by arrows. keyboard:false disables directional navigation, while non-button Enter/Space still activate. Buttons without type default to button.
+- Initial state: decoded matching hash → stored array (empty means all closed) → defaultOpen → DOM. Filter invalid IDs before exclusive/alwaysOpen. data-cge-open="false" stays closed. updateHash writes encoded IDs without losing history.state.
+- duration applies to wrapper and icons; CSS honors reduced motion. Storage failures do not break initialization. Use stable root IDs/storageKey. destroy restores owned attributes/classes/styles and cancels initial scrolling; destroy independent children before their parent.
+- CGECollapse is a named export from tailtools or tailtools/CGEAccordion. All controls for one panel share an instance; trigger is the first, triggers lists all. init(newControl) binds newly inserted controls. Missing targets are skipped by discovery and throw on direct construction. Collapse accepts data-cge-default-open/duration/storage/storage-key, recognizes grid-rows-[1fr] open markup, and supports non-button Enter/Space.
+- See [usage](../../../docs/CGEAccordion/usage.md), [API](../../../docs/CGEAccordion/api.md) and [maintenance report](../../../REPORTS.md).
+
+Callbacks may destroy their instance; subsequent accordion sibling opening and Collapse toggle hooks stop before mutating restored DOM. Runtime resolved options expose complete UI defaults; callback options accept null.

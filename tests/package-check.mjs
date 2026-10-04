@@ -26,6 +26,10 @@ assert.deepEqual(plugins.sort(), readdirSync(join(workspace, 'plugins')).filter(
 const library = await import(pathToFileURL(join(packed, 'dist/tailtools.js')));
 assert.equal(typeof library.init, 'function');
 assert.equal(typeof library.default.init, 'function');
+assert.equal(typeof library.CGECollapse, 'function');
+assert.equal(library.default.CGECollapse, library.CGECollapse);
+const accordionBarrel = await import(pathToFileURL(join(packed, 'plugins/CGEAccordion/index.js')));
+assert.equal(typeof accordionBarrel.CGECollapse, 'function');
 for (const plugin of plugins) {
   for (const file of [`plugins/${plugin}/index.d.ts`, `plugins/${plugin}/${plugin}.d.ts`]) assert(files.has(file));
   assert.equal(typeof library[plugin], 'function');
@@ -43,7 +47,7 @@ for (const path of submodules) {
 }
 // Use package self-reference from a consumer within the extracted package;
 // this exercises the actual exports conditions without registry installs.
-const typeSource = `import TailTools, { CGESelect, CGEDropzone } from 'tailtools';\n` +
+const typeSource = `import TailTools, { CGESelect, CGEDropzone, CGECollapse } from 'tailtools';\nimport { CGECollapse as ShortCollapse } from 'tailtools/CGEAccordion';\nvoid [CGECollapse, ShortCollapse, TailTools.CGECollapse];\n` +
   plugins.map(name => `import ${name}Plugin from 'tailtools/plugins/${name}';\nvoid ${name}Plugin;`).join('\n') +
   submodules.map((path, index) => `\nimport Module${index} from 'tailtools${path.slice(1)}';\nvoid Module${index};`).join('\n') +
   '\nnew TailTools.CGEFilter(); new TailTools.CGESort(); new TailTools.CGEPagination(); new TailTools.CGEResponsive();\n' +

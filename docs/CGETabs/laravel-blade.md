@@ -183,3 +183,7 @@ When switching tabs inside Livewire or Alpine.js components, `CGETabs` works sea
     </x-cge-tabs>
 </div>
 ```
+
+
+## Dynamic panel cleanup
+Use unique tab/panel names per component. AJAX endpoints should return trusted rendered Blade HTML. Replacing an AJAX panel destroys its registered child plugins; Tabs destroy restores the original panel nodes and attributes. For explicit page/Livewire removal, call the instance's `destroy()` before removing its container, then initialize the inserted subtree. To cancel navigation, listen for the DOM `cge:tabs:show` event and call `preventDefault()`.
