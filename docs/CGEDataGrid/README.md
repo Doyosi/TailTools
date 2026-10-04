@@ -94,3 +94,7 @@ In your Blade view:
 - [Usage & Configuration Guide](usage.md)
 - [Practical Examples & Blade Components](examples.md)
 - [API Reference & TypeScript Typings](api.md)
+
+## Maintenance contracts
+
+Use stable unique IDs for remote data and enable `serverSide: true` for paginated endpoints. Removal methods update the local view. Cancellation, recreation and selection behavior are detailed in the [usage guide](usage.md#data-ownership-and-lifecycle). Regression checks run at [the browser test page](../../tests/regressions.html).

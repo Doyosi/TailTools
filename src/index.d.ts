@@ -21,6 +21,7 @@ import { CGELightbox } from '../plugins/CGELightbox/index.js';
 import { CGEModal } from '../plugins/CGEModal/index.js';
 import { CGESelect } from '../plugins/CGESelect/index.js';
 import { CGEToast } from '../plugins/CGEToast/index.js';
+import { CGEFilter, CGESort, CGEPagination, CGEResponsive } from '../plugins/CGEDataTable/index.js';
 import { CGEDataTable } from '../plugins/CGEDataTable/index.js';
 import { CGEDataGrid } from '../plugins/CGEDataGrid/index.js';
 declare const TailTools: {
@@ -36,5 +37,9 @@ declare const TailTools: {
   CGEToast: typeof CGEToast;
   CGEDataTable: typeof CGEDataTable;
   CGEDataGrid: typeof CGEDataGrid;
+  CGEFilter: typeof CGEFilter;
+  CGESort: typeof CGESort;
+  CGEPagination: typeof CGEPagination;
+  CGEResponsive: typeof CGEResponsive;
 };
 export default TailTools;

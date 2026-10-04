@@ -135,12 +135,14 @@ Independent filtering engine with configurable debounce and server serialization
 ```javascript
 import { CGEFilter } from 'tailtools/plugins/CGEDataTable/modules/CGEFilter.js';
 
-const filter = new CGEFilter({ debounce: 300 });
+const filter = new CGEFilter({
+    debounce: 300,
+    onChange: ({ global, serialized }) => {
+        // serialized: { search: global, 'filters[status]': 'active' }
+    }
+});
 filter.attachSearchInput('#search-input');
 filter.attachColumnFilter('status', '#status-select'); // Supports <select>, <select multiple>, and CGESelect
-filter.on('filter', ({ global, serialized }) => {
-    // serialized: { search: 'query', 'filters[status]': 'active' }
-});
 ```
 
 ### CGESort (`modules/CGESort.js`)
@@ -176,3 +178,11 @@ const resp = new CGEResponsive({ mode: 'collapse', table: '#my-table' });
 `CGEDataTable` automatically invokes `CGEActionButton.init()` on newly injected row elements across page swaps, search queries, column sorting, and server-rendered HTML injections.
 
 No manual event binding is required when rows contain action buttons with `data-cge-action="delete"` or confirmation dialogs.
+
+## Maintenance contracts
+
+- Keep the shipped API and existing theme. Use stable unique `id` values for remote records; zero is a valid ID. Set `serverSide: true` for a paginated Laravel endpoint, or false for a complete array processed locally.
+- Standalone module callbacks use constructor `onChange`, not `.on()`. Grid module names differ from Table (`setFilter`, `goToPage`, `getWindow` versus `setColumnFilter`, `goTo`, `computeWindow`); check the appropriate declaration before using a subpath.
+- New requests abort the previous request; stale responses cannot render or clear loading. Destroy cancels requests, timers, frames and listeners, restores original DOM, and permits recreation. Update all four plugin docs and verify browser regressions after maintenance.
+- Removal methods are local view operations; persist deletions with your own backend endpoint or CGEActionButton. A restore success must not remove the card/row. CGEActionButton.init() takes a selector string; global delegation covers future rows, so do not pass an HTMLElement.
+- CGEAlert methods take positional title/message/options and return an object with `isConfirmed`; dismissal is not confirmation. Grid deleteSelected returns a Promise<number>; Table deleteSelected returns the table and its toolbar asks first.

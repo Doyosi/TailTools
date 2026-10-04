@@ -43,6 +43,7 @@ export class CGEPagination {
     this.total = Math.max(0, parseInt(this.options.total, 10) || 0);
 
     /** @type {any} Reference to parent table if registered */
+    this.page = Math.min(this.page, this.lastPage);
     this.table = null;
 
     /** @type {Array<{ element: HTMLElement, event: string, handler: EventListener }>} */
@@ -180,6 +181,7 @@ export class CGEPagination {
       }
     }
 
+    this.page = Math.max(1, Math.min(this.page, this.lastPage));
     return this;
   }
 
@@ -259,9 +261,7 @@ export class CGEPagination {
     const params = {
       [this.options.pageParam]: this.page,
     };
-    if (this.perPage > 0) {
-      params[this.options.perPageParam] = this.perPage;
-    }
+    params[this.options.perPageParam] = this.perPage > 0 ? this.perPage : 'All';
     return params;
   }
 
@@ -292,9 +292,7 @@ export class CGEPagination {
 
     if (typeof this.options.onChange === 'function') {
       this.options.onChange(payload);
-    }
-
-    if (this.table && typeof this.table._onPaginationChange === 'function') {
+    } else if (this.table && typeof this.table._onPaginationChange === 'function') {
       this.table._onPaginationChange(payload);
     }
   }

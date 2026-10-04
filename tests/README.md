@@ -2,7 +2,7 @@
 
 `npm test` runs Node request/API/documentation regressions, then strict TypeScript checks with NodeNext and Bundler. TypeScript is a development dependency.
 
-Run `npm run dev` and open `/tests/regressions.html`, or use the demo link. Scenarios cover all nine plugins, awaited clear, async teardown, native reset, submitters, ARIA and stacked overlays. Requests are mocked; no real upload/delete or Laravel server is used. Each scenario reports PASS/FAIL.
+Run `npm run dev` and open `/tests/regressions.html`, or use the demo link. Scenarios cover all eleven plugins, awaited clear, async teardown, native reset, submitters, ARIA and stacked overlays. Collection scenarios additionally cover AJAX races, stable IDs, local pagination, confirmation dismissal, responsive cleanup and recreation. Requests are mocked; no real upload/delete or Laravel server is used. Each scenario reports PASS/FAIL.
 
 For automated browser verification, use an available Playwright installation and Chrome:
 

@@ -163,16 +163,18 @@ export class CGESort {
     let elements = [];
     if (typeof headers === 'string') {
       elements = Array.from(document.querySelectorAll(headers));
-    } else if (headers instanceof HTMLTableElement) {
-      elements = Array.from(headers.querySelectorAll('thead th[data-cge-key], thead th[data-cge-sortable]'));
+    } else if (headers instanceof HTMLElement) {
+      elements = Array.from(headers.querySelectorAll('th[data-cge-key], th[data-cge-sortable]'));
     } else if (headers instanceof NodeList || Array.isArray(headers)) {
       elements = Array.from(headers);
     }
 
     for (const th of elements) {
       const key = th.getAttribute('data-cge-key') || th.getAttribute('data-key') || th.dataset.cgeKey;
-      if (!key) continue;
+      if (!key || key === '_select' || th.getAttribute('data-cge-sortable') === 'false' || this._boundHeaders.some(item => item.element === th)) continue;
 
+      const original = { tabindex: th.getAttribute('tabindex'), role: th.getAttribute('role'),
+        sort: th.getAttribute('aria-sort'), classes: th.className };
       th.classList.add('cge-th-sortable', 'cursor-pointer', 'select-none');
       th.setAttribute('tabindex', '0');
       th.setAttribute('role', 'columnheader');
@@ -192,7 +194,7 @@ export class CGESort {
       th.addEventListener('click', handler);
       th.addEventListener('keydown', keyHandler);
 
-      this._boundHeaders.push({ element: th, key, handler });
+      this._boundHeaders.push({ element: th, key, handler, keyHandler, original });
     }
 
     this.updateIndicators();
@@ -280,8 +282,8 @@ export class CGESort {
       }
       case 'currency': {
         // Strip any currency symbols ($, €, £, ₺, ¥) and parse standard or european notation
-        const cleanA = String(a).replace(/[^\d.,-]/g, '').replace(/,/g, '.');
-        const cleanB = String(b).replace(/[^\d.,-]/g, '').replace(/,/g, '.');
+        const cleanA = this._normalizeCurrency(a);
+        const cleanB = this._normalizeCurrency(b);
         const numA = parseFloat(cleanA);
         const numB = parseFloat(cleanB);
         return (isNaN(numA) ? 0 : numA) - (isNaN(numB) ? 0 : numB);
@@ -301,6 +303,15 @@ export class CGESort {
    * Auto-detects data type from sample values.
    * @private
    */
+  _normalizeCurrency(value) {
+    const clean = String(value).replace(/[^\d.,-]/g, '');
+    const decimal = Math.max(clean.lastIndexOf('.'), clean.lastIndexOf(','));
+    if (decimal >= 0 && clean.length - decimal - 1 <= 2) {
+      return clean.slice(0, decimal).replace(/[.,]/g, '') + '.' + clean.slice(decimal + 1);
+    }
+    return clean.replace(/[.,]/g, '');
+  }
+
   _detectType(a, b) {
     const val = (a !== null && a !== undefined && a !== '') ? a : b;
     if (val === null || val === undefined) return 'string';
@@ -333,9 +344,7 @@ export class CGESort {
 
     if (typeof this.options.onChange === 'function') {
       this.options.onChange(payload);
-    }
-
-    if (this.table && typeof this.table._onSortChange === 'function') {
+    } else if (this.table && typeof this.table._onSortChange === 'function') {
       this.table._onSortChange(payload);
     }
   }
@@ -346,9 +355,13 @@ export class CGESort {
   destroy() {
     for (const item of this._boundHeaders) {
       item.element.removeEventListener('click', item.handler);
+      item.element.removeEventListener('keydown', item.keyHandler);
+      for (const [attr, value] of [['tabindex', item.original.tabindex], ['role', item.original.role], ['aria-sort', item.original.sort]]) {
+        if (value === null) item.element.removeAttribute(attr); else item.element.setAttribute(attr, value);
+      }
       const icon = item.element.querySelector('.cge-sort-indicator');
       if (icon) icon.remove();
-      item.element.classList.remove('cge-th-sortable', 'cge-sorted-asc', 'cge-sorted-desc');
+      item.element.className = item.original.classes;
     }
     this._boundHeaders = [];
     this.table = null;

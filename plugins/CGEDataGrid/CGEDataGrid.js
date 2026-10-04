@@ -1,3 +1,4 @@
+import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, fetchCollection } from '../shared/collection.js';
 /**
  * CGEDataGrid - Modern Reactive Card Grid & List Engine
  * TailTools Plugin Library
@@ -97,6 +98,8 @@ export class CGEDataGrid {
 
     translations: {
       'search-placeholder': 'Search items...',
+      'view-grid': 'Grid view',
+      'view-list': 'List view',
       'sort-by': 'Sort by...',
       'per-page': 'Show :count items',
       info: 'Showing :from to :to of :total items',
@@ -115,7 +118,8 @@ export class CGEDataGrid {
    * @returns {CGEDataGrid[]}
    */
   static init(root = document) {
-    const elements = root.querySelectorAll('[data-cge-datagrid]');
+    const elements = [...root.querySelectorAll('[data-cge-datagrid]')];
+    if (root.matches?.('[data-cge-datagrid]')) elements.unshift(root);
     const instances = [];
     elements.forEach((el) => {
       if (!CGEDataGrid.instances.has(el)) {
@@ -148,6 +152,8 @@ export class CGEDataGrid {
       return CGEDataGrid.instances.get(this.root);
     }
 
+    initializeCollection(this, this.root);
+    this._itemIds = new Map();
     this.options = this._mergeOptions(CGEDataGrid.defaults, options);
 
     /** @type {'grid' | 'list'} */
@@ -157,6 +163,7 @@ export class CGEDataGrid {
     this.layoutMode = ['grid', 'list', 'both'].includes(this.options.layoutMode) ? this.options.layoutMode : 'both';
 
     /** @type {Set<string | number>} Set of selected item IDs */
+    if (this.layoutMode !== 'both') this.viewMode = this.layoutMode;
     this.selectedIds = new Set();
 
     /** @type {Array<any>} Primary in-memory dataset */
@@ -300,7 +307,10 @@ export class CGEDataGrid {
       `;
       this.controlsWrap.appendChild(viewSwitcher);
 
-      viewSwitcher.querySelectorAll('[data-cge-view]').forEach((btn) => {
+    }
+    if (this.layoutMode === 'both') {
+      this.controlsWrap.querySelectorAll('[data-cge-view]').forEach((btn) => {
+        btn.setAttribute('aria-pressed', String(btn.getAttribute('data-cge-view') === this.viewMode));
         const handler = (e) => {
           e.preventDefault();
           const targetMode = btn.getAttribute('data-cge-view');
@@ -327,7 +337,9 @@ export class CGEDataGrid {
         perPageSelect.appendChild(optEl);
       });
       this.controlsWrap.appendChild(perPageSelect);
-
+    }
+    const perPageSelect = this.controlsWrap.querySelector('.cge-datagrid-perpage');
+    if (perPageSelect) {
       const handler = (e) => {
         this.pagination.setPerPage(e.target.value);
       };
@@ -353,26 +365,25 @@ export class CGEDataGrid {
           </div>
         `;
         this.headerEl.after(selBar);
+      }
+      const selAllBtn = selBar.querySelector('.cge-btn-select-all');
+      const clearBtn = selBar.querySelector('.cge-btn-clear-selection');
+      const delBtn = selBar.querySelector('.cge-btn-delete-selected');
 
-        const selAllBtn = selBar.querySelector('.cge-btn-select-all');
-        const clearBtn = selBar.querySelector('.cge-btn-clear-selection');
-        const delBtn = selBar.querySelector('.cge-btn-delete-selected');
-
-        if (selAllBtn) {
-          const h = () => this.selectAll();
-          selAllBtn.addEventListener('click', h);
-          this._eventCleanups.push({ element: selAllBtn, event: 'click', handler: h });
-        }
-        if (clearBtn) {
-          const h = () => this.clearSelection();
-          clearBtn.addEventListener('click', h);
-          this._eventCleanups.push({ element: clearBtn, event: 'click', handler: h });
-        }
-        if (delBtn) {
-          const h = () => this.deleteSelected();
-          delBtn.addEventListener('click', h);
-          this._eventCleanups.push({ element: delBtn, event: 'click', handler: h });
-        }
+      if (selAllBtn) {
+        const h = () => this.selectAll();
+        selAllBtn.addEventListener('click', h);
+        this._eventCleanups.push({ element: selAllBtn, event: 'click', handler: h });
+      }
+      if (clearBtn) {
+        const h = () => this.clearSelection();
+        clearBtn.addEventListener('click', h);
+        this._eventCleanups.push({ element: clearBtn, event: 'click', handler: h });
+      }
+      if (delBtn) {
+        const h = () => this.deleteSelected();
+        delBtn.addEventListener('click', h);
+        this._eventCleanups.push({ element: delBtn, event: 'click', handler: h });
       }
       this.selectionBar = selBar;
     }
@@ -489,7 +500,8 @@ export class CGEDataGrid {
         if (trigger && this.cardsContainer.contains(trigger)) {
           const card = trigger.closest('.cge-card');
           if (card) {
-            this.removeCard(card);
+            const action = (e.detail?.action || trigger.getAttribute('data-cge-action') || '').toLowerCase();
+            if (['delete', 'revoke', 'destroy', 'remove', 'cancel', 'forcedelete'].includes(action) || trigger.hasAttribute('data-cge-delete-card')) this.removeCard(card);
           }
         }
       };
@@ -533,7 +545,10 @@ export class CGEDataGrid {
    * @returns {this}
    */
   setData(data) {
-    this.data = Array.isArray(data) ? [...data] : [];
+    if (this._destroyed) return this;
+    cancelCollectionWork(this);
+    this.setLoading(false);
+    this._indexData(Array.isArray(data) ? [...data] : []);
     this.pagination.page = 1;
     this.clearSelection();
     this.refresh();
@@ -546,8 +561,10 @@ export class CGEDataGrid {
    * @returns {Promise<any>}
    */
   async fetch(extraParams = {}) {
-    if (!this.options.url) return;
-
+    if (this._destroyed || !this.options.url) return;
+    this._requestController?.abort();
+    const controller = this._requestController = new AbortController();
+    const requestId = ++this._requestId;
     this.setLoading(true);
 
     try {
@@ -558,61 +575,65 @@ export class CGEDataGrid {
         ...extraParams,
       };
 
-      const urlObj = new URL(this.options.url, window.location.origin);
-      Object.entries(queryParams).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && v !== '') {
-          urlObj.searchParams.set(k, String(v));
-        }
-      });
-
-      let responseData;
-      if (this.options.driver === 'axios' || (this.options.driver === 'auto' && window.axios)) {
-        const client = window.axios;
-        const res = await client.get(urlObj.toString(), { headers: this.options.headers });
-        responseData = res.data;
-      } else {
-        const res = await fetch(urlObj.toString(), {
-          method: this.options.method || 'GET',
-          headers: {
-            Accept: 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            ...this.options.headers,
-          },
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
-        }
-        responseData = await res.json();
-      }
+      const responseData = await fetchCollection(this.options, queryParams, controller.signal);
+      if (this._destroyed || requestId !== this._requestId) return;
 
       // Handle Laravel LengthAwarePaginator structure
       if (responseData && Array.isArray(responseData.data)) {
-        this.data = responseData.data;
-        this.pagination.total = responseData.total !== undefined ? responseData.total : responseData.data.length;
-        if (responseData.current_page !== undefined) {
+        this._indexData(responseData.data);
+        if (this.options.serverSide) this.pagination.total = responseData.total !== undefined ? responseData.total : responseData.data.length;
+        if (this.options.serverSide && responseData.current_page !== undefined) {
           this.pagination.page = responseData.current_page;
         }
-        if (responseData.per_page !== undefined) {
-          this.pagination.perPage = responseData.per_page;
+        if (this.options.serverSide && responseData.per_page !== undefined) {
+          this.pagination.perPage = this.pagination._normalizePerPage(responseData.per_page);
         }
       } else if (Array.isArray(responseData)) {
-        this.data = responseData;
+        this._indexData(responseData);
         this.pagination.total = responseData.length;
       } else {
-        this.data = [];
+        this._indexData([]);
         this.pagination.total = 0;
       }
 
       this.emit('data-loaded', { data: this.data, raw: responseData });
-      this._renderCards(this.data);
-      this._renderFooter();
+      if (this._destroyed || requestId !== this._requestId) return;
+      if (this.options.serverSide) {
+        this.pagination.setTotal(this.pagination.total);
+        this.pagination.page = Math.max(1, Math.min(parseInt(this.pagination.page, 10) || 1, this.pagination.lastPage));
+        this._renderCards(this.data);
+        this._renderFooter();
+        this._updateSelectionBar();
+        this.emit('render', { items: this.data, total: this.pagination.total });
+      } else this.refresh();
       return responseData;
     } catch (err) {
-      console.error('[CGEDataGrid] Fetch error:', err);
-      this.emit('fetch-error', { error: err });
+      if (!this._destroyed && requestId === this._requestId && !controller.signal.aborted) {
+        this.emit('fetch-error', { error: err });
+      }
     } finally {
-      this.setLoading(false);
+      if (!this._destroyed && requestId === this._requestId) this.setLoading(false);
     }
+  }
+
+  _indexData(data) {
+    ++this._dataVersion;
+    this.data = data;
+    this._itemIds = new Map(data.map((item, index) => [item, String(item.id ?? `item-${index}`)]));
+  }
+
+  _getItemId(item, index) {
+    return this._itemIds?.get(item) ?? String(item.id ?? `item-${index}`);
+  }
+
+  _refreshAfterRemoval(count) {
+    if (this.options.serverSide && this.options.source === 'ajax') {
+      this.pagination.setTotal(Math.max(0, this.pagination.total - count));
+      this._renderCards(this.data);
+      this._renderFooter();
+      this._updateSelectionBar();
+      this.emit('render', { items: this.data, total: this.pagination.total });
+    } else this.refresh();
   }
 
   /**
@@ -620,7 +641,8 @@ export class CGEDataGrid {
    * @returns {this}
    */
   refresh() {
-    if (this.options.serverSide) {
+    if (this._destroyed) return this;
+    if (this.options.serverSide && this.options.source === 'ajax') {
       this.fetch();
       return this;
     }
@@ -674,9 +696,8 @@ export class CGEDataGrid {
     this.cardsContainer.appendChild(fragment);
 
     // Auto-init CGEActionButton on newly rendered cards
-    if (this.options.autoBindActions && window.TailTools && typeof window.TailTools.CGEActionButton?.init === 'function') {
-      window.TailTools.CGEActionButton.init(this.cardsContainer);
-    }
+    const actions = window.CGEActionButton || window.TailTools?.CGEActionButton;
+    if (this.options.autoBindActions && typeof actions?.init === 'function') actions.init();
   }
 
   /**
@@ -688,7 +709,7 @@ export class CGEDataGrid {
    */
   _createCardElement(item, index) {
     const isList = this.viewMode === 'list';
-    const itemId = String(item.id !== undefined ? item.id : `item-${index}`);
+    const itemId = this._getItemId(item, index);
 
     let htmlContent = '';
 
@@ -755,13 +776,14 @@ export class CGEDataGrid {
         const checkboxWrapper = document.createElement('div');
         checkboxWrapper.className = this.options.ui.cardCheckboxWrapper;
         checkboxWrapper.innerHTML = `
-          <input type="checkbox" class="${this.options.ui.cardCheckbox} cge-card-checkbox" data-cge-select-id="${id}" ${this.selectedIds.has(id) ? 'checked' : ''} />
+          <input type="checkbox" class="${this.options.ui.cardCheckbox} cge-card-checkbox" data-cge-select-id="${escapeHTML(id)}" ${this.selectedIds.has(id) ? 'checked' : ''} />
         `;
         if (getComputedStyle(el).position === 'static') {
           el.style.position = 'relative';
         }
         el.prepend(checkboxWrapper);
       } else {
+        checkbox.setAttribute('data-cge-select-id', id);
         checkbox.checked = this.selectedIds.has(id);
       }
     }
@@ -799,6 +821,8 @@ export class CGEDataGrid {
       prevBtn.className = `${this.options.ui.pageButton} ${this.pagination.page <= 1 ? this.options.ui.pageButtonDisabled : ''}`;
       prevBtn.innerHTML = '&lsaquo;';
       prevBtn.title = 'Previous';
+      prevBtn.disabled = this.pagination.page <= 1;
+      prevBtn.setAttribute('aria-label', 'Previous page');
       prevBtn.onclick = () => this.pagination.prevPage();
       this.paginationEl.appendChild(prevBtn);
 
@@ -825,6 +849,8 @@ export class CGEDataGrid {
       nextBtn.className = `${this.options.ui.pageButton} ${this.pagination.page >= totalPages ? this.options.ui.pageButtonDisabled : ''}`;
       nextBtn.innerHTML = '&rsaquo;';
       nextBtn.title = 'Next';
+      nextBtn.disabled = this.pagination.page >= totalPages;
+      nextBtn.setAttribute('aria-label', 'Next page');
       nextBtn.onclick = () => this.pagination.nextPage();
       this.paginationEl.appendChild(nextBtn);
 
@@ -858,6 +884,8 @@ export class CGEDataGrid {
     prevBtn.type = 'button';
     prevBtn.className = `${this.options.ui.pageButton} ${this.pagination.page <= 1 ? this.options.ui.pageButtonDisabled : ''}`;
     prevBtn.innerHTML = '&lsaquo;';
+    prevBtn.disabled = this.pagination.page <= 1;
+    prevBtn.setAttribute('aria-label', 'Previous page');
     prevBtn.onclick = () => this.pagination.prevPage();
     this.paginationEl.appendChild(prevBtn);
 
@@ -870,6 +898,8 @@ export class CGEDataGrid {
     nextBtn.type = 'button';
     nextBtn.className = `${this.options.ui.pageButton} ${this.pagination.page >= totalPages ? this.options.ui.pageButtonDisabled : ''}`;
     nextBtn.innerHTML = '&rsaquo;';
+    nextBtn.disabled = this.pagination.page >= totalPages;
+    nextBtn.setAttribute('aria-label', 'Next page');
     nextBtn.onclick = () => this.pagination.nextPage();
     this.paginationEl.appendChild(nextBtn);
   }
@@ -880,7 +910,7 @@ export class CGEDataGrid {
    * @returns {this}
    */
   setViewMode(mode) {
-    if (mode !== 'grid' && mode !== 'list') return this;
+    if (this._destroyed || (mode !== 'grid' && mode !== 'list') || (this.layoutMode !== 'both' && mode !== this.layoutMode)) return this;
     if (this.viewMode === mode) return this;
 
     this.viewMode = mode;
@@ -893,11 +923,13 @@ export class CGEDataGrid {
         switcher.querySelectorAll('[data-cge-view]').forEach((btn) => {
           const isTarget = btn.getAttribute('data-cge-view') === mode;
           btn.className = `${this.options.ui.viewModeButton} ${isTarget ? this.options.ui.viewModeButtonActive : ''}`;
+          btn.setAttribute('aria-pressed', String(isTarget));
         });
       }
     }
 
-    this.refresh();
+    if (this.options.serverSide && this.options.source === 'ajax') this._renderCards(this.data);
+    else this.refresh();
     this.emit('viewmode', { viewMode: mode });
     return this;
   }
@@ -919,7 +951,7 @@ export class CGEDataGrid {
     }
 
     // Update card DOM visual state
-    const card = this.cardsContainer.querySelector(`[data-cge-id="${strId}"]`);
+    const card = this.cardsContainer.querySelector(`[data-cge-id="${CSS.escape(strId)}"]`);
     if (card) {
       if (willSelect) {
         card.classList.add(...this.options.ui.cardSelected.split(' ').filter(Boolean));
@@ -945,7 +977,7 @@ export class CGEDataGrid {
   selectAll() {
     const targetItems = this.options.serverSide ? this.data : this.processedData;
     targetItems.forEach((item, idx) => {
-      const id = String(item.id !== undefined ? item.id : `item-${idx}`);
+      const id = this._getItemId(item, idx);
       this.selectedIds.add(id);
     });
 
@@ -988,7 +1020,7 @@ export class CGEDataGrid {
   getSelectedItems() {
     const idSet = this.selectedIds;
     return this.data.filter((item, idx) => {
-      const id = String(item.id !== undefined ? item.id : `item-${idx}`);
+      const id = this._getItemId(item, idx);
       return idSet.has(id);
     });
   }
@@ -998,84 +1030,51 @@ export class CGEDataGrid {
    * @returns {Promise<number>} Number of removed items
    */
   async deleteSelected() {
-    const count = this.selectedIds.size;
-    if (count === 0) return 0;
-
-    // Trigger confirmation via CGEAlert if available, or native confirm
-    const confirmMessage = this.options.translations['confirm-bulk-delete'].replace(':count', String(count));
-    let confirmed = false;
-
-    if (window.TailTools && typeof window.TailTools.CGEAlert?.confirm === 'function') {
-      try {
-        const res = await window.TailTools.CGEAlert.confirm({
-          title: 'Delete Selected Items',
-          text: confirmMessage,
-          variant: 'destructive',
-          confirmText: 'Delete All',
-        });
-        confirmed = res && res.isConfirmed;
-      } catch {
-        confirmed = false;
-      }
-    } else {
-      confirmed = window.confirm(confirmMessage);
-    }
-
-    if (!confirmed) return 0;
-
+    if (this._destroyed || this._confirmingDelete || !this.selectedIds.size) return 0;
     const idsToDelete = new Set(this.selectedIds);
-    this.data = this.data.filter((item, idx) => {
-      const id = String(item.id !== undefined ? item.id : `item-${idx}`);
-      return !idsToDelete.has(id);
-    });
-
-    this.clearSelection();
-    this.refresh();
-    this.emit('bulk-delete', { deletedCount: count, deletedIds: Array.from(idsToDelete) });
-    return count;
+    const originalData = this.data;
+    const message = this.options.translations['confirm-bulk-delete'].replace(':count', String(idsToDelete.size));
+    this._confirmingDelete = true;
+    try {
+      const alert = window.CGEAlert || window.TailTools?.CGEAlert;
+      const result = alert?.confirm ? await alert.confirm('Delete Selected Items', message, { archetype: 'delete' }) : window.confirm(message);
+      if (!(result === true || result?.isConfirmed) || this._destroyed || this.data !== originalData) return 0;
+      this.data = this.data.filter((item, idx) => !idsToDelete.has(this._getItemId(item, idx)));
+      const removed = originalData.length - this.data.length;
+      idsToDelete.forEach(id => this.selectedIds.delete(id));
+      this._updateCardsSelectionState();
+      this._refreshAfterRemoval(removed);
+      this.emit('selection-change', { selectedIds: this.getSelectedIds(), selectedItems: this.getSelectedItems() });
+      this.emit('bulk-delete', { deletedCount: removed, deletedIds: Array.from(idsToDelete) });
+      return removed;
+    } catch {
+      return 0;
+    } finally { this._confirmingDelete = false; }
   }
 
-  /**
-   * Smoothly removes a card from view and dataset with animation.
-   * @param {HTMLElement | string} target Card element or ID
-   * @returns {boolean}
-   */
+  /** Removes a card locally after its exit animation. */
+
   removeCard(target) {
-    const card = typeof target === 'string' ? this.cardsContainer.querySelector(`[data-cge-id="${target}"]`) : target;
-    if (!card) return false;
-
+    if (this._destroyed) return false;
+    const card = typeof target === 'string' ? this.cardsContainer.querySelector(`[data-cge-id="${CSS.escape(target)}"]`) : target;
+    if (!card || !this.cardsContainer.contains(card) || card.dataset.cgeRemoving) return false;
     const id = card.getAttribute('data-cge-id');
-
-    // Add scale-down fade exit transition
-    card.style.transition = 'all 250ms ease-out';
-    card.style.opacity = '0';
-    card.style.transform = 'scale(0.95)';
-
-    setTimeout(() => {
-      card.remove();
-
-      // Remove from data arrays
-      if (id) {
-        this.selectedIds.delete(id);
-        this.data = this.data.filter((item, idx) => {
-          const itemId = String(item.id !== undefined ? item.id : `item-${idx}`);
-          return itemId !== id;
-        });
-      }
-
-      this.pagination.setTotal(this.data.length);
-      this._renderFooter();
-      this._updateSelectionBar();
+    const version = this._dataVersion;
+    card.dataset.cgeRemoving = 'true';
+    card.style.transition = 'all 250ms ease-out'; card.style.opacity = '0'; card.style.transform = 'scale(0.95)';
+    delayCollection(this, () => {
+      if (this._dataVersion !== version) return;
+      const previousCount = this.data.length;
+      card.remove(); this.selectedIds.delete(id);
+      this.data = this.data.filter((item, idx) => this._getItemId(item, idx) !== id);
+      this._refreshAfterRemoval(previousCount - this.data.length);
       this.emit('card-removed', { id, card });
-    }, 250);
-
+    });
     return true;
   }
 
-  /**
-   * Synchronizes visual selection classes and checkboxes across all visible cards.
-   * @private
-   */
+  /** Synchronizes visible selection state. */
+
   _updateCardsSelectionState() {
     if (!this.cardsContainer) return;
     this.cardsContainer.querySelectorAll('.cge-card').forEach((card) => {
@@ -1118,6 +1117,7 @@ export class CGEDataGrid {
    */
   setLoading(isLoading) {
     this.loading = Boolean(isLoading);
+    this.root.setAttribute('aria-busy', String(this.loading));
     if (this.loadingEl) {
       this.loadingEl.style.display = this.loading ? 'flex' : 'none';
     }
@@ -1175,6 +1175,7 @@ export class CGEDataGrid {
    * @param {any} [detail={}]
    */
   emit(event, detail = {}) {
+    if (this._destroyed && event !== 'destroyed') return;
     const payload = { ...detail, instance: this };
 
     if (this._listeners.has(event)) {
@@ -1216,6 +1217,10 @@ export class CGEDataGrid {
    * Teardown and cleanup of instances, listeners, and sub-modules.
    */
   destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    cancelCollectionWork(this);
+    this.emit('destroyed', { instance: this });
     for (const item of this._eventCleanups) {
       item.element.removeEventListener(item.event, item.handler);
     }
@@ -1227,7 +1232,8 @@ export class CGEDataGrid {
 
     this._listeners.clear();
     CGEDataGrid.instances.delete(this.root);
-    this.emit('destroyed', { instance: this });
+    this.loading = false;
+    this._restoreDOM();
   }
 }
 

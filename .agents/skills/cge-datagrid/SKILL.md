@@ -119,3 +119,11 @@ In Blade template:
 | `selectable` | `boolean` | `false` | Enables card checkboxes and bulk action bar. |
 | `selectOnClick` | `boolean` | `false` | Toggles selection by clicking anywhere on card. |
 | `autoBindActions` | `boolean` | `true` | Auto binds `CGEActionButton` on rendered cards. |
+
+## Maintenance contracts
+
+- Keep the shipped API and existing theme. Use stable unique `id` values for remote records; zero is a valid ID. Set `serverSide: true` for a paginated Laravel endpoint, or false for a complete array processed locally.
+- Standalone module callbacks use constructor `onChange`, not `.on()`. Grid module names differ from Table (`setFilter`, `goToPage`, `getWindow` versus `setColumnFilter`, `goTo`, `computeWindow`); check the appropriate declaration before using a subpath.
+- New requests abort the previous request; stale responses cannot render or clear loading. Destroy cancels requests, timers, frames and listeners, restores original DOM, and permits recreation. Update all four plugin docs and verify browser regressions after maintenance.
+- Removal methods are local view operations; persist deletions with your own backend endpoint or CGEActionButton. A restore success must not remove the card/row. CGEActionButton.init() takes a selector string; global delegation covers future rows, so do not pass an HTMLElement.
+- CGEAlert methods take positional title/message/options and return an object with `isConfirmed`; dismissal is not confirmation. Grid deleteSelected returns a Promise<number>; Table deleteSelected returns the table and its toolbar asks first.

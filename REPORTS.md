@@ -2,6 +2,41 @@
 
 **Tarih:** 4 Ekim 2026
 
+## CGEDataGrid ve CGEDataTable ek incelemesi — tamamlandı
+
+Kullanıcının eklediği iki plugin; çekirdek sınıfları, yedi standalone modül, JS/type barrel'ları, package exports, stiller, mevcut demo, docs ve iki canonical skill ile birlikte incelendi. AGENTS.md ve üç rules belgesi uygulandı; mevcut plan/checklist dosyalarına bakım fazı eklendi. Mimari, public metot isimleri, tema ve Laravel/Tailwind kullanım biçimi korundu.
+
+| Alan | Bulunan sorun | Uygulanan düzeltme |
+| --- | --- | --- |
+| İki pluginin modülleri | onChange callback ile parent bildirimi aynı anda çalışıp iki render/istek üretiyordu. | Callback varsa bir kez çağrılır; yoksa parent bildirimi kullanılır. |
+| AJAX sürücüleri | Eski yanıt yeni veriyi ezebiliyor, eski finally aktif loading'i kapatabiliyordu. Grid Axios daima GET gönderiyordu; Table Fetch HTTP hatalarını başarılı içerik gibi işleyebiliyordu. | AbortController ve istek sürümü; yalnızca güncel yanıt render/loading'i değiştirir. Ortak küçük internal collection helper Fetch/Axios yöntem, JSON gövde, başlık ve HTTP hata davranışını eşitler. |
+| Yerel/uzak veri pipeline'ı | Grid client-side AJAX bütün veriyi doğrudan basıyor ve paginator metadata'sı yerel limitleri değiştirebiliyordu. | serverSide:false yerel filter/sort/page pipeline'ını kullanır; serverSide:true sunucu toplamını/sayfasını korur. Görünüm değişikliği yüklü uzak sayfayı tekrar kullanır. |
+| Seçim kimlikleri | Grid'in id olmayan kayıtları sayfadaki index üzerinden yeniden kimlik alıyordu. Table, sıfır ID'yi düşürüyor; paginator kayıtlarını farklı DOM ID'leriyle render ediyordu. Tırnaklı ID'ler selector/checkbox markup'ını bozabiliyordu. | Yerel Grid kayıtlarına sabit kimlik eşlemesi; Table'da nullish ID normalizasyonu ve Blade satırlarının veri kümesine alınması; attribute escaping ve CSS.escape. |
+| Silme onayları | Grid yanlış CGEAlert argümanlarını kullanıyordu. Table iptal sonucunu truthy nesne kabul ediyordu; seçim araç çubuğu hiç oluşturulmuyordu. | Positional CGEAlert API ve isConfirmed denetimi; Table toolbar oluşturulur. Onay sırasında ikinci işlem engellenir, diyalogda gösterilen seçim snapshot'ı kullanılır; destroy/veri değişimi sonrasında onay etkisizdir. |
+| Yerel kaldırma | Timer'lar destroy sonrası çalışabiliyor, yeni veri kümesinden kayıt silebiliyor; Grid kaldırma sonrası sayfayı yenilemiyordu. | Sahip olunan timer'lar iptal edilir, veri sürümü kontrol edilir; eşzamanlı farklı kaldırmalar tamamlanır; yerel sayfa yeniden hesaplanır. Sunucu sayfasında yalnızca yüklü görünüm/toplam güncellenir. |
+| CGEActionButton uyumu | init metoduna HTMLElement veriliyordu; Grid her başarılı action'da kart siliyordu. | init() ile mevcut global delegation kullanılır. Restore ve diğer normal başarılar kartı korur; destructive başarıları veya açık silme işaretleri kaldırır. |
+| Table sıralama/pagination | thead, attachHeaders tarafından tanınmıyordu; klavye listener'ı silinmiyor; false sortable ayarı göz ardı ediliyordu. Toplam azalınca aktif sayfa sınır dışında kalabiliyordu. Currency sıralaması binlik ayırıcıları yanlış okuyordu. | thead/HTMLElement desteği, tekil click/Enter/Space binding, non-sortable/selection header hariç tutma ve özgün attribute/class restorasyonu. Sayfa clamp edilir; All açıkça serialize edilir. US/Avrupa para biçimleri doğru sıralanır. |
+| Responsive/teardown | Child row parent ID'si boştu; detached expanded row referansları, fallback resize listener'ı ve scroll sınıfları kalabiliyordu. | Parent kimliği bağlanır; detached referanslar elenir; observer/resize ve mode sınıfları temizlenir. Helper özgün DOM node'larını geri yükler, consumer listener'larını korur. |
+| Plugin lifecycle | Table DOM handler'ları ve timer/frame'ları temizlenmiyordu. Grid destroyed callback'i listener temizlendikten sonra çağrılıyordu. | İdempotent destroy, istek/timer/frame/listener temizliği, destroy event'inin bir kez bildirilmesi ve aynı DOM üzerinde recreation. use() eski modülü bırakır, kontrolleri yeniden bağlar ve custom extension teardown'ını takip eder. |
+| Tipler, docs ve skills | Default root declaration dört standalone modülü içermiyordu; filter.on() skill örneği gerçek API'de yoktu. | Root/default tipler, çeviri/seçim tipleri ve thead tipi eşitlendi. İki pluginin README/usage/examples/api, Table Blade rehberi ve iki skill güncellendi. API belgelerine yedi modülün declaration'ları da eklendi. |
+
+### Doğrulama sonuçları
+
+- npm test: **27/27 Node testi** geçti; strict **NodeNext ve Bundler** type checks geçti.
+- Chrome: **82/82 tarayıcı senaryosu** geçti; bunun 32'si yeni collection regresyonudur. Programmatic ve declarative kullanım, AJAX yarışları/hataları, kimlik/seçim, onay snapshot'ı/iptali, responsive, module replacement ve destroy/recreation sınandı. Uncaught JS error yok.
+- npm run build: **library ESM/UMD/CSS ve demo build** geçti.
+- npm run test:package: gerçek npm arşivinde **11 plugin ve 7 modül alt yolu**, named/default import'lar ve izole NodeNext/Bundler declaration çözümlemesi geçti.
+- Chrome demo **11 plugin + 4 standalone root export** ile hatasız açıldı. Derlenmiş **ESM ve UMD** içinde Select FormData, Grid/Table declarative initialization ve gerçek veri render'ı geçti.
+- git diff --check: temiz. Testler tests/collections.test.mjs ve tests/collection-regressions.js içinde; mevcut interactive test sayfasına ve index.html bağlantısına entegre edildi.
+
+### Kullanım sınırları ve teslim
+
+Bulk delete, removeCard ve removeRow **yerel veri/görünüm işlemleridir**; sunucuya DELETE isteği göndermez. Kalıcı silmeyi backend endpoint'i veya CGEActionButton üstlenmelidir. Uzak sayfalarda kararlı ve benzersiz id verilmelidir; selected data getter'ları yalnızca yüklü yanıttaki kayıtları döndürür. Grid renderer, Table formatter ve Blade HTML güvenilen uygulama markup'ı kabul eder.
+
+Gerçek Laravel/CSRF/backend entegrasyonu, tüm tarayıcı motorları ve screen reader davranışı bu yerel/mocked testlerle doğrulanmış sayılmaz. Paket metadata'sı private:true ve version:0.0.0 olarak korundu; publish/commit/push yapılmadı. Kaynak değişiklikleri çalışma alanındadır; node_modules/dist ignored kalır.
+
+## Önceki dokuz plugin bakımının kaydı
+
 İlk inceleme ile “Sonraki küçük bakım adayları” listesinin tamamı uygulandı. Dokuz plugin, AGENTS.md, rules, canonical/eski skills, docs, paket girişleri ve test altyapısı birlikte incelendi. Mevcut plugin sınıfları, CSS tasarımı ve Laravel/Tailwind akışı korundu; gerekli ortak sahiplik kodu üç küçük internal helper dosyasında toplandı.
 
 ## Sonraki küçük bakım adayları — tamamlandı
@@ -69,7 +104,7 @@ Ayrıntılar: [tests/README.md](tests/README.md), [kurulum](docs/installing.md),
 
 ## Git çalışma durumu
 
-Runtime/doküman/test düzenlemeleri çalışma alanındadır; commit/push yapılmadı. node_modules/dist takibini kaldırmak için yapılan Git indeks silmeleri staged durumdadır. Bu silmeler yerel dosyaları diskten kaldırmaz. Diğer kaynak değişiklikleri normal çalışma alanı değişiklikleridir; kullanıcının önceki bakım değişiklikleri korunmuştur.
+**Önceki bakım aşamasındaki teslim notu:** Runtime/doküman/test düzenlemeleri çalışma alanındadır; commit/push yapılmadı. node_modules/dist takibini kaldırmak için yapılan Git indeks silmeleri staged durumdadır. Bu silmeler yerel dosyaları diskten kaldırmaz. Diğer kaynak değişiklikleri normal çalışma alanı değişiklikleridir; kullanıcının önceki bakım değişiklikleri korunmuştur.
 
 ## İlk incelemede düzeltilen sorunlar
 

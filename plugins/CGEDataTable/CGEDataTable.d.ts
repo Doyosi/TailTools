@@ -51,6 +51,11 @@ export interface CGEDataTableUIConfig {
 }
 
 export interface CGEDataTableTranslations {
+  'clear-selection'?: string;
+  'delete-selected'?: string;
+  'selected-count'?: string;
+  'delete-selected-confirm'?: string;
+  'deleted-success'?: string;
   'search-placeholder'?: string;
   'per-page'?: string;
   info?: string;
@@ -136,7 +141,7 @@ export declare class CGEDataTable {
   getSelectedRows(): any[];
   selectAll(): this;
   clearSelection(): this;
-  toggleSelectRow(rowId: string, forceState?: boolean): this;
+  toggleSelectRow(rowId: string | number, forceState?: boolean): this;
   deleteSelected(): this;
   removeRow(target: string | HTMLElement): this;
   t(key: string, replacements?: Record<string, any>): string;

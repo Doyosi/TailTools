@@ -143,3 +143,7 @@ return response()->json([
 ```
 
 `CGEDataTable` injects the HTML rows into `<tbody>` and immediately invokes `CGEActionButton.init()` so all delete, restore, and modal triggers function instantly.
+
+## Response and deletion ownership
+
+Use `serverSide: true` for Laravel paginator responses. JSON records and trusted Blade row responses are ingested with stable IDs; `full`/`html` responses should provide `total`, `current_page` and `per_page` when server pagination is active. Selection and bulk removal only affect the loaded view. Persist deletion in a Laravel endpoint, then update/reload the table.

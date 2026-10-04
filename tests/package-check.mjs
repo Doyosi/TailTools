@@ -22,7 +22,7 @@ execFileSync('tar', ['-xf', join(temporary, archive.filename), '-C', modules]);
 const packed = join(modules, 'package');
 const pkg = JSON.parse(readFileSync(join(packed, 'package.json'), 'utf8'));
 const plugins = readdirSync(join(packed, 'plugins')).filter(name => name.startsWith('CGE'));
-assert.equal(plugins.length, 11);
+assert.deepEqual(plugins.sort(), readdirSync(join(workspace, 'plugins')).filter(name => name.startsWith('CGE')).sort());
 const library = await import(pathToFileURL(join(packed, 'dist/tailtools.js')));
 assert.equal(typeof library.init, 'function');
 assert.equal(typeof library.default.init, 'function');
@@ -32,10 +32,21 @@ for (const plugin of plugins) {
   const module = await import(pathToFileURL(join(packed, 'plugins', plugin, 'index.js')));
   assert.equal(module.default, module[plugin]);
 }
+const submodules = Object.keys(pkg.exports).filter(path => path.includes('/modules/') && path.endsWith('.js'));
+for (const path of submodules) {
+  const entry = pkg.exports[path];
+  assert(files.has(entry.types.slice(2)), `Missing ${entry.types}`);
+  const module = await import(pathToFileURL(join(packed, entry.import)));
+  const name = path.split('/').at(-1).slice(0, -3);
+  assert.equal(typeof module[name], 'function');
+  assert.equal(module.default, module[name]);
+}
 // Use package self-reference from a consumer within the extracted package;
 // this exercises the actual exports conditions without registry installs.
 const typeSource = `import TailTools, { CGESelect, CGEDropzone } from 'tailtools';\n` +
   plugins.map(name => `import ${name}Plugin from 'tailtools/plugins/${name}';\nvoid ${name}Plugin;`).join('\n') +
+  submodules.map((path, index) => `\nimport Module${index} from 'tailtools${path.slice(1)}';\nvoid Module${index};`).join('\n') +
+  '\nnew TailTools.CGEFilter(); new TailTools.CGESort(); new TailTools.CGEPagination(); new TailTools.CGEResponsive();\n' +
   `\nTailTools.init(document);\nconst select = new CGESelect(document.createElement('select'));\nselect.on('opened', detail => detail.instance.close());\nconst cleared: Promise<void> = new CGEDropzone(document.createElement('div')).clear();\nvoid cleared;\n`;
 writeFileSync(join(packed, 'consumer.mts'), typeSource);
 const compiler = resolve(workspace, 'node_modules/typescript/bin/tsc');

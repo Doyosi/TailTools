@@ -1,3 +1,4 @@
+import { escapeHTML } from '../../shared/collection.js';
 /**
  * CGEResponsive - Independent Data Table Responsive Sub-Module
  * TailTools Plugin Library
@@ -35,6 +36,8 @@ export class CGEResponsive {
     this._resizeObserver = null;
 
     /** @type {Set<string>} Set of hidden column keys in collapse mode */
+    this._originalClasses = new Map();
+    this._resizeHandler = null;
     this.hiddenColumns = new Set();
 
     /** @type {Set<HTMLTableRowElement>} Set of currently expanded rows in collapse mode */
@@ -54,6 +57,7 @@ export class CGEResponsive {
    * @param {HTMLElement | string} [container]
    */
   attach(table, container = null) {
+    if (this.tableElement) this.destroy();
     this.tableElement = typeof table === 'string' ? document.querySelector(table) : table;
     if (!this.tableElement) return;
 
@@ -89,6 +93,9 @@ export class CGEResponsive {
    */
   refresh() {
     if (!this.tableElement) return this;
+    for (const element of this._originalClasses.keys()) {
+      if (element !== this.containerElement && !this.tableElement.contains(element) && element !== this.tableElement) this._originalClasses.delete(element);
+    }
 
     const width = this._getContainerWidth();
 
@@ -130,6 +137,7 @@ export class CGEResponsive {
   expandRow(tr) {
     if (!tr || this.expandedRows.has(tr)) return;
 
+    this._rememberClasses(tr);
     this.expandedRows.add(tr);
     tr.classList.add('cge-row-expanded');
 
@@ -146,7 +154,7 @@ export class CGEResponsive {
 
     const childTr = document.createElement('tr');
     childTr.className = 'cge-child-row bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-700/60';
-    childTr.setAttribute('data-parent-row', tr.dataset.rowId || '');
+    childTr.setAttribute('data-parent-row', tr.getAttribute('data-cge-id') || tr.dataset.rowId || '');
 
     const childTd = document.createElement('td');
     childTd.colSpan = colSpan;
@@ -156,7 +164,7 @@ export class CGEResponsive {
     for (const item of hiddenData) {
       dlHtml += `
         <div class="flex items-start justify-between sm:justify-start gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-1.5 last:border-b-0">
-          <span class="font-semibold text-slate-500 dark:text-slate-400 shrink-0">${item.label}:</span>
+          <span class="font-semibold text-slate-500 dark:text-slate-400 shrink-0">${escapeHTML(item.label)}:</span>
           <span class="text-slate-900 dark:text-slate-100 break-words font-medium">${item.html}</span>
         </div>`;
     }
@@ -215,7 +223,8 @@ export class CGEResponsive {
       });
       this._resizeObserver.observe(target);
     } else {
-      window.addEventListener('resize', () => this.refresh());
+      this._resizeHandler = () => this.refresh();
+      window.addEventListener('resize', this._resizeHandler);
     }
   }
 
@@ -263,6 +272,9 @@ export class CGEResponsive {
       return false;
     };
 
+    for (const row of Array.from(this.expandedRows)) {
+      if (!this.tableElement.contains(row)) this.expandedRows.delete(row);
+    }
     this.hiddenColumns.clear();
 
     columns.forEach(({ th, index, key, priority }) => {
@@ -271,11 +283,12 @@ export class CGEResponsive {
         this.hiddenColumns.add(key);
       }
 
+      this._rememberClasses(th);
       th.classList.toggle('cge-col-hidden', hide);
 
       // Hide/show corresponding td in tbody rows
       const tds = this.tableElement.querySelectorAll(`tbody tr:not(.cge-child-row) > td:nth-child(${index + 1})`);
-      tds.forEach(td => td.classList.toggle('cge-col-hidden', hide));
+      tds.forEach(td => { this._rememberClasses(td); td.classList.toggle('cge-col-hidden', hide); });
     });
 
     // Invert/inject toggle buttons on first cell of each row if there are hidden columns
@@ -327,7 +340,7 @@ export class CGEResponsive {
           for (const item of hiddenData) {
             dlHtml += `
               <div class="flex items-start justify-between sm:justify-start gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-1.5 last:border-b-0">
-                <span class="font-semibold text-slate-500 dark:text-slate-400 shrink-0">${item.label}:</span>
+                <span class="font-semibold text-slate-500 dark:text-slate-400 shrink-0">${escapeHTML(item.label)}:</span>
                 <span class="text-slate-900 dark:text-slate-100 break-words font-medium">${item.html}</span>
               </div>`;
           }
@@ -344,9 +357,11 @@ export class CGEResponsive {
    */
   _updateScrollMode() {
     if (!this.containerElement) return;
+    this._rememberClasses(this.containerElement);
     this.containerElement.classList.add('cge-table-scroll-container', 'overflow-x-auto');
     const thead = this.tableElement?.querySelector('thead');
     if (thead) {
+      this._rememberClasses(thead);
       thead.classList.add('sticky', 'top-0', 'z-10', 'bg-slate-50', 'dark:bg-slate-900');
     }
   }
@@ -376,8 +391,14 @@ export class CGEResponsive {
    * Mode class management on container/table.
    * @private
    */
+  _rememberClasses(element) {
+    if (element && !this._originalClasses.has(element)) this._originalClasses.set(element, element.getAttribute('class'));
+  }
+
   _applyModeClass() {
     if (!this.tableElement) return;
+    this._rememberClasses(this.tableElement);
+    this._rememberClasses(this.containerElement);
     this.tableElement.classList.remove('cge-responsive-collapse', 'cge-responsive-scroll');
     this.tableElement.classList.add(`cge-responsive-${this.mode}`);
 
@@ -400,9 +421,10 @@ export class CGEResponsive {
       this.tableElement.querySelectorAll('.cge-responsive-toggle').forEach(el => el.remove());
     }
 
-    if (this.containerElement) {
-      this.containerElement.classList.remove('cge-table-scroll-container');
+    for (const [element, classes] of this._originalClasses) {
+      if (classes === null) element.removeAttribute('class'); else element.setAttribute('class', classes);
     }
+    this._originalClasses.clear();
   }
 
   /**
@@ -434,6 +456,8 @@ export class CGEResponsive {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
     }
+    if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
+    this._resizeHandler = null;
     this.tableElement = null;
     this.containerElement = null;
     this.table = null;

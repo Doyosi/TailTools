@@ -53,6 +53,8 @@ export interface CGEDataGridUIConfig {
 }
 
 export interface CGEDataGridTranslations {
+  'view-grid'?: string;
+  'view-list'?: string;
   'search-placeholder'?: string;
   'sort-by'?: string;
   'per-page'?: string;
@@ -121,7 +123,7 @@ export declare class CGEDataGrid {
   options: Required<CGEDataGridOptions>;
   viewMode: CGEDataGridViewMode;
   layoutMode: CGEDataGridLayoutMode;
-  selectedIds: Set<string | number>;
+  selectedIds: Set<string>;
   data: any[];
   processedData: any[];
   loading: boolean;
@@ -154,3 +156,170 @@ export declare class CGEDataGrid {
 
 export default CGEDataGrid;
 ```
+
+## Standalone module declarations
+
+These paths use their own exported types; Grid and Table modules have different method names.
+
+### CGEFilter.d.ts
+
+```typescript
+/**
+ * CGEFilter - TypeScript Definitions
+ */
+
+export interface CGEFilterOptions {
+  debounce?: number;
+  searchParam?: string;
+  filtersParam?: string;
+  caseSensitive?: boolean;
+  input?: HTMLInputElement | string | null;
+  onChange?: (payload: CGEFilterChangePayload) => void;
+}
+
+export interface CGEFilterChangePayload {
+  global: string;
+  columns: Record<string, any>;
+  serialized: Record<string, string>;
+}
+
+export declare class CGEFilter {
+  options: Required<CGEFilterOptions>;
+  globalQuery: string;
+  columnFilters: Record<string, any>;
+  grid: any;
+  table: any;
+
+  constructor(options?: CGEFilterOptions);
+
+  attachSearchInput(input: HTMLInputElement | string): void;
+  attachFieldFilter(fieldKey: string, element: HTMLElement | string, eventType?: string): void;
+  apply(query: string): this;
+  setFilter(columnKey: string, value: any): this;
+  clear(): this;
+  serialize(): Record<string, any>;
+  filterData<T = any>(rows: T[], colKeys?: string[] | null): T[];
+  destroy(): void;
+}
+
+export default CGEFilter;
+```
+
+### CGEPagination.d.ts
+
+```typescript
+/**
+ * CGEPagination - TypeScript Definitions
+ */
+
+export interface CGEPaginationTranslations {
+  info?: string;
+  'per-page'?: string;
+  prev?: string;
+  next?: string;
+  'go-to-page'?: string;
+  all?: string;
+  jump?: string;
+  [key: string]: string | undefined;
+}
+
+export interface CGEPaginationOptions {
+  page?: number;
+  perPage?: number | string;
+  total?: number;
+  perPageOptions?: Array<number | string>;
+  windowDelta?: number;
+  pageParam?: string;
+  perPageParam?: string;
+  onChange?: (payload: CGEPaginationChangePayload) => void;
+  translations?: CGEPaginationTranslations;
+}
+
+export interface CGEPaginationChangePayload {
+  page: number;
+  perPage: number;
+  total: number;
+  lastPage: number;
+  from: number;
+  to: number;
+  serialized: Record<string, string | number>;
+}
+
+export declare class CGEPagination {
+  options: Required<CGEPaginationOptions>;
+  page: number;
+  perPage: number;
+  total: number;
+  grid: any;
+  table: any;
+
+  readonly lastPage: number;
+  readonly from: number;
+  readonly to: number;
+
+  constructor(options?: CGEPaginationOptions);
+
+  goToPage(targetPage: number | string): this;
+  prevPage(): this;
+  nextPage(): this;
+  setPerPage(perPage: number | string): this;
+  setTotal(total: number): this;
+  getWindow(delta?: number | null): Array<number | string>;
+  computeWindow(delta?: number | null): Array<number | string>;
+  paginateData<T = any>(rows: T[]): T[];
+  formatInfo(template?: string | null): string;
+  serialize(): Record<string, any>;
+  destroy(): void;
+}
+
+export default CGEPagination;
+```
+
+### CGESort.d.ts
+
+```typescript
+/**
+ * CGESort - TypeScript Definitions
+ */
+
+export interface CGESortRule {
+  key: string;
+  direction: 'asc' | 'desc';
+}
+
+export interface CGESortOptions {
+  multiSort?: boolean;
+  sortByParam?: string;
+  sortDirParam?: string;
+  cycle?: Array<'asc' | 'desc' | 'none'>;
+  defaultDirection?: 'asc' | 'desc';
+  onChange?: (payload: CGESortChangePayload) => void;
+}
+
+export interface CGESortChangePayload {
+  rules: CGESortRule[];
+  serialized: Record<string, any>;
+}
+
+export declare class CGESort {
+  options: Required<CGESortOptions>;
+  rules: CGESortRule[];
+  grid: any;
+  table: any;
+
+  constructor(options?: CGESortOptions);
+
+  sortBy(fieldKey: string, direction?: 'asc' | 'desc' | 'none', multi?: boolean): this;
+  toggleSort(fieldKey: string, multi?: boolean): this;
+  getDirection(fieldKey: string): 'asc' | 'desc' | 'none';
+  clear(): this;
+  serialize(): Record<string, any>;
+  attachSortSelect(select: HTMLSelectElement | string): void;
+  sortData<T = any>(rows: T[]): T[];
+  destroy(): void;
+}
+
+export default CGESort;
+```
+
+Lifecycle and DOM contracts are documented in [usage](usage.md#data-ownership-and-lifecycle).

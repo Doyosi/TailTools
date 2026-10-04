@@ -138,3 +138,22 @@ CGEDataTable.setTranslations({
   'collapse-details': 'Detaylar',
 });
 ```
+
+## Data ownership and lifecycle
+
+- Give remote records a stable unique `id` (including zero); Table also accepts `_id`. Fallback IDs for local records stay attached to their records through filtering/sorting/paging. After `setData()` replaces a local dataset, selection resets. Remote selection IDs may persist across pages, while selected data getters return only records in the current response.
+- With `source: 'ajax', serverSide: false`, the response is treated as the complete dataset and filtered/sorted/paginated locally. Set `serverSide: true` when the endpoint already returns one Laravel paginator page. The server then owns total/page metrics. Switching the Grid view reuses the loaded page.
+- Only the newest request may render or clear loading. A new request aborts the previous one. `destroy()` aborts requests, cancels timers/frames, unbinds controls and restores original DOM nodes/attributes. Calling destroy twice is safe; the same root can be initialized again. Original consumer DOM listeners are retained.
+- Fetch/Axios respect the HTTP method. GET/HEAD send query parameters; other methods send JSON with Fetch or request data with Axios. Explicit Axios mode requires `window.axios.request`. Provide Laravel CSRF headers for authenticated POST requests.
+- HTML renderers/formatters and Blade snippets accept trusted application HTML. Escape user text when building these strings. A Grid renderer should return one wrapping element.
+- Bulk removal and `removeCard()/removeRow()` change the local view only; they do not send DELETE requests to the server. Use your backend endpoint or CGEActionButton for persistence. Only destructive action successes remove a card/row; restore and unrelated actions keep it.
+
+## Selection and standalone modules
+
+Set `selectable: true` (default false) to add row checkboxes and the selection toolbar. `selectAll(): this` selects the visible page, `clearSelection(): this` clears IDs, `toggleSelectRow(id: string | number, state?: boolean): this` toggles one, `getSelectedIds(): string[]` and `getSelectedRows(): any[]` read selection. `deleteSelected(): this` removes selected rows locally after 250 ms; its toolbar prompts first. `removeRow(idOrElement): this` removes one row. Dismissing CGEAlert never deletes data.
+
+Selection events: `selection:change` carries `{ selectedIds, count, instance }`; `rows:deleted` carries `{ ids, instance }`; `row:deleted` carries `{ rowId, element, instance }`. DOM names prepend `cge:datatable:`.
+
+Standalone filter/sort/pagination notifications use their constructor `onChange(payload)` callback, not an `.on()` method. When both callback and parent reference exist, the callback is used once. `use()` releases the replaced module and rebinds its controls; custom extensions with a destroy method are released with the table.
+
+`fetch()` emits `error` and rejects HTTP/network failures. Internal automatic calls consume that rejection after emitting it; explicit calls should use try/catch. Aborted/stale requests are silent. Header Enter/Space sorts once, `data-cge-sortable="false"` disables sorting and selection headers are never sortable. Loading sets `aria-busy`.

@@ -1,3 +1,4 @@
+import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection } from '../shared/collection.js';
 /**
  * CGEDataTable - Modular High-Performance Data Grid Engine
  * TailTools Plugin Library
@@ -39,7 +40,7 @@ export class CGEDataTable {
     serverSide: false, // true = remote filter/sort/pagination; false = client-side
     perPage: 10,
     perPageOptions: [10, 25, 50, 100, 'All'],
-    responsiveMode: 'collapse', // 'collapse' | 'cards' | 'scroll'
+    responsiveMode: 'collapse', // 'collapse' | 'scroll'
     autoBindActions: true, // Automatically bind CGEActionButton on render
     selectable: false, // Enable row selection checkboxes and bulk actions
     ui: {
@@ -81,6 +82,7 @@ export class CGEDataTable {
       jump: 'Go',
       'collapse-details': 'Details',
       'clear-selection': 'Clear All',
+      'deleted-success': ':count records removed from this view.',
       'delete-selected': 'Delete Selected',
       'selected-count': ':count selected',
       'delete-selected-confirm': 'Are you sure you want to delete :count selected records?',
@@ -102,6 +104,9 @@ export class CGEDataTable {
     }
 
     this.rawElement = el;
+    initializeCollection(this, el);
+    this._eventCleanups = [];
+    this._extensions = new Set();
 
     // Resolve table, wrapper, thead, tbody
     if (el.tagName === 'TABLE') {
@@ -168,10 +173,9 @@ export class CGEDataTable {
     this.responsive = null;
 
     // Initialize sub-modules & pipeline
-    this._init();
-
     CGEDataTable.instances.set(this.rawElement, this);
     CGEDataTable.instances.set(this.tableElement, this);
+    this._init();
   }
 
   /**
@@ -205,6 +209,7 @@ export class CGEDataTable {
    * @private
    */
   _init() {
+    this._createdWrapper = !this.wrapperElement;
     this._setupDOMStructure();
     this._parseColumns();
     this._initSubModules();
@@ -222,7 +227,7 @@ export class CGEDataTable {
         this.refresh();
       }
     } else if (this.options.source === 'ajax') {
-      this.fetch();
+      this.fetch().catch(() => {});
     }
 
     this._emit('init', { instance: this });
@@ -309,6 +314,26 @@ export class CGEDataTable {
       this.headerBar.appendChild(perPageWrapper);
     }
 
+    if (this.options.selectable) {
+      this.selectionBar = this.wrapperElement.querySelector('.cge-datatable-selection');
+      if (!this.selectionBar) {
+        this.selectionBar = document.createElement('div');
+        this.selectionBar.className = 'cge-datatable-selection hidden flex items-center gap-3 px-3 py-2 text-sm';
+        const count = document.createElement('span');
+        count.setAttribute('data-cge-selection-count', '');
+        this.selectionBar.append(count);
+        for (const [attribute, label] of [['data-cge-clear-selection', 'clear-selection'], ['data-cge-delete-selected', 'delete-selected']]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.setAttribute(attribute, '');
+          button.className = this.options.ui.pageButton;
+          button.textContent = this.t(label);
+          this.selectionBar.append(button);
+        }
+        this.headerBar.after(this.selectionBar);
+      }
+    }
+
     // Bottom Footer Bar (Info & Pagination)
     this.footerBar = this.wrapperElement.querySelector('.cge-datatable-footer');
     if (!this.footerBar) {
@@ -389,7 +414,7 @@ export class CGEDataTable {
     // Hook per-page select
     const perPageSel = this.headerBar?.querySelector('[data-cge-per-page-select]');
     if (perPageSel) {
-      perPageSel.addEventListener('change', (e) => {
+      this._listen(perPageSel, 'change', (e) => {
         this.pagination.setPerPage(e.target.value);
       });
     }
@@ -411,13 +436,27 @@ export class CGEDataTable {
    * @returns {this}
    */
   use(PluginClass, pluginOptions = {}) {
+    if (this._destroyed) return this;
     if (typeof PluginClass === 'function') {
       const instance = new PluginClass(pluginOptions);
       instance.table = this;
-      if (instance instanceof CGEFilter) this.filter = instance;
-      else if (instance instanceof CGESort) this.sort = instance;
-      else if (instance instanceof CGEPagination) this.pagination = instance;
-      else if (instance instanceof CGEResponsive) this.responsive = instance;
+      if (instance instanceof CGEFilter) {
+        this.filter.destroy(); this.filter = instance;
+        if (!pluginOptions.input) instance.attachSearchInput(this.headerBar.querySelector('[data-cge-filter-input]'));
+        this.wrapperElement.querySelectorAll('select[data-cge-filter], input[data-cge-filter], select[data-cge-filter-column], input[data-cge-filter-column]').forEach(el => {
+          const key = el.getAttribute('data-cge-filter') || el.getAttribute('data-cge-filter-column');
+          if (key) instance.attachColumnFilter(key, el);
+        });
+      } else if (instance instanceof CGESort) {
+        this.sort.destroy(); this.sort = instance; instance.attachHeaders(this.thead);
+      } else if (instance instanceof CGEPagination) {
+        this.pagination.destroy(); this.pagination = instance;
+        instance.setMetrics({ total: this.rawRows.length });
+      } else if (instance instanceof CGEResponsive) {
+        this.responsive.destroy(); this.responsive = instance;
+        instance.attach(this.tableElement, this.tableContainer);
+      } else this._extensions.add(instance);
+      this.refresh();
     }
     return this;
   }
@@ -461,7 +500,7 @@ export class CGEDataTable {
       this.columns = ths.map((th, idx) => {
         const key = th.getAttribute('data-cge-key') || `col_${idx}`;
         const label = th.innerText.trim() || key;
-        const sortable = th.hasAttribute('data-cge-sortable') || th.classList.contains('sortable') || true;
+        const sortable = key !== '_select' && th.getAttribute('data-cge-sortable') !== 'false';
         const type = th.getAttribute('data-cge-type') || 'string';
         const prioAttr = th.getAttribute('data-cge-priority');
         const priority = prioAttr ? parseInt(prioAttr, 10) : (idx === 0 ? 1 : 2);
@@ -470,7 +509,7 @@ export class CGEDataTable {
         th.setAttribute('data-cge-key', key);
         th.setAttribute('data-cge-priority', String(priority));
         th.setAttribute('data-cge-type', type);
-        if (sortable) th.setAttribute('data-cge-sortable', '');
+        th.setAttribute('data-cge-sortable', String(sortable));
 
         return { key, label, sortable, type, priority, visible: true };
       });
@@ -515,7 +554,7 @@ export class CGEDataTable {
       th.setAttribute('data-cge-key', col.key);
       th.setAttribute('data-cge-priority', String(col.priority || 2));
       th.setAttribute('data-cge-type', col.type || 'string');
-      if (col.sortable) th.setAttribute('data-cge-sortable', '');
+      th.setAttribute('data-cge-sortable', String(col.sortable));
 
       if (col.key === '_select') {
         th.className = `${this.options.ui.th} w-10 text-center`;
@@ -550,7 +589,7 @@ export class CGEDataTable {
           cbTd = document.createElement('td');
           cbTd.className = `${this.options.ui.td} w-10 text-center`;
           cbTd.setAttribute('data-cge-key', '_select');
-          cbTd.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${rowId}" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
+          cbTd.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${escapeHTML(rowId)}" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
           tr.prepend(cbTd);
         }
       }
@@ -567,6 +606,7 @@ export class CGEDataTable {
         rowData[key] = val;
       });
 
+      tr.setAttribute('data-cge-id', rowId);
       return rowData;
     });
 
@@ -580,17 +620,13 @@ export class CGEDataTable {
    * @returns {this}
    */
   setData(data) {
-    if (!Array.isArray(data)) return this;
+    if (this._destroyed || !Array.isArray(data)) return this;
+    cancelCollectionWork(this);
+    this.setLoading(false);
+    this.selectedRowIds.clear();
+    ++this._dataVersion;
 
-    this.rawRows = data.map((item, idx) => {
-      if (typeof item === 'object' && item !== null) {
-        return {
-          _id: item.id || item._id || `item_${idx}`,
-          ...item,
-        };
-      }
-      return { _id: `item_${idx}`, value: item };
-    });
+    this.rawRows = this._normalizeRows(data);
 
     this.pagination.setMetrics({ total: this.rawRows.length, page: 1 });
     this.refresh();
@@ -601,8 +637,9 @@ export class CGEDataTable {
    * Primary pipeline executor: Filter -> Sort -> Paginate -> Render.
    */
   refresh() {
+    if (this._destroyed) return;
     if (this.options.serverSide && this.options.source === 'ajax') {
-      this.fetch();
+      this.fetch().catch(() => {});
       return;
     }
 
@@ -618,6 +655,7 @@ export class CGEDataTable {
 
     // 4. Render rows to tbody
     this._renderRows(this.pagedRows);
+    this._updateSelectionUI();
 
     // 5. Render pagination controls and counter metrics
     this._renderPaginationUI();
@@ -631,6 +669,7 @@ export class CGEDataTable {
     this._autoBindActionButtons();
 
     this._emit('rendered', { rows: this.pagedRows, total: this.pagination.total });
+    this._emit('refresh');
   }
 
   /**
@@ -639,143 +678,60 @@ export class CGEDataTable {
    * @returns {Promise<any>}
    */
   async fetch(extraParams = {}) {
-    if (!this.options.url) return;
-
-    this.setLoading(true);
-    this._emit('loading', { loading: true });
-
-    // Compile query parameters from sub-modules
-    const params = {
-      ...(this.filter ? this.filter.serialize() : {}),
-      ...(this.sort ? this.sort.serialize() : {}),
-      ...(this.pagination ? this.pagination.serialize() : {}),
-      ...extraParams,
-    };
-
+    if (this._destroyed || !this.options.url) return;
+    this._requestController?.abort();
+    const controller = this._requestController = new AbortController();
+    const requestId = ++this._requestId;
+    this.setLoading(true); this._emit('loading', { loading: true });
+    const params = { ...this.filter.serialize(), ...this.sort.serialize(), ...this.pagination.serialize(), ...extraParams };
     try {
-      let data = null;
-
-      // Auto-detect Axios or Fetch
-      if (this.options.driver === 'axios' || (this.options.driver === 'auto' && typeof window !== 'undefined' && window.axios)) {
-        const client = window.axios;
-        const res = await client.request({
-          url: this.options.url,
-          method: this.options.method,
-          params: this.options.method.toUpperCase() === 'GET' ? params : undefined,
-          data: this.options.method.toUpperCase() !== 'GET' ? params : undefined,
-          headers: this.options.headers,
-        });
-        data = res.data;
-      } else {
-        const urlObj = new URL(this.options.url, window.location.href);
-        if (this.options.method.toUpperCase() === 'GET') {
-          for (const [k, v] of Object.entries(params)) {
-            urlObj.searchParams.set(k, String(v));
-          }
-        }
-        const res = await fetch(urlObj.toString(), {
-          method: this.options.method,
-          headers: {
-            Accept: 'application/json, text/html',
-            ...this.options.headers,
-          },
-          body: this.options.method.toUpperCase() !== 'GET' ? JSON.stringify(params) : undefined,
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          data = await res.json();
-        } else {
-          data = await res.text();
-        }
-      }
-
+      const data = await fetchCollection(this.options, params, controller.signal, true);
+      if (this._destroyed || requestId !== this._requestId) return;
       this._handleServerResponse(data);
-      this.setLoading(false);
-      this._emit('loading', { loading: false });
       return data;
-    } catch (err) {
-      this.setLoading(false);
-      this._emit('loading', { loading: false });
-      this._emit('error', { error: err });
-      console.error('[CGEDataTable] Fetch error:', err);
-      throw err;
+    } catch (error) {
+      if (!this._destroyed && requestId === this._requestId && !controller.signal.aborted) {
+        this._emit('error', { error });
+        throw error;
+      }
+    } finally {
+      if (!this._destroyed && requestId === this._requestId) {
+        this.setLoading(false); this._emit('loading', { loading: false });
+      }
     }
   }
 
-  /**
-   * Handles server response across all supported formats.
-   * @private
-   */
+  /** Accepts Laravel JSON and trusted Blade rows. */
+
   _handleServerResponse(res) {
-    if (!res) return;
-
-    // Format 1: Blade HTML monolithic string (res.full or string response)
-    if (typeof res === 'string' && (res.includes('<tr') || res.includes('<td'))) {
-      this.tbody.innerHTML = res;
-      this._finalizeRender();
-      return;
-    }
-
-    if (res.full && typeof res.full === 'string') {
-      this.tbody.innerHTML = res.full;
-      if (res.total !== undefined) {
-        this.pagination.setMetrics({
-          total: res.total,
-          page: res.current_page || res.page,
-          perPage: res.per_page || res.perPage,
-          lastPage: res.last_page || res.lastPage,
-        });
-      }
-      this._finalizeRender();
-      return;
-    }
-
-    // Format 2: Blade HTML row map: res.html: { 1: "<tr>...</tr>", 2: "<tr>...</tr>" }
-    if (res.html && typeof res.html === 'object') {
-      this.tbody.innerHTML = Object.values(res.html).join('');
-      if (res.total !== undefined) {
-        this.pagination.setMetrics({
-          total: res.total,
-          page: res.current_page || res.page,
-          perPage: res.per_page || res.perPage,
-        });
-      }
-      this._finalizeRender();
-      return;
-    }
-
-    // Format 3: Laravel LengthAwarePaginator: { data: [...], current_page: 1, last_page: 5, total: 100, per_page: 20 }
-    if (res.data && Array.isArray(res.data) && res.total !== undefined) {
-      this.rawRows = res.data;
-      this.pagedRows = res.data;
-      this.pagination.setMetrics({
-        page: res.current_page || res.page || 1,
-        perPage: res.per_page || res.perPage || this.options.perPage,
-        total: res.total || 0,
-        lastPage: res.last_page || res.lastPage || 1,
-      });
-      this._renderRows(this.pagedRows);
-      this._finalizeRender();
-      return;
-    }
-
-    // Format 4: Flat array without metadata: res = [...] or res.data = [...]
-    const rowsArray = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
-    if (this.options.serverSide) {
-      this.rawRows = rowsArray;
-      this.pagedRows = rowsArray;
-      this._renderRows(this.pagedRows);
+    ++this._dataVersion;
+    const html = typeof res === 'string' ? res : typeof res?.full === 'string' ? res.full
+      : res?.html && typeof res.html === 'object' ? Object.values(res.html).join('') : null;
+    if (html !== null) {
+      this.tbody.innerHTML = html;
+      this._ingestFromDOM();
     } else {
-      this.setData(rowsArray);
+      const data = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      this.rawRows = this._normalizeRows(data);
     }
-
-    this._finalizeRender();
+    if (this.options.serverSide) {
+      this.pagedRows = this.rawRows;
+      this.pagination.setMetrics({ total: res?.total ?? this.rawRows.length,
+        page: res?.current_page ?? res?.page ?? this.pagination.page,
+        perPage: res?.per_page ?? res?.perPage ?? this.pagination.perPage });
+      this._renderRows(this.pagedRows);
+      this._finalizeRender();
+    } else this.refresh();
   }
 
-  /**
-   * Finalizes render pipeline (controls, responsive layout, and action binding).
-   * @private
-   */
+  _normalizeRows(data) {
+    return data.map((item, idx) => typeof item === 'object' && item !== null
+      ? { ...item, _id: item._id ?? item.id ?? `item_${idx}` }
+      : { _id: `item_${idx}`, value: item });
+  }
+
+  /** Finalizes controls, responsive state and delegated actions. */
+
   _finalizeRender() {
     this._renderPaginationUI();
     this._updateSelectionUI();
@@ -784,6 +740,7 @@ export class CGEDataTable {
     }
     this._autoBindActionButtons();
     this._emit('rendered', { rows: this.pagedRows, total: this.pagination.total });
+    this._emit('refresh');
   }
 
   /**
@@ -802,7 +759,7 @@ export class CGEDataTable {
     this.tbody.innerHTML = '';
 
     rows.forEach((row, rowIdx) => {
-      const rowId = String(row._id || (row._element && row._element.getAttribute('data-cge-id')) || rowIdx);
+      const rowId = String(row._id ?? row.id ?? row._element?.getAttribute('data-cge-id') ?? `item_${rowIdx}`);
 
       // If row has pre-existing DOM element, clone or re-append
       if (row._element instanceof HTMLTableRowElement) {
@@ -812,7 +769,7 @@ export class CGEDataTable {
             cbTd = document.createElement('td');
             cbTd.className = `${this.options.ui.td} w-10 text-center`;
             cbTd.setAttribute('data-cge-key', '_select');
-            cbTd.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${rowId}" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
+            cbTd.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${escapeHTML(rowId)}" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
             row._element.prepend(cbTd);
           }
           const isSelected = this.selectedRowIds.has(rowId);
@@ -840,7 +797,7 @@ export class CGEDataTable {
 
         if (col.key === '_select') {
           td.className = `${this.options.ui.td} w-10 text-center`;
-          td.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${rowId}" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
+          td.innerHTML = `<input type="checkbox" data-cge-select-row data-row-id="${escapeHTML(rowId)}" ${isSelected ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />`;
           tr.appendChild(td);
           return;
         }
@@ -991,7 +948,7 @@ export class CGEDataTable {
 
     if (typeof window !== 'undefined' && window.CGEActionButton && typeof window.CGEActionButton.init === 'function') {
       try {
-        window.CGEActionButton.init(this.tbody || this.tableElement);
+        window.CGEActionButton.init();
       } catch (e) {
         // Suppress or log non-fatal binding error
       }
@@ -1033,14 +990,15 @@ export class CGEDataTable {
    */
   setLoading(isLoading) {
     this.loading = Boolean(isLoading);
+    this.tableElement.setAttribute('aria-busy', String(this.loading));
     if (!this.loadingOverlay) return this;
 
     if (this.loading) {
       this.loadingOverlay.classList.remove('hidden');
-      requestAnimationFrame(() => this.loadingOverlay?.classList.remove('opacity-0'));
+      frameCollection(this, () => this.loadingOverlay?.classList.remove('opacity-0'));
     } else {
       this.loadingOverlay.classList.add('opacity-0');
-      setTimeout(() => {
+      delayCollection(this, () => {
         if (!this.loading) this.loadingOverlay?.classList.add('hidden');
       }, 200);
     }
@@ -1094,6 +1052,7 @@ export class CGEDataTable {
    * @private
    */
   _emit(eventName, detail = {}) {
+    if (this._destroyed && eventName !== 'destroy') return;
     const fullDetail = { ...detail, instance: this };
 
     // 1. Instance callbacks
@@ -1116,9 +1075,14 @@ export class CGEDataTable {
    * Binds table-level DOM event listeners (actions, selection, and bulk controls).
    * @private
    */
+  _listen(element, event, handler) {
+    element.addEventListener(event, handler);
+    this._eventCleanups.push({ element, event, handler });
+  }
+
   _bindTableEvents() {
     // 1. Listen for CGEActionButton success on delete/revoke actions
-    this.tableElement.addEventListener('cge:action:success', (e) => {
+    this._listen(this.tableElement, 'cge:action:success', (e) => {
       const btn = e.target.closest('[data-cge-action]');
       if (!btn) return;
       const action = (btn.getAttribute('data-cge-action') || '').toLowerCase();
@@ -1128,20 +1092,20 @@ export class CGEDataTable {
           this.removeRow(tr);
         } else if (tr && tr.classList.contains('cge-child-row')) {
           const parentRowId = tr.getAttribute('data-parent-row');
-          const parentTr = this.tbody.querySelector(`tr[data-cge-id="${parentRowId}"]`);
+          const parentTr = this.tbody.querySelector(`tr[data-cge-id="${CSS.escape(parentRowId)}"]`);
           if (parentTr) this.removeRow(parentTr);
         }
       }
     });
 
     // 2. Selection: Select-All Checkbox change & Row Checkbox change
-    this.tableElement.addEventListener('change', (e) => {
+    this._listen(this.tableElement, 'change', (e) => {
       if (e.target.matches('[data-cge-select-all]')) {
         const isChecked = e.target.checked;
-        const visibleRows = this.pagedRows.length > 0 ? this.pagedRows : this.rawRows;
+        const visibleRows = this.pagedRows;
 
         visibleRows.forEach(row => {
-          const id = String(row._id || row.id || '');
+          const id = String(row._id ?? row.id ?? '');
           if (id) {
             if (isChecked) this.selectedRowIds.add(id);
             else this.selectedRowIds.delete(id);
@@ -1189,31 +1153,38 @@ export class CGEDataTable {
     if (this.selectionBar) {
       const clearBtn = this.selectionBar.querySelector('[data-cge-clear-selection]');
       if (clearBtn) {
-        clearBtn.addEventListener('click', () => this.clearSelection());
+        this._listen(clearBtn, 'click', () => this.clearSelection());
       }
 
       const deleteBtn = this.selectionBar.querySelector('[data-cge-delete-selected]');
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', async () => {
+        this._listen(deleteBtn, 'click', async () => {
           const count = this.selectedRowIds.size;
-          if (count === 0) return;
-
-          let confirmed = true;
-          if (typeof window !== 'undefined' && window.CGEAlert && typeof window.CGEAlert.delete === 'function') {
-            confirmed = await window.CGEAlert.delete(
-              this.t('delete-selected'),
-              this.t('delete-selected-confirm', { count })
-            );
-          } else if (typeof window !== 'undefined') {
-            confirmed = window.confirm(this.t('delete-selected-confirm', { count }));
-          }
-
-          if (confirmed) {
-            this.deleteSelected();
-            if (typeof window !== 'undefined' && window.CGEToast) {
-              window.CGEToast.success(`${count} records deleted successfully!`);
+          if (count === 0 || this._confirmingDelete || this._destroyed) return;
+          const originalRows = this.rawRows;
+          const selected = new Set(this.selectedRowIds);
+          this._confirmingDelete = true;
+          try {
+            let confirmed = true;
+            if (typeof window !== 'undefined' && window.CGEAlert && typeof window.CGEAlert.delete === 'function') {
+              const result = await window.CGEAlert.delete(
+                this.t('delete-selected'),
+                this.t('delete-selected-confirm', { count })
+              );
+              confirmed = result === true || result?.isConfirmed === true;
+            } else if (typeof window !== 'undefined') {
+              confirmed = window.confirm(this.t('delete-selected-confirm', { count }));
             }
-          }
+
+            if (confirmed && !this._destroyed && this.rawRows === originalRows) {
+              this._deleteRows(selected);
+              if (typeof window !== 'undefined' && window.CGEToast) {
+                window.CGEToast.success(this.t('deleted-success', { count }));
+              }
+            }
+          } catch (error) {
+            this._emit('error', { error });
+          } finally { this._confirmingDelete = false; }
         });
       }
     }
@@ -1277,7 +1248,7 @@ export class CGEDataTable {
    */
   getSelectedRows() {
     const ids = this.selectedRowIds;
-    return this.rawRows.filter(r => ids.has(String(r._id || r.id)));
+    return this.rawRows.filter(r => ids.has(String(r._id ?? r.id)));
   }
 
   /**
@@ -1285,9 +1256,9 @@ export class CGEDataTable {
    * @returns {this}
    */
   selectAll() {
-    const targetRows = this.pagedRows.length > 0 ? this.pagedRows : this.rawRows;
+    const targetRows = this.pagedRows;
     targetRows.forEach(r => {
-      const id = String(r._id || r.id || '');
+      const id = String(r._id ?? r.id ?? '');
       if (id) this.selectedRowIds.add(id);
     });
     this.tbody.querySelectorAll('tr:not(.cge-child-row)').forEach(tr => {
@@ -1331,8 +1302,12 @@ export class CGEDataTable {
    * @returns {this}
    */
   deleteSelected() {
-    const idsToDelete = new Set(this.selectedRowIds);
-    if (idsToDelete.size === 0) return this;
+    return this._deleteRows(new Set(this.selectedRowIds));
+  }
+
+  _deleteRows(idsToDelete) {
+    if (this._destroyed || idsToDelete.size === 0) return this;
+    const version = this._dataVersion;
 
     // Animate selected rows out
     this.tbody.querySelectorAll('tr:not(.cge-child-row)').forEach(tr => {
@@ -1344,12 +1319,14 @@ export class CGEDataTable {
       }
     });
 
-    setTimeout(() => {
-      this.rawRows = this.rawRows.filter(r => !idsToDelete.has(String(r._id || r.id)));
+    delayCollection(this, () => {
+      if (this._dataVersion !== version) return;
+      const previousCount = this.rawRows.length;
+      this.rawRows = this.rawRows.filter(r => !idsToDelete.has(String(r._id ?? r.id)));
 
       // Also remove any direct tr in DOM
       idsToDelete.forEach(id => {
-        const tr = this.tbody.querySelector(`tr[data-cge-id="${id}"]`);
+        const tr = this.tbody.querySelector(`tr[data-cge-id="${CSS.escape(id)}"]`);
         if (tr) {
           const next = tr.nextElementSibling;
           if (next && next.classList.contains('cge-child-row')) next.remove();
@@ -1357,11 +1334,10 @@ export class CGEDataTable {
         }
       });
 
-      this.selectedRowIds.clear();
-      this.pagination.setMetrics({ total: this.rawRows.length });
-      this.refresh();
+      idsToDelete.forEach(id => this.selectedRowIds.delete(id));
+      this._refreshAfterRemoval(previousCount - this.rawRows.length);
       this._emit('rows:deleted', { ids: Array.from(idsToDelete) });
-    }, 250);
+    });
 
     return this;
   }
@@ -1372,26 +1348,32 @@ export class CGEDataTable {
    * @returns {this}
    */
   removeRow(target) {
+    if (this._destroyed) return this;
+    const version = this._dataVersion;
     let rowId = null;
     let trEl = null;
 
     if (typeof target === 'string') {
       rowId = target;
-      trEl = this.tbody?.querySelector(`tr[data-cge-id="${rowId}"]`);
+      trEl = this.tbody?.querySelector(`tr[data-cge-id="${CSS.escape(rowId)}"]`);
     } else if (target instanceof HTMLElement) {
       trEl = target.closest('tr');
       rowId = trEl?.getAttribute('data-cge-id');
     }
 
+    if (!rowId || (trEl && (!this.tbody.contains(trEl) || trEl.dataset.cgeRemoving))) return this;
     if (trEl) {
+      trEl.dataset.cgeRemoving = 'true';
       trEl.style.transition = 'all 0.25s ease';
       trEl.style.opacity = '0';
       trEl.style.transform = 'scale(0.96)';
     }
 
-    setTimeout(() => {
+    delayCollection(this, () => {
+      if (this._dataVersion !== version) return;
+      const previousCount = this.rawRows.length;
       if (rowId) {
-        this.rawRows = this.rawRows.filter(r => String(r._id || r.id) !== String(rowId) && r._element !== trEl);
+        this.rawRows = this.rawRows.filter(r => String(r._id ?? r.id) !== String(rowId) && r._element !== trEl);
         this.selectedRowIds.delete(String(rowId));
       } else if (trEl) {
         this.rawRows = this.rawRows.filter(r => r._element !== trEl);
@@ -1405,10 +1387,9 @@ export class CGEDataTable {
         trEl.remove();
       }
 
-      this.pagination.setMetrics({ total: Math.max(0, this.rawRows.length > 0 ? this.rawRows.length : this.pagination.total - 1) });
-      this.refresh();
+      this._refreshAfterRemoval(previousCount - this.rawRows.length);
       this._emit('row:deleted', { rowId, element: trEl });
-    }, 250);
+    });
 
     return this;
   }
@@ -1416,19 +1397,36 @@ export class CGEDataTable {
   /**
    * Tears down sub-modules, event listeners, and DOM modifications.
    */
-  destroy() {
+  _refreshAfterRemoval(count) {
+    if (this.options.serverSide && this.options.source === 'ajax') {
+      this.pagedRows = this.rawRows;
+      this.pagination.setMetrics({ total: Math.max(0, this.pagination.total - count) });
+      this._renderRows(this.pagedRows); this._finalizeRender();
+    } else this.refresh();
+  }
 
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    cancelCollectionWork(this);
+    for (const { element, event, handler } of this._eventCleanups) element.removeEventListener(event, handler);
+    this._eventCleanups = [];
     this._emit('destroy');
 
     if (this.filter) this.filter.destroy();
     if (this.sort) this.sort.destroy();
     if (this.pagination) this.pagination.destroy();
     if (this.responsive) this.responsive.destroy();
+    for (const extension of this._extensions) extension.destroy?.();
+    this._extensions.clear();
 
     CGEDataTable.instances.delete(this.rawElement);
     CGEDataTable.instances.delete(this.tableElement);
 
     this._listeners.clear();
+    this.loading = false;
+    if (this._createdWrapper) this.wrapperElement.replaceWith(this.tableElement);
+    this._restoreDOM();
   }
 
   // =========================================================================

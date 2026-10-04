@@ -44,6 +44,7 @@ export class CGEPagination {
     this.total = Math.max(0, parseInt(this.options.total, 10) || 0);
 
     /** @type {any} Reference to parent grid or table if registered */
+    this.page = Math.min(this.page, this.lastPage);
     this.grid = null;
     this.table = null;
 
@@ -253,9 +254,7 @@ export class CGEPagination {
 
     if (typeof this.options.onChange === 'function') {
       this.options.onChange(payload);
-    }
-
-    if (this.grid && typeof this.grid._onPaginationChange === 'function') {
+    } else if (this.grid && typeof this.grid._onPaginationChange === 'function') {
       this.grid._onPaginationChange(payload);
     } else if (this.table && typeof this.table._onPaginationChange === 'function') {
       this.table._onPaginationChange(payload);

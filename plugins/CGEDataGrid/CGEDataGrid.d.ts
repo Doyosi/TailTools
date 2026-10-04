@@ -48,6 +48,8 @@ export interface CGEDataGridUIConfig {
 }
 
 export interface CGEDataGridTranslations {
+  'view-grid'?: string;
+  'view-list'?: string;
   'search-placeholder'?: string;
   'sort-by'?: string;
   'per-page'?: string;
@@ -116,7 +118,7 @@ export declare class CGEDataGrid {
   options: Required<CGEDataGridOptions>;
   viewMode: CGEDataGridViewMode;
   layoutMode: CGEDataGridLayoutMode;
-  selectedIds: Set<string | number>;
+  selectedIds: Set<string>;
   data: any[];
   processedData: any[];
   loading: boolean;

@@ -8,6 +8,7 @@ import { CGEModal } from '../plugins/CGEModal/CGEModal.js';
 import { CGEDrawer } from '../plugins/CGEDrawer/CGEDrawer.js';
 import { CGEAlert } from '../plugins/CGEAlert/CGEAlert.js';
 import { maintenanceRegressions } from './maintenance-regressions.js';
+import { collectionRegressions } from './collection-regressions.js';
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -310,6 +311,7 @@ export async function runRegressionTests({ maintenance = true } = {}) {
       assert(confirmed === 1, 'Declarative confirmation failed');
     });
     if (maintenance) await maintenanceRegressions({ check, mount, fixture, track, assert, wait, deferred });
+    if (maintenance) await collectionRegressions({ check, mount, fixture, track, assert, wait, deferred });
     await check('Core: subtree init scopes selects and nested toast delegation handles one click', async () => {
       const { initTailTools } = await import('../src/index.ts');
       mount('<div id="audit-panel"><select data-cge-select><option>A</option></select><button data-cge-toast="Once" data-cge-toast-duration="0">Show</button></div>');

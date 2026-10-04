@@ -290,9 +290,7 @@ export class CGEFilter {
 
     if (typeof this.options.onChange === 'function') {
       this.options.onChange(payload);
-    }
-
-    if (this.grid && typeof this.grid._onFilterChange === 'function') {
+    } else if (this.grid && typeof this.grid._onFilterChange === 'function') {
       this.grid._onFilterChange(payload);
     } else if (this.table && typeof this.table._onFilterChange === 'function') {
       this.table._onFilterChange(payload);

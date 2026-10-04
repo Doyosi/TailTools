@@ -193,3 +193,18 @@ const pager = new CGEPagination({ page: 5, perPage: 10, total: 500 });
 console.log(pager.computeWindow());
 // Output: [1, '...', 3, 4, 5, 6, 7, '...', 50]
 ```
+
+## Handling remote failures and teardown
+
+```javascript
+import { CGEDataTable } from 'tailtools';
+const collection = new CGEDataTable('#users-table', {
+  source: 'ajax', url: '/api/users', driver: 'fetch', serverSide: true,
+  // Authenticated POST endpoints: method: 'POST', headers: { 'X-CSRF-TOKEN': token }
+});
+collection.on('error', ({ error }) => console.error(error));
+// Before replacing the containing Blade partial:
+collection.destroy();
+```
+
+Supply a stable `id` in each API record. Persist deletion in your endpoint before removing an item from this local view; bulk removal has no built-in backend DELETE request.

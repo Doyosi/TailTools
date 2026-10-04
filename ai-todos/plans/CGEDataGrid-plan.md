@@ -260,3 +260,11 @@ export declare class CGEDataGrid {
    - Features: `selectable: true`, selection count, Select All, Clear Selection, bulk delete, single card delete with `CGEActionButton`.
 3. **Showcase 3: Simulated Laravel LengthAwarePaginator Ajax Cards:**
    - Remote paginator endpoint with 60 card items, simulating server-side pagination, search, and sorting.
+# Bakım incelemesi — 2026-10-04
+
+Mevcut API ve görünüm korunacak. AJAX istek sırası/iptali, yerel pipeline,
+kararlı seçim kimlikleri, CGEAlert/CGEActionButton uyumu ve destroy sonrası
+DOM/listener/timer temizliği düzeltilecek. Tipler, dört doküman, skill ve
+tarayıcı/paket testleri aynı bakım kapsamında doğrulanacak.
+
+Bakım tamamlandı: Node 27/27, Chrome 82/82, strict NodeNext/Bundler, build ve paket kontrolleri geçti. Ayrıntılar: [REPORTS.md](../../REPORTS.md).

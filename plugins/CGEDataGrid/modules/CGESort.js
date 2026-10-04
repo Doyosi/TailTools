@@ -230,9 +230,7 @@ export class CGESort {
 
     if (typeof this.options.onChange === 'function') {
       this.options.onChange(payload);
-    }
-
-    if (this.grid && typeof this.grid._onSortChange === 'function') {
+    } else if (this.grid && typeof this.grid._onSortChange === 'function') {
       this.grid._onSortChange(payload);
     } else if (this.table && typeof this.table._onSortChange === 'function') {
       this.table._onSortChange(payload);

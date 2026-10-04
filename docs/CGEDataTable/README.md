@@ -19,7 +19,7 @@ Built with a decoupled sub-module architecture: a lightweight core orchestrator 
 │  CGEFilter  │ │   CGESort   │ │CGEPagination│ │CGEResponsive│
 └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
   Global Search   Single/Multi    Sliding Window  Priority Collapse
-  Column Filters  Natural Type    Jump Input      Mobile Cards
+  Column Filters  Natural Type    Jump Input      Child Rows
   Number Ranges   SVG Indicators  Per-Page Select Sticky Scroll
   Serialization   Serialization   Counter Metrics ResizeObserver
 ```
@@ -40,7 +40,7 @@ Built with a decoupled sub-module architecture: a lightweight core orchestrator 
    - Whenever rows are rendered or refreshed after pagination, sorting, or filtering, newly injected row elements automatically trigger `CGEActionButton.init()` to ensure destructive actions (`delete`, `restore`, `forceDelete`) work seamlessly with confirmation modals.
 4. **Adaptive Responsive Views:**
    - **Mode 1 (`collapse`):** Priority-based column reduction with an interactive child-row accordion (`+ / -` toggle) to reveal hidden column data.
-   - **Mode 2 (`scroll`):** Smooth horizontal scroll container with sticky header and shadow indicators.
+   - **Mode 2 (`scroll`):** Horizontal scroll container with sticky header.
 5. **Headless UI Customization:**
    - Complete Tailwind CSS v4 class slot mapping across container, header, search input, per-page dropdown, table, thead, tbody, tr, td, and pagination buttons.
 6. **Built-in Localization (i18n):**
@@ -92,3 +92,7 @@ filter.attachSearchInput('#custom-search-input');
 - [Code Examples (HTML, Tailwind v4 & Ajax)](examples.md)
 - [Laravel Blade Components](laravel-blade.md)
 - [TypeScript API Reference](api.md)
+
+## Maintenance contracts
+
+Use stable unique IDs for remote data and enable `serverSide: true` for paginated endpoints. Removal methods update the local view. Cancellation, recreation and selection behavior are detailed in the [usage guide](usage.md#data-ownership-and-lifecycle). Regression checks run at [the browser test page](../../tests/regressions.html).

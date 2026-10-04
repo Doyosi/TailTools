@@ -3,10 +3,12 @@
 // to a provided Playwright module directory. It uses an isolated Chrome profile.
 import { createRequire } from 'node:module';
 import { execFileSync, spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.TAILTOOLS_PLAYWRIGHT_MODULE || 'playwright');
 const baseline = process.argv.includes('--baseline');
+const expectedExports = [...readdirSync('plugins').filter(name => name.startsWith('CGE')),
+  'CGEFilter', 'CGESort', 'CGEPagination', 'CGEResponsive'].sort();
 const testUrl = process.env.TAILTOOLS_TEST_URL || 'http://127.0.0.1:5184';
 const server = process.argv.includes('--serve') ? spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', new URL(testUrl).port, '--strictPort'], { windowsHide: true, stdio: 'ignore' }) : null;
 if (server) {
@@ -45,7 +47,7 @@ try {
     await demo.waitForFunction(() => window.TailTools?.CGESelect);
     const plugins = await demo.evaluate(() => Object.keys(window.TailTools).filter(name => name.startsWith('CGE')));
     console.log(JSON.stringify({ demoPlugins: plugins, demoErrors }, null, 2));
-    if (demoErrors.length || plugins.length !== 9) process.exitCode = 1;
+    if (demoErrors.length || JSON.stringify(plugins.sort()) !== JSON.stringify(expectedExports)) process.exitCode = 1;
   }
   if (process.argv.includes('--bundle')) {
     for (const format of ['esm', 'umd']) {
@@ -69,10 +71,21 @@ try {
         select.setValue(['a', 'b']);
         const values = new FormData(document.querySelector('form')).getAll('tags[]');
         select.destroy();
-        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).length, values };
+        document.body.insertAdjacentHTML('beforeend', '<div data-cge-datagrid></div><table data-cge-datatable><thead><tr><th data-cge-key="name">Name</th></tr></thead><tbody><tr data-cge-id="0"><td>Table</td></tr></tbody></table>');
+        const root = document.querySelector('[data-cge-datagrid]');
+        root.dataset.cgeConfig = JSON.stringify({ source: 'json', data: [{ id: 0, html_card: '<article>Grid</article>' }] });
+        const tableRoot = document.querySelector('[data-cge-datatable]');
+        api.init(document);
+        const grid = api.CGEDataGrid.instances.get(root);
+        const table = api.CGEDataTable.get(tableRoot);
+        const collections = grid?.data.length === 1 && table?.rawRows.length === 1
+          && root.textContent.includes('Grid') && tableRoot.textContent.includes('Table');
+        grid?.destroy(); table?.destroy();
+        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections };
       });
       console.log(JSON.stringify({ bundle: format, ...result, errors: bundleErrors }));
-      if (bundleErrors.length || result.plugins !== 9 || result.values.join(',') !== 'a,b') process.exitCode = 1;
+      if (bundleErrors.length || JSON.stringify(result.plugins) !== JSON.stringify(expectedExports)
+        || !result.collections || result.values.join(',') !== 'a,b') process.exitCode = 1;
       await bundled.close();
     }
   }

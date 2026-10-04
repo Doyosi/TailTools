@@ -33,3 +33,27 @@ const cleared: Promise<void> = new Dropzone(document.createElement('div'), dropO
 select.on('opend', () => {});
 // @ts-expect-error remote option uses URL string
 const invalid: CGESelectOptions = { asyncSource: { url: 123 } }; void invalid;
+
+// Standalone modules and the two collection plugins must match root/default exports.
+import { CGEFilter, CGESort, CGEPagination, CGEResponsive } from 'tailtools';
+import GridFilter from 'tailtools/plugins/CGEDataGrid/modules/CGEFilter.js';
+import GridSort from 'tailtools/plugins/CGEDataGrid/modules/CGESort.js';
+import GridPagination from 'tailtools/plugins/CGEDataGrid/modules/CGEPagination.js';
+const gridOptions: CGEDataGridOptions = { source: 'json', data: [{ id: 0 }], selectable: true, layoutMode: 'list' };
+const grid = new DataGrid(document.createElement('div'), gridOptions);
+grid.on('selection-change', detail => { const ids: string[] = detail.selectedIds; void ids; });
+grid.on('fetch-error', detail => void detail.error);
+const tableOptions: CGEDataTableOptions = { source: 'json', data: [{ id: 0 }], columns: [{ key: 'id', sortable: false }] };
+const table = new DataTable(document.createElement('table'), tableOptions);
+table.toggleSelectRow(0);
+table.on('rows:deleted', detail => { const ids: string[] = detail.ids; void ids; });
+new CGESort().attachHeaders(document.createElement('thead'));
+const filter: CGEFilter = new TailTools.CGEFilter({ onChange: detail => void detail.serialized });
+const pager: CGEPagination = new TailTools.CGEPagination({ perPage: 'All' });
+const sort: CGESort = new TailTools.CGESort();
+const responsive: CGEResponsive = new TailTools.CGEResponsive({ table: '#users' });
+void [filter, pager, sort, responsive, new GridFilter(), new GridSort(), new GridPagination()];
+// @ts-expect-error the grid has only grid/list views
+grid.setViewMode('cards');
+// @ts-expect-error standalone filter notifications use onChange, not on()
+filter.on('filter', () => {});

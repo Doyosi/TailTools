@@ -144,3 +144,11 @@ translations: {
 - [ ] Phase 9: Documentation suite in `docs/CGEDataTable/`
 - [ ] Phase 10: AI skills generation in `.agents/skills/`
 - [ ] Phase 11: Validation (`npm test`, `npm run test:package`, `npm run build`)
+# Bakım incelemesi — 2026-10-04
+
+Mevcut API ve görünüm korunacak. Tekil modül bildirimleri, erişilebilir başlık
+sıralaması, AJAX istek sırası/iptali, Laravel HTML/JSON veri kimlikleri,
+seçim/silme ve responsive/destroy temizliği düzeltilecek. Tipler, dokümanlar,
+skill ve tarayıcı/paket testleri aynı bakım kapsamında doğrulanacak.
+
+Bakım tamamlandı: Node 27/27, Chrome 82/82, strict NodeNext/Bundler, build ve paket kontrolleri geçti. Ayrıntılar: [REPORTS.md](../../REPORTS.md).

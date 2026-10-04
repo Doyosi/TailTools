@@ -153,3 +153,18 @@ class StudentResource extends JsonResource
   </div>
 </div>
 ```
+
+## Handling remote failures and teardown
+
+```javascript
+import { CGEDataGrid } from 'tailtools';
+const collection = new CGEDataGrid('#student-grid', {
+  source: 'ajax', url: '/api/users', driver: 'fetch', serverSide: true,
+  // Authenticated POST endpoints: method: 'POST', headers: { 'X-CSRF-TOKEN': token }
+});
+collection.on('fetch-error', ({ error }) => console.error(error));
+// Before replacing the containing Blade partial:
+collection.destroy();
+```
+
+Supply a stable `id` in each API record. Persist deletion in your endpoint before removing an item from this local view; bulk removal has no built-in backend DELETE request.

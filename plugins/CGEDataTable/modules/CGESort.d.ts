@@ -34,7 +34,7 @@ export declare class CGESort {
   reset(): this;
   serialize(): Record<string, string>;
   sortRows<T = any>(rows: T[], columns?: Array<{ key: string; type?: string; [key: string]: any }>): T[];
-  attachHeaders(headers: NodeList | Array<HTMLTableCellElement> | HTMLTableElement | string): void;
+  attachHeaders(headers: NodeList | Array<HTMLTableCellElement> | HTMLElement | string): void;
   updateIndicators(): void;
   destroy(): void;
 }
