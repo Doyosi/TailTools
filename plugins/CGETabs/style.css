@@ -1,0 +1,76 @@
+/**
+ * CGETabs Stylesheet
+ * Compatible with Tailwind CSS v4.3+ and fallback CSS animations.
+ */
+
+@keyframes cge-tabs-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cge-tabs-fade-in,
+.animate-fade-in {
+  animation: cge-tabs-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Sliding active indicator baseline styles */
+[data-cge-tabs-indicator],
+.cge-tabs-indicator,
+[role="tablist"] > [data-cge-indicator],
+[role="tablist"] > [data-cge-tabs-indicator] {
+  pointer-events: none;
+  position: absolute;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: left, width, top, height, opacity;
+}
+
+/* Tabpanel base behavior */
+[data-cge-panel][hidden] {
+  display: none !important;
+}
+
+[data-cge-panel]:focus-visible {
+  outline: 2px solid var(--color-indigo-500, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Segmented control wrapper */
+.cge-tabs-segmented {
+  display: inline-flex;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-slate-100, #f1f5f9);
+  position: relative;
+}
+
+:is(.dark .cge-tabs-segmented) {
+  background-color: var(--color-slate-800, #1e293b);
+}
+
+.cge-tabs-segmented [data-cge-tabs-indicator],
+.cge-tabs-segmented .cge-tabs-indicator,
+.cge-tabs-segmented [role="tablist"] > [data-cge-indicator],
+.cge-tabs-segmented [role="tablist"] > [data-cge-tabs-indicator] {
+  background-color: #ffffff;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  z-index: 0;
+}
+
+:is(.dark .cge-tabs-segmented) [data-cge-tabs-indicator],
+:is(.dark .cge-tabs-segmented) .cge-tabs-indicator,
+:is(.dark .cge-tabs-segmented) [role="tablist"] > [data-cge-indicator],
+:is(.dark .cge-tabs-segmented) [role="tablist"] > [data-cge-tabs-indicator] {
+  background-color: var(--color-slate-700, #334155);
+}
+
+.cge-tabs-segmented [data-cge-tab] {
+  position: relative;
+  z-index: 1;
+}

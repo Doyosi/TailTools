@@ -9,6 +9,7 @@ export * from '../plugins/CGESelect/index.js';
 export * from '../plugins/CGEToast/index.js';
 export * from '../plugins/CGEDataTable/index.js';
 export * from '../plugins/CGEDataGrid/index.js';
+export * from '../plugins/CGETabs/index.js';
 export declare function initTailTools(root?: Document | HTMLElement): void;
 export declare const init: typeof initTailTools;
 
@@ -24,6 +25,7 @@ import { CGEToast } from '../plugins/CGEToast/index.js';
 import { CGEFilter, CGESort, CGEPagination, CGEResponsive } from '../plugins/CGEDataTable/index.js';
 import { CGEDataTable } from '../plugins/CGEDataTable/index.js';
 import { CGEDataGrid } from '../plugins/CGEDataGrid/index.js';
+import { CGETabs } from '../plugins/CGETabs/index.js';
 declare const TailTools: {
   init: typeof initTailTools;
   CGEActionButton: typeof CGEActionButton;
@@ -37,9 +39,11 @@ declare const TailTools: {
   CGEToast: typeof CGEToast;
   CGEDataTable: typeof CGEDataTable;
   CGEDataGrid: typeof CGEDataGrid;
+  CGETabs: typeof CGETabs;
   CGEFilter: typeof CGEFilter;
   CGESort: typeof CGESort;
   CGEPagination: typeof CGEPagination;
   CGEResponsive: typeof CGEResponsive;
 };
 export default TailTools;
+

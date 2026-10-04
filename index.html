@@ -227,6 +227,36 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Group 5: Navigation -->
+                    <div class="relative" id="dropdown-nav-wrapper">
+                        <button type="button" id="group-btn-nav" onclick="toggleDropdown('nav', event)" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md font-medium transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-300" id="group-dot-nav"></span>
+                                <span>Nav</span>
+                            </span>
+                            <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500 font-medium">1</span>
+                            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" id="group-arrow-nav" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="group-menu-nav" class="hidden absolute left-0 mt-1.5 w-68 rounded-lg bg-white border border-slate-200/90 shadow-xl py-1 z-50 transition-all">
+                            <!-- CGETabs -->
+                            <button type="button" id="tab-btn-tabs" onclick="switchTab('tabs')" class="w-full px-3 py-2 text-left flex items-start gap-2.5 hover:bg-slate-50 transition cursor-pointer group">
+                                <span class="text-sm p-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">📑</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-bold text-slate-900 text-xs flex items-center justify-between">
+                                        <span class="flex items-center gap-1.5">
+                                            <span>CGETabs</span>
+                                            <span class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold text-[9px] border border-indigo-200/60">New</span>
+                                        </span>
+                                        <span class="active-check hidden text-indigo-600 font-bold">✓</span>
+                                    </div>
+                                    <div class="text-[10px] text-slate-500 leading-tight">Accessible tabs, deep linking & lazy Ajax</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </nav>
 
                 <!-- Active Plugin Stepper Pill -->
@@ -263,10 +293,14 @@
                         </optgroup>
                         <optgroup label="Data">
                             <option value="datatable">📊 CGEDataTable</option>
-                            <option value="datagrid">🔲 CGEDataGrid (New)</option>
+                            <option value="datagrid">🔲 CGEDataGrid</option>
+                        </optgroup>
+                        <optgroup label="Navigation">
+                            <option value="tabs">📑 CGETabs (New)</option>
                         </optgroup>
                     </select>
                 </div>
+
             </div>
 
             <!-- Right Controls: Theme Switcher (Icon-only) -->
@@ -3006,9 +3040,359 @@
             </div>
         </section>
 
+        <!-- ============================================================= -->
+        <!-- SECTION: CGETabs Sandbox                                      -->
+        <!-- ============================================================= -->
+        <section id="section-tabs" class="hidden space-y-8">
+            <!-- Hero -->
+            <div class="mb-6 text-center sm:text-left flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-sm bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-xs mb-3 font-mono font-medium">
+                        <span>plugins/CGETabs</span>
+                        <span class="text-indigo-300">•</span>
+                        <span>WAI-ARIA Tabs, Deep Linking & Blade Lazy Loading</span>
+                    </div>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
+                        CGETabs Interactive Sandbox
+                    </h1>
+                    <p class="text-slate-600 text-sm sm:text-base max-w-3xl leading-relaxed">
+                        High-performance accessible tabs and segmented control plugin designed for Tailwind CSS v4.3+ and Laravel Blade. Features dual navigation state persistence (URL Hash and URL Query Param deep linking), on-demand Ajax / Blade partial lazy loading with caching, WAI-ARIA compliant keyboard navigation, dynamic animated sliding indicators, headless UI theming, and automated lifecycle re-binding for internal CGE plugins.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="testTabsPrev()" class="px-3 py-2 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1">
+                        <span>←</span>
+                        <span>Prev Tab</span>
+                    </button>
+                    <button type="button" onclick="testTabsNext()" class="px-3 py-2 rounded-sm bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1">
+                        <span>Next Tab</span>
+                        <span>→</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Demos Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <!-- Demo 1: Underline Tabs with Hash Deep Linking -->
+                <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-sm bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold text-xs">01</span>
+                                <h3 class="text-base font-bold text-slate-900">Hash Deep Linking & Animated Underline</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">urlSync: 'hash'</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Synchronizes tab state with the URL hash (e.g., <code class="text-indigo-600 font-mono">#tab-security</code>). Supports browser Back/Forward history traversal and includes nested CGE child plugins.
+                        </p>
+
+                        <!-- Live Hash Display -->
+                        <div class="mb-4 px-3 py-1.5 rounded-sm bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                            <span class="text-slate-500">Active URL Hash:</span>
+                            <span id="demo-hash-display" class="font-mono font-semibold text-indigo-600">#tab-overview</span>
+                        </div>
+
+                        <!-- CGETabs Component Container -->
+                        <div id="demo-hash-tabs-instance" data-cge-tabs data-cge-url-sync="hash" data-cge-indicator="line" class="w-full">
+                            <!-- Tab List -->
+                            <div role="tablist" class="flex border-b border-slate-200 gap-2 relative">
+                                <button type="button" data-cge-tab="tab-overview" class="px-4 py-2 text-xs font-semibold text-indigo-600 active flex items-center gap-1.5 cursor-pointer">
+                                    <span>📊</span>
+                                    <span>Overview</span>
+                                </button>
+                                <button type="button" data-cge-tab="tab-security" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                                    <span>🔒</span>
+                                    <span>Security & Keys</span>
+                                </button>
+                                <button type="button" data-cge-tab="tab-integrations" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                                    <span>🔌</span>
+                                    <span>Integrations</span>
+                                </button>
+                            </div>
+
+                            <!-- Tab Panels -->
+                            <div class="mt-4">
+                                <div data-cge-panel="tab-overview" class="space-y-3">
+                                    <div class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                        <h4 class="font-bold text-slate-800 mb-1">Production Cluster Health</h4>
+                                        <p class="text-slate-500 mb-3">All microservices operational across 12 distributed regions.</p>
+                                        <div class="grid grid-cols-3 gap-2 text-center font-mono">
+                                            <div class="p-2 bg-white rounded-sm border border-slate-200">
+                                                <div class="text-[10px] text-slate-400">Uptime</div>
+                                                <div class="font-bold text-emerald-600">99.98%</div>
+                                            </div>
+                                            <div class="p-2 bg-white rounded-sm border border-slate-200">
+                                                <div class="text-[10px] text-slate-400">Latency</div>
+                                                <div class="font-bold text-slate-800">18ms</div>
+                                            </div>
+                                            <div class="p-2 bg-white rounded-sm border border-slate-200">
+                                                <div class="text-[10px] text-slate-400">Pods</div>
+                                                <div class="font-bold text-indigo-600">64 / 64</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div data-cge-panel="tab-security" class="space-y-4">
+                                    <div class="p-4 rounded-sm bg-rose-50/50 border border-rose-100 text-xs space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <h4 class="font-bold text-slate-800">Production Secret Rotation</h4>
+                                                <p class="text-slate-500">Revokes all active API tokens and forces service credentials re-issue.</p>
+                                            </div>
+                                            <!-- Nested CGEActionButton inside tab panel -->
+                                            <button type="button"
+                                                    data-cge-action="delete"
+                                                    data-cge-title="Rotate All Production Keys?"
+                                                    data-cge-message="This will invalidate all in-flight JWT sessions."
+                                                    data-cge-confirm-text="Yes, Rotate Keys"
+                                                    data-cge-success-toast="Production keys rotated successfully!"
+                                                    data-cge-simulate="700"
+                                                    class="px-3 py-1.5 rounded-sm bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition cursor-pointer">
+                                                Rotate Keys
+                                            </button>
+                                        </div>
+                                        <!-- Nested CGEForm inside tab panel -->
+                                        <form data-cge-form action="/mock-api/security-toggle" method="POST" class="pt-2 border-t border-rose-100 flex items-center justify-between">
+                                            <span class="text-slate-700 font-medium">Require Strict 2FA for Deployments:</span>
+                                            <button type="submit" class="px-2.5 py-1 rounded-sm bg-slate-800 text-white font-semibold text-xs hover:bg-slate-700 transition cursor-pointer">
+                                                Save Policy
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div data-cge-panel="tab-integrations" class="space-y-3">
+                                    <div class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-semibold text-slate-800">GitHub Deploy Webhook</span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-semibold text-slate-800">Slack Incident Alerts</span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Connected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo 2: Segmented Control & Pill Indicator -->
+                <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-sm bg-violet-50 text-violet-600 border border-violet-100 flex items-center justify-center font-bold text-xs">02</span>
+                                <h3 class="text-base font-bold text-slate-900">Segmented Control & Pill Indicator</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200/60 font-mono">indicator: 'pill'</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Modern iOS/macOS styled segmented control. The active indicator renders as a floating background pill tracking tab dimension and position smoothly.
+                        </p>
+
+                        <!-- CGETabs Segmented Component Container -->
+                        <div id="demo-pill-tabs-instance" data-cge-tabs='{"indicator":"pill","urlSync":false}' class="w-full">
+                            <div role="tablist" class="cge-tabs-segmented p-1 bg-slate-100 rounded-lg relative inline-flex">
+                                <button type="button" data-cge-tab="time-daily" class="px-3.5 py-1.5 text-xs font-semibold rounded-md transition text-slate-800 active cursor-pointer">
+                                    Daily Metrics
+                                </button>
+                                <button type="button" data-cge-tab="time-weekly" class="px-3.5 py-1.5 text-xs font-semibold rounded-md transition text-slate-500 hover:text-slate-800 cursor-pointer">
+                                    Weekly Trends
+                                </button>
+                                <button type="button" data-cge-tab="time-monthly" class="px-3.5 py-1.5 text-xs font-semibold rounded-md transition text-slate-500 hover:text-slate-800 cursor-pointer">
+                                    Monthly Revenue
+                                </button>
+                            </div>
+
+                            <div class="mt-4">
+                                <div data-cge-panel="time-daily" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-bold text-slate-700">Today's Traffic</span>
+                                        <span class="font-mono text-indigo-600 font-bold">142,850 Requests</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-indigo-600 h-full rounded-full" style="width: 78%"></div>
+                                    </div>
+                                </div>
+                                <div data-cge-panel="time-weekly" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-bold text-slate-700">7-Day Aggregation</span>
+                                        <span class="font-mono text-emerald-600 font-bold">982,100 Requests</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-emerald-600 h-full rounded-full" style="width: 89%"></div>
+                                    </div>
+                                </div>
+                                <div data-cge-panel="time-monthly" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-bold text-slate-700">30-Day Billing Volume</span>
+                                        <span class="font-mono text-violet-600 font-bold">$18,450.00 USD</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                        <div class="bg-violet-600 h-full rounded-full" style="width: 94%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo 3: Query Param Deep Linking -->
+                <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-sm bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-xs">03</span>
+                                <h3 class="text-base font-bold text-slate-900">URL Query Param Deep Linking</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60 font-mono">urlSync: 'query'</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Preserves state via URL query parameters (e.g. <code class="text-amber-700 font-mono">?tab=settings</code>). Perfect for administrative views, filter bars, and shareable deep links.
+                        </p>
+
+                        <!-- Live Query Display -->
+                        <div class="mb-4 px-3 py-1.5 rounded-sm bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                            <span class="text-slate-500">Active URL Query:</span>
+                            <span id="demo-query-display" class="font-mono font-semibold text-amber-700">?tab=profile</span>
+                        </div>
+
+                        <!-- CGETabs Query Component Container -->
+                        <div id="demo-query-tabs-instance" data-cge-tabs='{"urlSync":"query","queryParamKey":"tab","indicator":"line"}' class="w-full">
+                            <div role="tablist" class="flex border-b border-slate-200 gap-2 relative">
+                                <button type="button" data-cge-tab="profile" class="px-4 py-2 text-xs font-semibold text-amber-700 active cursor-pointer">
+                                    User Profile
+                                </button>
+                                <button type="button" data-cge-tab="billing" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">
+                                    Billing & Plan
+                                </button>
+                                <button type="button" data-cge-tab="team" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">
+                                    Team Members
+                                </button>
+                            </div>
+
+                            <div class="mt-4">
+                                <div data-cge-panel="profile" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <h4 class="font-bold text-slate-800">Jane Doe (Administrator)</h4>
+                                    <p class="text-slate-500">Primary engineering lead for TailTools deployment pipeline.</p>
+                                </div>
+                                <div data-cge-panel="billing" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <h4 class="font-bold text-slate-800">Enterprise Pro Plan</h4>
+                                    <p class="text-slate-500">Renews on Nov 15, 2026. $299/month, 10 team seats included.</p>
+                                </div>
+                                <div data-cge-panel="team" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <h4 class="font-bold text-slate-800">Core Engineering (5 Members)</h4>
+                                    <p class="text-slate-500">Elena Rostova, Marcus Vance, Sarah Jenkins, Liam Torres, Alex Rivera.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo 4: On-Demand Lazy Blade Partials via Ajax -->
+                <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between hover:shadow-md transition-all">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-sm bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center font-bold text-xs">04</span>
+                                <h3 class="text-base font-bold text-slate-900">Lazy Ajax Partials & Caching</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200/60 font-mono">data-cge-ajax</span>
+                        </div>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Fetches HTML partials on first click with loading spinners, caching, and auto-lifecycle child plugin binding. Includes automated retry handling.
+                        </p>
+
+                        <!-- Action Toolbar for Ajax Tab -->
+                        <div class="mb-4 flex items-center justify-between gap-2">
+                            <button type="button" onclick="testReloadAjaxTab()" class="px-2.5 py-1 text-[11px] font-semibold rounded-sm bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200 transition cursor-pointer">
+                                ↻ Force Reload Telemetry Tab
+                            </button>
+                            <span id="ajax-cache-status" class="text-[11px] text-slate-400 font-mono">Cache: ready</span>
+                        </div>
+
+                        <!-- CGETabs Ajax Container -->
+                        <div id="demo-ajax-tabs-instance" data-cge-tabs data-cge-url-sync="false" data-cge-indicator="line" class="w-full">
+                            <div role="tablist" class="flex border-b border-slate-200 gap-2 relative">
+                                <button type="button" data-cge-tab="ajax-local" class="px-4 py-2 text-xs font-semibold text-cyan-700 active cursor-pointer">
+                                    Local (Instant)
+                                </button>
+                                <button type="button" data-cge-tab="ajax-telemetry" data-cge-ajax="/mock-api/tabs/telemetry" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">
+                                    Live Telemetry (Ajax)
+                                </button>
+                                <button type="button" data-cge-tab="ajax-error" data-cge-ajax="/mock-api/tabs/error" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 cursor-pointer">
+                                    Failing Tab (Retry Demo)
+                                </button>
+                            </div>
+
+                            <div class="mt-4 min-h-[120px]">
+                                <div data-cge-panel="ajax-local" class="p-4 rounded-sm bg-slate-50 border border-slate-100 text-xs">
+                                    <h4 class="font-bold text-slate-800">Pre-rendered Local Tab</h4>
+                                    <p class="text-slate-500">This content was pre-rendered in the DOM and requires no network activity.</p>
+                                </div>
+                                <div data-cge-panel="ajax-telemetry">
+                                    <!-- Lazy loaded via /mock-api/tabs/telemetry -->
+                                </div>
+                                <div data-cge-panel="ajax-error">
+                                    <!-- Failing demo loaded via /mock-api/tabs/error -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Demo 5: Keyboard Navigation & Programmatic Controller -->
+            <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs hover:shadow-md transition-all">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-sm bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-xs">05</span>
+                        <h3 class="text-base font-bold text-slate-900">WAI-ARIA Accessibility & Programmatic API</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">Current Tab:</span>
+                        <span id="programmatic-active-tab-display" class="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">tab-overview</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                    <!-- Keyboard Cheatsheet -->
+                    <div class="p-4 rounded-sm bg-slate-50 border border-slate-100 space-y-2">
+                        <h4 class="font-bold text-slate-800">Keyboard Navigation (WAI-ARIA Pattern)</h4>
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono">←</kbd><span>Previous Tab</span></div>
+                            <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono">→</kbd><span>Next Tab</span></div>
+                            <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono">Home</kbd><span>First Tab</span></div>
+                            <div class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono">End</kbd><span>Last Tab</span></div>
+                        </div>
+                        <p class="text-slate-400 text-[10px] pt-1">Focus any tab button and use arrow keys to navigate seamlessly.</p>
+                    </div>
+
+                    <!-- Programmatic Buttons -->
+                    <div class="p-4 rounded-sm bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                        <h4 class="font-bold text-slate-800 mb-2">Programmatic Controller</h4>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="testTabsFirst()" class="px-3 py-1.5 rounded-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold cursor-pointer">.first()</button>
+                            <button type="button" onclick="testTabsPrev()" class="px-3 py-1.5 rounded-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold cursor-pointer">.prev()</button>
+                            <button type="button" onclick="testTabsNext()" class="px-3 py-1.5 rounded-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold cursor-pointer">.next()</button>
+                            <button type="button" onclick="testTabsLast()" class="px-3 py-1.5 rounded-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold cursor-pointer">.last()</button>
+                            <button type="button" onclick="testTabsDestroyToggle()" id="tabs-toggle-destroy-btn" class="px-3 py-1.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-semibold cursor-pointer">.destroy()</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Live Event Logger Panel -->
         <div class="p-6 rounded-sm bg-white border border-slate-200/90 shadow-xs mb-10">
             <div class="flex items-center justify-between mb-3.5">
+
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     <h3 class="text-sm font-bold text-slate-900">Live Event Inspector</h3>
@@ -3352,7 +3736,8 @@
             { id: 'drawer', name: 'CGEDrawer', icon: '🗄️', group: 'media' },
             { id: 'lightbox', name: 'CGELightbox', icon: '🖼️', group: 'media' },
             { id: 'datatable', name: 'CGEDataTable', icon: '📊', group: 'data' },
-            { id: 'datagrid', name: 'CGEDataGrid', icon: '🔲', group: 'data' }
+            { id: 'datagrid', name: 'CGEDataGrid', icon: '🔲', group: 'data' },
+            { id: 'tabs', name: 'CGETabs', icon: '📑', group: 'nav' }
         ];
 
         window.currentTab = 'alert';
@@ -3368,7 +3753,7 @@
         // Toggle Grouped Dropdown Menus
         window.toggleDropdown = function(group, e) {
             if (e) e.stopPropagation();
-            ['feedback', 'forms', 'media', 'data'].forEach(g => {
+            ['feedback', 'forms', 'media', 'data', 'nav'].forEach(g => {
                 const menu = document.getElementById(`group-menu-${g}`);
                 const arrow = document.getElementById(`group-arrow-${g}`);
                 if (g === group) {
@@ -3392,8 +3777,9 @@
             if (!e.target.closest('#dropdown-feedback-wrapper') &&
                 !e.target.closest('#dropdown-forms-wrapper') &&
                 !e.target.closest('#dropdown-media-wrapper') &&
-                !e.target.closest('#dropdown-data-wrapper')) {
-                ['feedback', 'forms', 'media', 'data'].forEach(g => {
+                !e.target.closest('#dropdown-data-wrapper') &&
+                !e.target.closest('#dropdown-nav-wrapper')) {
+                ['feedback', 'forms', 'media', 'data', 'nav'].forEach(g => {
                     const menu = document.getElementById(`group-menu-${g}`);
                     const arrow = document.getElementById(`group-arrow-${g}`);
                     if (menu) menu.classList.add('hidden');
@@ -3411,7 +3797,7 @@
                 'section-alert', 'section-toast', 'section-modal',
                 'section-form', 'section-drawer', 'section-lightbox',
                 'section-action', 'section-select', 'section-dropzone',
-                'section-datatable', 'section-datagrid'
+                'section-datatable', 'section-datagrid', 'section-tabs'
             ];
             sections.forEach(secId => {
                 const el = document.getElementById(secId);
@@ -3425,6 +3811,19 @@
             // Trigger DataGrid setup when activated
             if (tab === 'datagrid' && typeof window.setupDataGridDemos === 'function') {
                 window.setupDataGridDemos();
+            }
+
+            // Trigger CGETabs setup when activated
+            if (tab === 'tabs') {
+                if (typeof window.setupTabsDemos === 'function') {
+                    window.setupTabsDemos();
+                }
+                requestAnimationFrame(() => {
+                    if (window.demoHashTabs) window.demoHashTabs.updateIndicator();
+                    if (window.demoPillTabs) window.demoPillTabs.updateIndicator();
+                    if (window.demoQueryTabs) window.demoQueryTabs.updateIndicator();
+                    if (window.demoAjaxTabs) window.demoAjaxTabs.updateIndicator();
+                });
             }
 
             // Recalculate layout for visible DataTables
@@ -3470,7 +3869,7 @@
 
             // 6. Highlight active group button
             const activeGroup = currentPlugin ? currentPlugin.group : null;
-            ['feedback', 'forms', 'media', 'data'].forEach(g => {
+            ['feedback', 'forms', 'media', 'data', 'nav'].forEach(g => {
                 const groupBtn = document.getElementById(`group-btn-${g}`);
                 const dot = document.getElementById(`group-dot-${g}`);
                 if (g === activeGroup) {
@@ -3492,6 +3891,7 @@
                 if (arrow) arrow.classList.remove('rotate-180');
             });
         };
+
 
         // Initialize active tab indicator on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -3632,6 +4032,26 @@
         ['init', 'render', 'viewmode', 'selection-change', 'data-loaded', 'bulk-delete', 'card-removed'].forEach(evt => {
             document.addEventListener(`cge:datagrid:${evt}`, (e) => logEvent(`cge:datagrid:${evt}`, e.detail));
         });
+
+        // Attach listeners for CGETabs
+        ['show', 'shown', 'ajax-start', 'ajax-loaded', 'ajax-error', 'destroyed'].forEach(evt => {
+            document.addEventListener(`cge:tabs:${evt}`, (e) => {
+                logEvent(`cge:tabs:${evt}`, e.detail);
+                if (evt === 'shown') {
+                    if (e.detail.instance?.element?.id === 'demo-hash-tabs-instance') {
+                        const activeDisplay = document.getElementById('programmatic-active-tab-display');
+                        if (activeDisplay && e.detail.tabId) activeDisplay.textContent = e.detail.tabId;
+                        const hashDisplay = document.getElementById('demo-hash-display');
+                        if (hashDisplay) hashDisplay.textContent = '#' + e.detail.tabId;
+                    } else if (e.detail.instance?.element?.id === 'demo-query-tabs-instance') {
+                        const queryDisplay = document.getElementById('demo-query-display');
+                        const paramKey = e.detail.instance.options?.queryParamKey || 'tab';
+                        if (queryDisplay) queryDisplay.textContent = `?${paramKey}=${e.detail.tabId}`;
+                    }
+                }
+            });
+        });
+
 
         function updateActionResultUI(evt, detail) {
             const badge = document.getElementById('action-status-badge');
@@ -5294,7 +5714,68 @@
         const fetchBeforeGridDemo = window.fetch.bind(window);
         window.fetch = async function(request, init = {}) {
             const url = new URL(request instanceof Request ? request.url : request, window.location.href);
+            if (url.pathname === '/mock-api/tabs/telemetry') {
+
+                const signal = init.signal || (request instanceof Request ? request.signal : null);
+                await new Promise((resolve, reject) => {
+                    if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+                    const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); };
+                    const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, 600);
+                    signal?.addEventListener('abort', abort, { once: true });
+                });
+                return new Response(`
+                    <div class="p-4 rounded-sm bg-cyan-50/50 border border-cyan-100 text-xs space-y-3">
+                        <div class="flex items-center justify-between pb-2 border-b border-cyan-200/60">
+                            <div>
+                                <h4 class="font-bold text-slate-800">Remote Blade Partial Injected</h4>
+                                <p class="text-slate-500">Fetched via Ajax with automatic CGE plugin re-binding.</p>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800">Cache Active</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-center">
+                            <div class="p-2 bg-white rounded border border-cyan-200">
+                                <div class="text-[10px] text-slate-400">Load Avg</div>
+                                <div class="font-bold text-slate-800">0.42, 0.58</div>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-cyan-200">
+                                <div class="text-[10px] text-slate-400">Memory</div>
+                                <div class="font-bold text-emerald-600">4.2 / 16 GB</div>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-cyan-200">
+                                <div class="text-[10px] text-slate-400">I/O Speed</div>
+                                <div class="font-bold text-slate-800">1.2 GB/s</div>
+                            </div>
+                            <div class="p-2 bg-white rounded border border-cyan-200">
+                                <div class="text-[10px] text-slate-400">Network</div>
+                                <div class="font-bold text-indigo-600">840 Mbps</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-slate-500">Embedded Action Button:</span>
+                            <button type="button"
+                                    data-cge-action="run"
+                                    data-cge-title="Ping Remote Telemetry Agents?"
+                                    data-cge-success-toast="All 16 telemetry agents responded in 12ms!"
+                                    data-cge-simulate="500"
+                                    class="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition cursor-pointer">
+                                ⚡ Ping Telemetry Agents
+                            </button>
+                        </div>
+                    </div>
+                `, { status: 200, headers: { 'Content-Type': 'text/html' } });
+            }
+            if (url.pathname === '/mock-api/tabs/error') {
+                const signal = init.signal || (request instanceof Request ? request.signal : null);
+                await new Promise((resolve, reject) => {
+                    if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+                    const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); };
+                    const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, 400);
+                    signal?.addEventListener('abort', abort, { once: true });
+                });
+                return new Response('Internal Server Error: Simulated connection reset', { status: 500, statusText: 'Internal Server Error' });
+            }
             if (url.pathname !== '/mock-api/clusters') return fetchBeforeGridDemo(request, init);
+
             const signal = init.signal || (request instanceof Request ? request.signal : null);
             await new Promise((resolve, reject) => {
                 if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
@@ -5529,14 +6010,163 @@
             }
         };
 
+        // =====================================================================
+        // CGETabs Interactive Sandbox Setup & Handlers
+        // =====================================================================
+        window.demoHashTabs = null;
+        window.demoPillTabs = null;
+        window.demoQueryTabs = null;
+        window.demoAjaxTabs = null;
+
+        window.setupTabsDemos = function() {
+            if (!window.CGETabs) return;
+
+            // 1. Hash Tabs
+            const hashEl = document.getElementById('demo-hash-tabs-instance');
+            if (hashEl && !window.demoHashTabs) {
+                window.demoHashTabs = window.CGETabs.get(hashEl) || new window.CGETabs(hashEl, {
+                    urlSync: 'hash',
+                    indicator: 'line'
+                });
+                window.demoHashTabs.on('cge:tabs:shown', (detail) => {
+                    const el = document.getElementById('demo-hash-display');
+                    if (el) el.textContent = '#' + detail.tabId;
+                    const progEl = document.getElementById('programmatic-active-tab-display');
+                    if (progEl) progEl.textContent = detail.tabId;
+                });
+                const active = window.demoHashTabs.getActiveTab();
+                if (active) {
+                    const el = document.getElementById('demo-hash-display');
+                    if (el) el.textContent = '#' + active;
+                    const progEl = document.getElementById('programmatic-active-tab-display');
+                    if (progEl) progEl.textContent = active;
+                }
+            }
+
+            // 2. Pill Tabs
+            const pillEl = document.getElementById('demo-pill-tabs-instance');
+            if (pillEl && !window.demoPillTabs) {
+                window.demoPillTabs = window.CGETabs.get(pillEl) || new window.CGETabs(pillEl, {
+                    indicator: 'pill',
+                    urlSync: false
+                });
+            }
+
+            // 3. Query Param Tabs
+            const queryEl = document.getElementById('demo-query-tabs-instance');
+            if (queryEl && !window.demoQueryTabs) {
+                window.demoQueryTabs = window.CGETabs.get(queryEl) || new window.CGETabs(queryEl, {
+                    urlSync: 'query',
+                    queryParamKey: 'tab',
+                    indicator: 'line'
+                });
+                window.demoQueryTabs.on('cge:tabs:shown', (detail) => {
+                    const el = document.getElementById('demo-query-display');
+                    if (el) el.textContent = '?tab=' + detail.tabId;
+                });
+                const active = window.demoQueryTabs.getActiveTab();
+                if (active) {
+                    const el = document.getElementById('demo-query-display');
+                    if (el) el.textContent = '?tab=' + active;
+                }
+            }
+
+            // 4. Ajax Lazy Tabs
+            const ajaxEl = document.getElementById('demo-ajax-tabs-instance');
+            if (ajaxEl && !window.demoAjaxTabs) {
+                window.demoAjaxTabs = window.CGETabs.get(ajaxEl) || new window.CGETabs(ajaxEl, {
+                    urlSync: false,
+                    indicator: 'line',
+                    cacheAjax: true
+                });
+                window.demoAjaxTabs.on('cge:tabs:ajax-loaded', (detail) => {
+                    const status = document.getElementById('ajax-cache-status');
+                    if (status) status.textContent = `Cache: [${detail.tabId}] loaded`;
+                    if (window.CGEToast) {
+                        window.CGEToast.success(`Ajax tab "${detail.tabId}" loaded and cached!`);
+                    }
+                });
+                window.demoAjaxTabs.on('cge:tabs:ajax-error', (detail) => {
+                    if (window.CGEToast) {
+                        window.CGEToast.error(`Failed to load "${detail.tabId}": ${detail.error?.message || 'Error'}`);
+                    }
+                });
+            }
+        };
+
+        window.testTabsNext = function() {
+            if (window.demoHashTabs) {
+                window.demoHashTabs.next();
+            }
+        };
+
+        window.testTabsPrev = function() {
+            if (window.demoHashTabs) {
+                window.demoHashTabs.prev();
+            }
+        };
+
+        window.testTabsFirst = function() {
+            if (window.demoHashTabs) {
+                window.demoHashTabs.first();
+            }
+        };
+
+        window.testTabsLast = function() {
+            if (window.demoHashTabs) {
+                window.demoHashTabs.last();
+            }
+        };
+
+        window.testReloadAjaxTab = function() {
+            if (window.demoAjaxTabs) {
+                window.demoAjaxTabs.show('ajax-telemetry');
+                window.demoAjaxTabs.loadAjaxTab('ajax-telemetry', true);
+            }
+        };
+
+        let tabsDestroyed = false;
+        window.testTabsDestroyToggle = function() {
+            const btn = document.getElementById('tabs-toggle-destroy-btn');
+            const hashEl = document.getElementById('demo-hash-tabs-instance');
+            if (!hashEl) return;
+
+            if (!tabsDestroyed) {
+                if (window.demoHashTabs) {
+                    window.demoHashTabs.destroy();
+                    window.demoHashTabs = null;
+                }
+                tabsDestroyed = true;
+                if (btn) {
+                    btn.textContent = 'Re-init Tabs';
+                    btn.className = 'px-3 py-1.5 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-semibold cursor-pointer';
+                }
+                if (window.CGEToast) window.CGEToast.info('CGETabs instance destroyed.');
+            } else {
+                window.demoHashTabs = new window.CGETabs(hashEl, {
+                    urlSync: 'hash',
+                    indicator: 'line'
+                });
+                tabsDestroyed = false;
+                if (btn) {
+                    btn.textContent = '.destroy()';
+                    btn.className = 'px-3 py-1.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-semibold cursor-pointer';
+                }
+                if (window.CGEToast) window.CGEToast.success('CGETabs instance re-initialized!');
+            }
+        };
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(window.setupDataGridDemos, 300);
+                setTimeout(window.setupTabsDemos, 300);
             });
         } else {
             setTimeout(window.setupDataGridDemos, 300);
+            setTimeout(window.setupTabsDemos, 300);
         }
     </script>
+
     <section class="max-w-6xl mx-auto p-6 mb-8 border border-slate-700 rounded-sm" id="maintenance-regressions">
         <h2 class="text-lg font-semibold mb-2">Maintenance regression checks</h2>
         <p class="text-sm mb-3">Check programmatic and declarative plugin usage, form serialization, repeated initialization and lifecycle cleanup.</p>

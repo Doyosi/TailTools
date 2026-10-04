@@ -15,6 +15,7 @@ import { CGESelect } from '../plugins/CGESelect';
 import { CGEDropzone } from '../plugins/CGEDropzone';
 import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from '../plugins/CGEDataTable';
 import { CGEDataGrid } from '../plugins/CGEDataGrid';
+import { CGETabs } from '../plugins/CGETabs';
 
 export {
   CGEModal,
@@ -28,6 +29,7 @@ export {
   CGEDropzone,
   CGEDataTable,
   CGEDataGrid,
+  CGETabs,
   CGEFilter,
   CGESort,
   CGEPagination,
@@ -72,6 +74,9 @@ export function initTailTools(root: Document | HTMLElement = document): void {
   // Initialize CGEDataGrid declarative data grids
   CGEDataGrid.init(root);
 
+  // Initialize CGETabs declarative tabs
+  CGETabs.init(root);
+
   console.log('[TailTools] Initialized plugins successfully');
 }
 
@@ -93,6 +98,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     CGEDropzone,
     CGEDataTable,
     CGEDataGrid,
+    CGETabs,
     CGEFilter,
     CGESort,
     CGEPagination,
@@ -109,6 +115,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   (window as any).CGEDropzone = CGEDropzone;
   (window as any).CGEDataTable = CGEDataTable;
   (window as any).CGEDataGrid = CGEDataGrid;
+  (window as any).CGETabs = CGETabs;
   (window as any).CGEFilter = CGEFilter;
   (window as any).CGESort = CGESort;
   (window as any).CGEPagination = CGEPagination;
@@ -134,9 +141,11 @@ export default {
   CGEDropzone,
   CGEDataTable,
   CGEDataGrid,
+  CGETabs,
   CGEFilter,
   CGESort,
   CGEPagination,
   CGEResponsive,
 };
+
 

@@ -258,6 +258,22 @@
     "./plugins/CGEToast/CGEToast.js": {
       "types": "./plugins/CGEToast/CGEToast.d.ts",
       "import": "./plugins/CGEToast/CGEToast.js"
+    },
+    "./plugins/CGETabs": {
+      "types": "./plugins/CGETabs/index.d.ts",
+      "import": "./plugins/CGETabs/index.js",
+      "default": "./plugins/CGETabs/index.js"
+    },
+    "./CGETabs": {
+      "types": "./plugins/CGETabs/index.d.ts",
+      "import": "./plugins/CGETabs/index.js",
+      "default": "./plugins/CGETabs/index.js"
+    },
+    "./plugins/CGETabs/style.css": "./plugins/CGETabs/style.css",
+    "./plugins/CGETabs/CGETabs.js": {
+      "types": "./plugins/CGETabs/CGETabs.d.ts",
+      "import": "./plugins/CGETabs/CGETabs.js"
     }
   }
 }
+

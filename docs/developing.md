@@ -22,7 +22,8 @@ TailTools/
 │       ├── cge-select/
 │       ├── cge-dropzone/
 │       ├── cge-datatable/
-│       └── cge-datagrid/
+│       ├── cge-datagrid/
+│       └── cge-tabs/
 ├── ai-todos/
 │   ├── plans/                 # Architectural plans for each plugin
 │   └── todo-cheks/            # Step-by-step progress & phase checklists

@@ -1,4 +1,4 @@
-import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, init, initTailTools } from 'tailtools';
+import { CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs, init, initTailTools } from 'tailtools';
 import TailTools from 'tailtools';
 import Modal from 'tailtools/plugins/CGEModal';
 import Toast from 'tailtools/plugins/CGEToast';
@@ -11,17 +11,26 @@ import Select from 'tailtools/plugins/CGESelect';
 import Dropzone from 'tailtools/plugins/CGEDropzone';
 import DataTable from 'tailtools/plugins/CGEDataTable';
 import DataGrid from 'tailtools/plugins/CGEDataGrid';
+import Tabs from 'tailtools/plugins/CGETabs';
 import { CGESelect as ShortSelect, type CGESelectOptions } from 'tailtools/CGESelect';
 import { CGEDataTable as ShortDataTable, type CGEDataTableOptions } from 'tailtools/CGEDataTable';
 import { CGEDataGrid as ShortDataGrid, type CGEDataGridOptions } from 'tailtools/CGEDataGrid';
+import { CGETabs as ShortTabs, type CGETabsOptions } from 'tailtools/CGETabs';
 import type { CGESelectEventMap } from '../../plugins/CGESelect/index.js';
 import type { CGEDropzoneOptions } from '../../plugins/CGEDropzone/index.js';
 
-const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid,
-  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, ShortSelect, ShortDataTable, ShortDataGrid];
+const constructors = [CGEModal, CGEToast, CGEAlert, CGEForm, CGEDrawer, CGELightbox, CGEActionButton, CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid, CGETabs,
+  Modal, Toast, Alert, Form, Drawer, Lightbox, Action, Select, Dropzone, DataTable, DataGrid, Tabs, ShortSelect, ShortDataTable, ShortDataGrid, ShortTabs];
 void constructors;
 init(document); initTailTools(document.body);
 TailTools.init(document);
+const tabsOptions: CGETabsOptions = { urlSync: 'query', indicator: 'pill' };
+const tabs = new Tabs(document.createElement('div'), tabsOptions);
+tabs.show('profile');
+tabs.on('cge:tabs:show', detail => { const tabId: string = detail.tabId; void tabId; });
+// @ts-expect-error invalid event
+tabs.on('cge:tabs:invalid', () => {});
+
 const options: CGESelectOptions = { multiple: true, asyncSource: { url: '/users', method: 'POST' } };
 const select = new Select(document.createElement('select'), options);
 select.on('opened', (detail: CGESelectEventMap['opened']) => detail.instance.close());
