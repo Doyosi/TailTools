@@ -1,0 +1,68 @@
+/**
+ * CGESelect Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+/* Hidden native select (accessible to FormData and form submit) */
+.cge-select-native-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+}
+
+/* Wrapper */
+.cge-select-wrapper {
+  position: relative;
+  display: block;
+}
+
+/* Dropdown Placement & Micro-transitions */
+.cge-select-dropdown {
+  transform-origin: top;
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.cge-select-placement-top {
+  transform-origin: bottom;
+}
+
+/* Options Scrollbar Styling */
+.cge-select-options::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cge-select-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cge-select-options::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.4);
+  border-radius: 2px;
+}
+
+.cge-select-options::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
+}
+
+/* Spinner Animation for Async Search */
+.cge-select-loading svg.animate-spin {
+  display: inline-block;
+  vertical-align: middle;
+  animation: cge-select-spin 1s linear infinite !important;
+}
+
+@keyframes cge-select-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

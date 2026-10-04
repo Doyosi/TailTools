@@ -1,0 +1,120 @@
+/**
+ * CGEDrawer Stylesheet
+ * Compatible with Tailwind CSS v4.3+ and fallback CSS animations.
+ */
+
+/* Directional Tactile Bounce Keyframes (Static Backdrop Dismissal Feedback) */
+@keyframes cge-drawer-bounce-left {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(14px);
+  }
+  75% {
+    transform: translateX(-4px);
+  }
+}
+
+@keyframes cge-drawer-bounce-right {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-14px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes cge-drawer-bounce-top {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(14px);
+  }
+  75% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes cge-drawer-bounce-bottom {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-14px);
+  }
+  75% {
+    transform: translateY(4px);
+  }
+}
+
+.cge-drawer-bounce-left {
+  animation: cge-drawer-bounce-left 0.4s cubic-bezier(0.25, 1, 0.5, 1) both !important;
+}
+
+.cge-drawer-bounce-right {
+  animation: cge-drawer-bounce-right 0.4s cubic-bezier(0.25, 1, 0.5, 1) both !important;
+}
+
+.cge-drawer-bounce-top {
+  animation: cge-drawer-bounce-top 0.4s cubic-bezier(0.25, 1, 0.5, 1) both !important;
+}
+
+.cge-drawer-bounce-bottom {
+  animation: cge-drawer-bounce-bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1) both !important;
+}
+
+/* Drawer root container */
+.cge-drawer {
+  --cge-drawer-z: 50;
+  z-index: var(--cge-drawer-z);
+}
+
+.cge-drawer.hidden {
+  display: none !important;
+}
+
+/* Backdrop smooth opacity transition fallback */
+.cge-drawer-backdrop {
+  will-change: opacity;
+}
+
+/* Dialog optimizations & hardware acceleration */
+.cge-drawer-dialog {
+  will-change: transform;
+}
+
+/* Mini Collapsed Rail Mode */
+.cge-drawer-mini-rail {
+  pointer-events: none !important;
+}
+
+.cge-drawer-mini-rail .cge-drawer-dialog.is-mini {
+  pointer-events: auto !important;
+  overflow: hidden;
+}
+
+.cge-drawer-mini-rail .cge-drawer-dialog.is-mini .cge-drawer-hide-on-mini,
+.cge-drawer-mini-rail .cge-drawer-dialog.is-mini [data-cge-drawer-hide-mini] {
+  display: none !important;
+}
+
+/* Drag Handle Styling (for bottom sheets & mobile drawers) */
+.cge-drawer-handle {
+  width: 2.25rem;
+  height: 0.25rem;
+  border-radius: 0.125rem; /* rounded-sm standard */
+  background-color: rgba(148, 163, 184, 0.5);
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 0.75rem;
+  cursor: grab;
+}
+
+.cge-drawer-handle:active {
+  cursor: grabbing;
+}

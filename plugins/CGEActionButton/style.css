@@ -1,0 +1,44 @@
+/**
+ * CGEActionButton Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+/* Busy loading state */
+.cge-action-btn-busy {
+  position: relative;
+  cursor: wait !important;
+  pointer-events: none !important;
+  opacity: 0.85;
+}
+
+/* Sibling locked state in action groups */
+.cge-action-sibling-locked {
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45;
+  transition: opacity 150ms ease-in-out;
+}
+
+/* Base button sizing preservation */
+[data-cge-action],
+[data-cge-confirm] {
+  transition: opacity 150ms ease-in-out, background-color 150ms ease-in-out;
+}
+
+/* Smooth Rotation Animation for Loading Spinners */
+.cge-action-btn-busy svg.animate-spin,
+button[aria-busy="true"] svg.animate-spin,
+.cge-action-spinner {
+  display: inline-block;
+  vertical-align: middle;
+  animation: cge-action-spin 1s linear infinite !important;
+}
+
+@keyframes cge-action-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

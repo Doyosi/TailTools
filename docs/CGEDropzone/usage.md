@@ -1,0 +1,146 @@
+# CGEDropzone Usage & Options
+
+Comprehensive configuration options, public methods, and event hooks for **CGEDropzone**.
+
+---
+
+## 1. Options Matrix
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `url` | `string \| null` | `null` | Remote endpoint URL for uploading files (required for `uploadMode: 'instant'`). |
+| `method` | `string` | `'POST'` | HTTP method for uploading files (`POST`, `PUT`, `PATCH`). |
+| `paramName` | `string` | `'file'` | FormData field name for uploaded file. Appends `[]` if multiple. |
+| `uploadMode` | `'instant' \| 'form'` | `'instant'` | Upload strategy: instant async queue or batch form submission. |
+| `mode` | `'standard' \| 'avatar'` | `'standard'` | Visual mode: multi-file responsive grid or single avatar uploader. |
+| `aspectRatio` | `string` | `'auto'` | Thumbnail aspect ratio preset (`1:1`, `16:9`, `300x600`, `1200x630`, `50x50`, `auto`). |
+| `acceptedFiles` | `string \| null` | `null` | Comma-delimited MIME types or extensions (e.g. `'image/*,.pdf,.zip'`). |
+| `maxFileSize` | `number \| null` | `10` | Maximum file size allowed in megabytes (MB). |
+| `minFileSize` | `number \| null` | `null` | Minimum file size allowed in megabytes (MB). |
+| `maxFiles` | `number \| null` | `null` | Maximum allowed files (automatically set to `1` in `avatar` mode). |
+| `maxConcurrent` | `number` | `2` | Number of simultaneous async file uploads in instant mode. |
+| `autoProcessQueue`| `boolean` | `true` | Automatically begin uploading when files are added. |
+| `headers` | `Object` | `{}` | Custom HTTP request headers. |
+| `extraData` | `Object \| Function` | `{}` | Additional FormData fields sent alongside the file payload. |
+| `removeUrl` | `string \| null` | `null` | Remote endpoint for deleting uploaded files on server. |
+| `removeMethod` | `string` | `'DELETE'` | HTTP method for remote deletion. |
+| `confirmDelete` | `boolean` | `true` | Prompt confirmation before deleting uploaded file (uses `CGEAlert` if present). |
+| `driver` | `'axios' \| 'xhr' \| 'fetch'` | `'axios'` | Network driver to use. Falls back to XHR if Axios is missing. |
+| `existingFiles` | `Array<Object>` | `[]` | Preloaded files from server `{ id, name, size, url, mimeType }`. |
+| `clickable` | `boolean \| string` | `true` | Whether dropzone element or child selector triggers file dialog on click. |
+| `previewContainer` | `string \| HTMLElement` | `null` | Custom container for rendered previews. |
+| `ui` | `Object` | `{...}` | Tailwind CSS v4 class slot mapping. |
+| `translations` | `Object` | `{...}` | i18n translation dictionary overrides. |
+| `renderPreview` | `Function \| null` | `null` | Custom preview card renderer: `(fileItem, dropzone) => HTMLElement \| string`. |
+| `renderTrigger` | `Function \| null` | `null` | Custom trigger renderer: `(dropzone) => HTMLElement \| string`. |
+
+---
+
+## 2. Public Methods
+
+### Static Methods
+```javascript
+// Automatically initialize all [data-cge-dropzone] containers
+CGEDropzone.init(document);
+
+// Retrieve an instance by selector or DOM element
+const dz = CGEDropzone.get('#my-dropzone');
+
+// Update global default translations
+CGEDropzone.setTranslations({
+  "dict-default-message": "Fichiers à déposer ici ou cliquez pour parcourir"
+});
+```
+
+### Instance Methods
+```javascript
+// Add file(s)
+dz.addFile(file);
+dz.addFiles(fileListOrArray);
+
+// Remove file by ID or file object
+await dz.removeFile(fileId);
+
+// Upload queue controls
+dz.uploadAll();
+dz.uploadFile(fileId);
+dz.cancelUpload(fileId);
+dz.retryUpload(fileId);
+dz.clear();
+
+// State controls
+dz.disable();
+dz.enable();
+dz.destroy();
+
+// Queue inspectors
+const allFiles = dz.getFiles();
+const queuedFiles = dz.getQueuedFiles();
+const uploadingFiles = dz.getUploadingFiles();
+const completedFiles = dz.getCompletedFiles();
+const failedFiles = dz.getFailedFiles();
+
+// Append to external FormData (for batch submissions or CGEForm)
+dz.appendToFormData(formData, 'custom_attachments');
+```
+
+---
+
+## 3. Events & Lifecycle
+
+### Instance Callbacks
+```javascript
+const dz = new CGEDropzone('#dropzone', {
+  onAddedFile: (file) => console.log('File added:', file.name),
+  onUploadProgress: (file, progress) => console.log(`${file.name}: ${progress}%`),
+  onSuccess: (file, response) => console.log('File uploaded:', response),
+  onError: (file, error) => console.error('Error on file:', error),
+  onRemoved: (file) => console.log('File removed:', file.name),
+  onQueueComplete: () => console.log('All queued files processed!')
+});
+```
+
+### Custom Event Emitter (`.on()` / `.off()`)
+```javascript
+dz.on('add', (file) => { ... });
+dz.on('progress', (file, progress) => { ... });
+dz.on('success', (file, response) => { ... });
+dz.on('error', (file, error) => { ... });
+dz.on('removed', (file) => { ... });
+dz.on('complete', () => { ... });
+```
+
+### Native DOM CustomEvents
+Dispatched on the dropzone root element with bubbling enabled:
+- `cge:dropzone:add`
+- `cge:dropzone:progress`
+- `cge:dropzone:success`
+- `cge:dropzone:error`
+- `cge:dropzone:removed`
+- `cge:dropzone:complete`
+
+```javascript
+document.addEventListener('cge:dropzone:success', (e) => {
+  const { instance, file, data } = e.detail;
+  console.log('DOM Event: Upload successful', file.name, data);
+});
+```
+
+---
+
+## 4. Headless UI Class Slots
+
+Every component element can be customized with Tailwind CSS v4 classes via the `ui` configuration slot:
+
+```javascript
+const dropzone = new CGEDropzone('#my-dropzone', {
+  ui: {
+    container: 'border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-primary-500 rounded-2xl p-6 transition-colors',
+    dragOver: 'border-primary-500 bg-primary-50/20',
+    previewCard: 'relative group rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm',
+    progressBar: 'h-1.5 bg-primary-500 rounded-full transition-all duration-200',
+    removeBtn: 'absolute top-2 right-2 p-1.5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity',
+    fileIcon: 'w-10 h-10 text-zinc-500'
+  }
+});
+```

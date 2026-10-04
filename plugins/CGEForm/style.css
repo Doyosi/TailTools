@@ -1,0 +1,103 @@
+/**
+ * CGEForm Stylesheet - TailTools Plugin
+ * Designed for Tailwind CSS v4.3+ and Laravel Blade environments.
+ * Non-destructive, zero-opinionated class definitions to preserve custom user UI.
+ */
+
+/* Form Group Container Hook */
+.cge-form-group {
+  position: relative;
+}
+
+/* Base Class Hooks (Zero-opinionated to prevent breaking custom user UI styles) */
+.cge-input,
+.cge-textarea,
+.cge-select {
+  /* Class definition hooks for developer targeting and CGEForm DOM discovery */
+}
+
+/* Helper Text Hooks */
+.cge-help-top,
+[data-cge-help="top"],
+.cge-help-bottom,
+[data-cge-help="bottom"] {
+  /* Class hooks for top and bottom supplementary helper elements */
+}
+
+/* Feedback Message Visibility Toggle (Non-destructive show/hide behavior) */
+.cge-feedback,
+.cge-error-feedback {
+  display: block;
+}
+
+.cge-feedback.hidden,
+.cge-error-feedback.hidden {
+  display: none !important;
+}
+
+/* In-Form Alert Banners */
+.cge-form-success {
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  background-color: var(--color-emerald-50, #ecfdf5);
+  border: 1px solid var(--color-emerald-200, #a7f3d0);
+  color: var(--color-emerald-800, #065f46);
+}
+
+:is(.dark, [data-theme="dark"]) .cge-form-success {
+  background-color: rgba(6, 95, 70, 0.2);
+  border-color: var(--color-emerald-800, #065f46);
+  color: var(--color-emerald-300, #6ee7b7);
+}
+
+.cge-form-error {
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  background-color: var(--color-rose-50, #fff1f2);
+  border: 1px solid var(--color-rose-200, #fecdd3);
+  color: var(--color-rose-800, #9f1239);
+}
+
+:is(.dark, [data-theme="dark"]) .cge-form-error {
+  background-color: rgba(159, 18, 57, 0.2);
+  border-color: var(--color-rose-800, #9f1239);
+  color: var(--color-rose-300, #fda4af);
+}
+
+.cge-form-success.hidden,
+.cge-form-error.hidden {
+  display: none !important;
+}
+
+/* Submit Button Busy State (only manages loading cursor and click prevention) */
+[data-cge-form] button[aria-busy="true"],
+[data-cge-form] button[type="submit"][aria-busy="true"],
+[data-cge-form] input[type="submit"][aria-busy="true"],
+[data-cge-form] [data-cge-submit][aria-busy="true"],
+button[aria-busy="true"] {
+  cursor: wait !important;
+  opacity: 0.8 !important;
+  pointer-events: none !important;
+}
+
+/* Smooth Rotation Animation for Loading Spinners */
+button[aria-busy="true"] svg.animate-spin {
+  display: inline-block;
+  vertical-align: middle;
+  animation: cge-form-spin 1s linear infinite;
+}
+
+@keyframes cge-form-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

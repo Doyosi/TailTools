@@ -1,0 +1,120 @@
+/**
+ * CGEToast Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+[id^="cge-toast-portal-"] {
+  z-index: 99999;
+}
+
+/* Toast card base styling & transitions */
+.cge-toast {
+  will-change: transform, opacity;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.cge-toast.cge-toast-light {
+  background-color: rgba(255, 255, 255, 0.98);
+  color: #0f172a;
+  border-color: #e2e8f0;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+.cge-toast.cge-toast-dark {
+  background-color: rgba(15, 23, 42, 0.96);
+  color: #f8fafc;
+  border-color: #334155;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+
+/* Full-width banner styles */
+.cge-toast-banner {
+  box-sizing: border-box;
+  width: 100vw;
+  max-width: 100%;
+}
+
+/* Action button styles */
+.cge-toast-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.cge-toast-action-btn:hover {
+  filter: brightness(1.08);
+}
+
+.cge-toast-action-btn:active {
+  transform: scale(0.96);
+}
+
+.cge-toast-btn-primary {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #6366f1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+}
+.cge-toast-btn-primary:hover {
+  background-color: #4338ca !important;
+  border-color: #818cf8 !important;
+}
+
+/* Secondary Button - Light Mode */
+.cge-toast.cge-toast-light .cge-toast-btn-secondary {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+.cge-toast.cge-toast-light .cge-toast-btn-secondary:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Secondary Button - Dark Mode */
+.cge-toast.cge-toast-dark .cge-toast-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.cge-toast.cge-toast-dark .cge-toast-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+}
+
+.cge-toast-btn-emerald {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+}
+.cge-toast-btn-emerald:hover {
+  background-color: #047857 !important;
+}
+
+.cge-toast-btn-amber {
+  background-color: #f59e0b !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  border-color: #fbbf24 !important;
+}
+.cge-toast-btn-amber:hover {
+  background-color: #d97706 !important;
+}
+
+/* Progress bar container and animation */
+.cge-toast-progress {
+  will-change: width;
+}
+

@@ -1,0 +1,2 @@
+# Plans directory for CGE plugins
+Each plugin will have its plan stored here as `<plugin-name>-plan.md`.

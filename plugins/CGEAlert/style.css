@@ -1,0 +1,70 @@
+/**
+ * CGEAlert Stylesheet
+ * Compatible with Tailwind CSS v4.3+
+ */
+
+#cge-alert-portal {
+  z-index: 99999;
+}
+
+/* Overlay backdrop styling */
+.cge-alert-overlay {
+  will-change: opacity;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.cge-alert-overlay.cge-alert-light {
+  background-color: rgba(15, 23, 42, 0.45);
+}
+
+.cge-alert-overlay.cge-alert-dark {
+  background-color: rgba(2, 6, 23, 0.75);
+}
+
+/* Alert dialog card */
+.cge-alert-dialog {
+  will-change: transform, opacity;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.cge-alert-dialog.cge-alert-light {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.cge-alert-dialog.cge-alert-dark {
+  background-color: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+}
+
+/* Fallback Tactile Shake Keyframes */
+@keyframes cge-alert-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-7px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(7px);
+  }
+}
+
+.cge-alert-shake {
+  animation: cge-alert-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+/* Spinner display enforcement: strictly hidden by default */
+[data-cge-alert-spinner] {
+  display: none !important;
+}
+
+[data-cge-alert-spinner].is-loading,
+button.is-loading [data-cge-alert-spinner] {
+  display: inline-block !important;
+}
+

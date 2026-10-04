@@ -1,0 +1,2 @@
+# Todo Checks directory for CGE plugins
+Each plugin will have its phase checklist stored here as `<plugin-name>-checklist.md`.
