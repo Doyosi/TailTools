@@ -65,19 +65,19 @@ In your main CSS file (`src/style.css` or `resources/css/app.css`):
      data-cge-size="md">
     
     <!-- Backdrop Overlay -->
-    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/75 backdrop-blur-sm" data-cge-modal-backdrop></div>
+    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
 
     <!-- Dialog Card -->
-    <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100" data-cge-modal-dialog>
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 id="modal-title" class="text-lg font-bold">Hello World</h3>
-            <button type="button" data-cge-modal-close class="text-slate-400 hover:text-white" aria-label="Close">✕</button>
+    <div class="cge-modal-dialog cge-modal-surface cge-modal-dark relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+        <div class="cge-modal-header">
+            <h3 id="modal-title" class="cge-modal-title">Hello World</h3>
+            <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
-        <div class="py-4 text-sm text-slate-300">
+        <div class="cge-modal-body">
             Welcome to CGEModal with Tailwind CSS v4!
         </div>
-        <div class="pt-3 border-t border-slate-800 flex justify-end">
-            <button type="button" data-cge-modal-close class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-sm text-xs">
+        <div class="cge-modal-footer">
+            <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">
                 Close
             </button>
         </div>
@@ -123,3 +123,11 @@ modal.open();
 Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Compact surface (2026-10-05)
+
+Use `cge-modal-surface` on the dialog and `cge-modal-header`, `cge-modal-body`, `cge-modal-footer` for its slots. The surface defaults to light; add `cge-modal-dark` for dark colors (`cge-modal-light` is an explicit light marker). This is a markup/CSS choice, not a JavaScript theme option. Keep `rounded-sm`; all built-in compact controls use `var(--radius-sm, 0.25rem)`.
+
+Header/body spacing is 16 px on mobile and 20 px on desktop; titles are 16 px and body text 13 px. Footer spacing is 12 px vertically. Actions are at least 32 px high, or 36 px below 640 px; close targets are 32 px. Long labels wrap. The body scrolls within a viewport-bounded surface while header/footer remain visible. A form wrapping all slots must use `cge-modal-layout`; a submit button must not carry `data-cge-modal-close` (close after successful submission).
+
+Use `cge-modal-action` for sizing and add your Tailwind color classes; `cge-modal-action-secondary` provides a theme-aware neutral action. `cge-modal-close`, `cge-modal-input` and `cge-modal-description` are optional. Existing consumer markup without these surface/slot classes keeps its own styling. Public options, sizing presets, events and declarations are unchanged. Import the plugin stylesheet or `tailtools/style.css`.

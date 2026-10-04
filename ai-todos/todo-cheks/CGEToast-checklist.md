@@ -71,3 +71,10 @@ Track the execution and verification phases for the `CGEToast` plugin.
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## 2026-10-05 kompakt görsel bakım
+- [x] Kurallar, skill, mevcut UI ve kapsam incelemesi
+- [x] rounded-sm korunarak kompakt UI ve responsive düzen
+- [x] Demo, dört belge ve skill eşitlemesi
+- [x] Açık/koyu tema, mobil ve etkileşim kontrolü
+- [x] Regresyon, type, build, paket kontrolü ve REPORTS.md

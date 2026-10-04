@@ -1,5 +1,7 @@
 # TailTools maintenance regression checks
 
+Use `node tests/run-browser.mjs --serve --toast-modal-ui --bundle --compact` for compact CGEToast/CGEModal checks. The actual demo is captured in light/dark themes at 320, 390 and 1024 px, including banners, long actions/text, custom images, form submission and long scrolling modal bodies. Checks cover rounded-sm surfaces/actions, viewport boundaries, action callbacks, pause/progress, declarative modal triggers, keyboard/focus restoration, static dismissal, size presets and reduced motion. Screenshots/measurements remain in OS temp. `--bundle` verifies the compact styles with the generated CSS in both ESM and UMD.
+
 Use `node tests/run-browser.mjs --serve --alert-ui --compact` for the compact CGEAlert visual checks. It captures 11 light/dark/mobile/desktop variants at 320, 390 and 1024 px, measures overflow and close-button overlap, and checks input validation, type-to-confirm, three actions, loading/custom colors, no-action footer and declarative cancel. Screenshots and measurements are saved to OS temp. `--bundle` also loads the generated CSS and verifies compact Alert rendering/confirmation in both ESM and UMD.
 
 `npm test` runs Node request/API/documentation regressions, then strict TypeScript checks with NodeNext and Bundler. TypeScript is a development dependency.

@@ -106,3 +106,6 @@ Preserve existing public methods, CSS, Blade markup and exports. Verify programm
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## 2026-10-05 kompakt görsel bakım
+Kullanıcının talebi: daha şık, dengeli ve kompakt UI; kart/kontrol köşeleri rounded-sm. Mevcut API ve lifecycle korunacak. Toast: semantik ikon yüzeyi, küçük eylemler, responsive banner/uzun metin. Modal: isteğe bağlı surface/header/body/footer sınıfları, açık/koyu tema, demo ve Blade örnekleri. Dört belge ve skill eşitlenecek; 320/390/1024 px görsel kontrol, regresyon, type, build ve paket doğrulaması yapılacak.

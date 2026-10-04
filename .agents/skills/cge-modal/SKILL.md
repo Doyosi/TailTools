@@ -64,31 +64,31 @@ window.CGEModal = CGEModal;
      data-cge-animation-driver="auto">
 
     <!-- Backdrop Overlay -->
-    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-sm" data-cge-modal-backdrop></div>
+    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
 
     <!-- Dialog Card -->
-    <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col justify-between"
+    <div class="cge-modal-dialog cge-modal-surface cge-modal-dark relative z-10 w-full rounded-sm"
          data-cge-modal-dialog>
         
         <!-- Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="cge-modal-header">
             <h3 id="my-modal-title" class="text-lg font-bold text-white">Modal Title</h3>
-            <button type="button" data-cge-modal-close class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer" aria-label="Close">
+            <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close">
                 ✕
             </button>
         </div>
 
         <!-- Body -->
-        <div class="py-4 text-sm text-slate-300">
+        <div class="cge-modal-body">
             Modal body content goes here.
         </div>
 
         <!-- Footer -->
-        <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
-            <button type="button" data-cge-modal-close class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-sm transition cursor-pointer">
+        <div class="cge-modal-footer">
+            <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">
                 Cancel
             </button>
-            <button type="button" data-cge-modal-close class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-sm transition cursor-pointer">
+            <button type="button" data-cge-modal-close class="cge-modal-action rounded-sm bg-indigo-600 hover:bg-indigo-500 text-white">
                 Confirm
             </button>
         </div>
@@ -107,6 +107,7 @@ Component file: `resources/views/components/cge-modal.blade.php`:
     'id',
     'title' => null,
     'size' => 'lg',
+    'theme' => 'dark', // Markup theme only: light | dark
     'backdrop' => 'true',
     'animation' => 'zoom',
     'animationDriver' => 'auto',
@@ -127,31 +128,31 @@ Component file: `resources/views/components/cge-modal.blade.php`:
      data-cge-animation-driver="{{ $animationDriver }}"
      data-cge-escape-close="{{ $escapeClose }}">
 
-    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-sm" data-cge-modal-backdrop></div>
+    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
 
-    <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col justify-between"
+    <div class="cge-modal-dialog cge-modal-surface {{ $theme === 'dark' ? 'cge-modal-dark' : 'cge-modal-light' }} relative z-10 w-full rounded-sm"
          data-cge-modal-dialog>
         
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="cge-modal-header">
             @if(isset($header))
                 {{ $header }}
             @elseif($title)
-                <h3 id="{{ $id }}-title" class="text-lg font-bold text-white tracking-tight">
+                <h3 id="{{ $id }}-title" class="cge-modal-title">
                     {{ $title }}
                 </h3>
             @endif
 
-            <button type="button" data-cge-modal-close class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer" aria-label="Close modal">
+            <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal">
                 ✕
             </button>
         </div>
 
-        <div class="py-4 text-sm text-slate-300">
+        <div class="cge-modal-body">
             {{ $slot }}
         </div>
 
         @if(isset($footer))
-            <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
+            <div class="cge-modal-footer">
                 {{ $footer }}
             </div>
         @endif
@@ -252,4 +253,7 @@ modal.modal.addEventListener('cge:modal:closed', (e) => {
 
 Destroy cancels animation frames/timers and settles pending animation promises. Modal, Drawer, Alert and Lightbox share body scroll, focus and stacking ownership. Only the top overlay handles keyboard events. Nested init roots process each trigger click once.
 
-Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEModal.d.ts](../../../../plugins/CGEModal/CGEModal.d.ts).
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEModal.d.ts](../../../plugins/CGEModal/CGEModal.d.ts).
+
+## Compact UI guidance (2026-10-05)
+Use cge-modal-surface with cge-modal-header/body/footer, cge-modal-title, cge-modal-close, cge-modal-action, cge-modal-action-secondary and cge-modal-input. Keep default cards and controls rounded-sm. The surface defaults to light; cge-modal-dark selects dark colors in HTML, not JS options. A form wrapping slots uses cge-modal-layout; close after successful submission rather than putting data-cge-modal-close on submit controls. Body scrolls inside the bounded surface while header/footer stay visible. Legacy consumer markup remains supported. See docs/CGEModal/usage.md for spacing and styling contracts.

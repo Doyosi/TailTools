@@ -208,3 +208,17 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 const toast = CGEToast.success('Saved', { duration: 0 });
 await toast.dismiss();
 ```
+
+## Compact presentation (2026-10-05)
+
+Floating cards keep `rounded-sm` and use 12 px padding, 32 px semantic icon/image slots, 13 px text and quieter light/dark shadows. Floating portals are capped at 384 px with 16 px viewport gutters. Banners retain edge-to-edge square corners; at small widths their actions sit below the copy and wrap. Progress bars are 2 px high.
+
+Actions use `rounded-sm`, compact horizontal padding, a minimum height of 28 px on desktop and 32 px below 640 px, with visible keyboard focus and wrapping labels. Close targets are 32 px. Custom `image.class`, custom icon HTML and action color classes remain supported. No option, method, event or declaration changes are required.
+
+```javascript
+CGEToast.show({
+  position: 'top-full', theme: 'light', duration: false, variant: 'info',
+  title: 'New workspace settings', message: 'Review the changes before continuing.',
+  actions: [{ label: 'Review workspace settings', class: 'cge-toast-btn-primary', onClick: toast => { console.log('Review'); toast.dismiss(); } }]
+});
+```

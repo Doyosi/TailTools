@@ -232,4 +232,7 @@ Nested document/subtree delegation handles a single click only once.
 
 Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
 
-Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEToast.d.ts](../../../../plugins/CGEToast/CGEToast.d.ts).
+Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEToast.d.ts](../../../plugins/CGEToast/CGEToast.d.ts).
+
+## Compact UI guidance (2026-10-05)
+Preserve rounded-sm cards, default icon/image slots and actions. Cards use 12 px padding, 32 px semantic icon badges, 13 px text and 2 px countdown bars. Floating portals fit within 16 px viewport gutters at 320 px and are capped at 384 px. Banner actions wrap beneath copy below 640 px; long labels wrap in both layouts. Action minimum height is 28 px desktop / 32 px mobile and close targets are 32 px. Custom icon HTML, image.class and action color classes remain supported; public API is unchanged.

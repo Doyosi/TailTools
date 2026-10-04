@@ -2,6 +2,24 @@
 
 **Tarih:** 5 Ekim 2026
 
+## CGEToast / CGEModal kompakt görsel bakım — tamamlandı
+
+**Güncelleme:** 5 Ekim 2026. Kullanıcının görsel iyileştirme ve küçük köşe talebi uygulandı. Yeni kartlar, varsayılan ikon/resim yüzeyleri ve kontroller **rounded-sm** kullanır; demo temasında ölçülen radius **4 px**. Public JS seçenekleri, yöntemleri, olaylar ve declaration sözleşmesi korundu.
+
+- **Toast:** Kart padding 16 → 12 px; 20 px çıplak SVG / 40 px default resim yerine 32 px ikon/resim yüzeyi, SVG 20 px. Başlık/metin 13 px, daha hafif gölgeler, 2 px progress ve 8 px stack aralığı. Floating portal en fazla 384 px ve viewport kenarlarında 16 px boşluk kullanır. Banner'lar tam genişlikte kare kenarlarını korur; dar ekranlarda butonlar metin altına geçip sarılır. Uzun metin ve aksiyon etiketleri yatay taşmaz. Eylem minimum yüksekliği desktop 28 px / mobil 32 px; kapatma hedefi 32 px. Custom icon/image.class/eylem renkleri korunur.
+- **Modal:** İsteğe bağlı **cge-modal-surface** ile sade light/dark yüzey, 16 px başlık, 13 px gövde ve yumuşak footer. Header/body yatay padding mobil 16 px / desktop 20 px; footer dikey padding 12 px. Eylem minimum yüksekliği desktop 32 px / mobil 36 px, kapatma hedefi 32 px. Uzun gövde kendi alanında kayar; başlık/footer görünür kalır. Form tüm slotları sarıyorsa cge-modal-layout kullanılır. Büyük radius eklenmedi.
+- **Entegrasyon:** Beş Modal demosu ve global tema seçici güncellendi. Modal HTML tüketiciye aittir; kompakt düzen surface/header/body/footer sınıflarıyla seçilir. Mevcut özel markup kendi stilini sürdürür. Theme bir CSS/markup tercihi, yeni JS option değildir. [Kullanım](docs/CGEModal/usage.md) ve [Blade component](docs/CGEModal/laravel-blade.md) örnekleri eşitlendi; Blade örneğinde light/dark theme prop sunulur.
+- **Demo düzeltmeleri:** Tanınmayan data-cge-keyboard ve data-cge-focus öznitelikleri mevcut data-cge-escape-close / data-cge-autofocus ile değiştirildi. Submit kontrolündeki erken close kaldırıldı; required form gönderildikten sonra success Toast ve close çalışır. Blade form eylemleri gerçek footer slotuna alındı ve mobile tek kolon düzeni eklendi.
+
+### Doğrulama
+
+- **27/27 Node**, strict **NodeNext/Bundler**, **116/116 Chrome** regresyonu başarılı. npm run build ve gerçek npm arşivine karşı npm run test:package geçti. Üretilen CSS ile **ESM/UMD** içinde kompakt Toast/Modal stili doğrulandı; uncaught JS hatası yok.
+- [Görsel/etkileşim kontrolü](tests/toast-modal-ui.mjs) **320, 390, 1024 px** genişliklerde **24** light/dark/floating/banner/long-content/image/form/size ekran görüntüsü üretti. 320×600 px uzun Modal ve full preset de kontrol edildi. Kart/eylem radius'u rounded-sm ile eşleşir; yatay/viewport taşması yok. Screenshot'lar görsel olarak incelendi.
+- Gerçek aksiyon callback'i, hover-pause/progress, kapatma düğmesi, deklaratif modal açma, Escape/focus restoration, required form gönderimi, static Escape/shake ve reduced-motion Toast kontrol edildi. Görseller/measurements.json OS temp içinde tutulur; runner yolu yazdırır.
+- İki pluginin dört ana belgesi, Modal Blade rehberi, canonical skill'ler, plan/checklist ve [test rehberi](tests/README.md) güncellendi. JS API değişmediği için declaration değişikliği gerekmedi. git diff --check temiz; commit/push yapılmadı.
+
+Tekrar çalıştırma: test rehberindeki Playwright ortamıyla **node tests/run-browser.mjs --serve --toast-modal-ui --bundle --compact**. Kontroller Chrome ve yerel demo/mock ortamında yapıldı; canlı Laravel, diğer browser engine'leri ve gerçek ekran okuyucu oturumu bu turda test edilmedi.
+
 ## CGEAlert kompakt görsel yenileme — tamamlandı
 
 **Güncelleme:** 5 Ekim 2026. Kullanıcının fazla padding/boşluk ve büyük butonlara yönelik isteği uygulandı. Alert için yeni görsel düzen geliştirildi; static/promise API, validation, tema ve size seçenekleri korundu.

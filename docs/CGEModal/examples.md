@@ -23,11 +23,11 @@ Practical code recipes and patterns for integrating `CGEModal` into real-world a
   <!-- Modal -->
   <div id="simple-modal" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div class="cge-modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-sm" data-cge-modal-backdrop></div>
-    <div class="cge-modal-dialog relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 p-6 rounded-sm" data-cge-modal-dialog>
-      <h3 class="text-lg font-bold">Simple Dialog</h3>
-      <p class="text-sm text-slate-400 mt-2">Zero-configuration modal with built-in Tailwind transitions.</p>
-      <div class="mt-4 flex justify-end">
-        <button type="button" data-cge-modal-close class="px-4 py-2 bg-slate-800 rounded-sm text-sm">Close</button>
+    <div class="cge-modal-dialog cge-modal-surface cge-modal-dark relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+      <div class="cge-modal-header"><h3 class="cge-modal-title">Simple Dialog</h3></div>
+      <div class="cge-modal-body">Zero-configuration modal with built-in Tailwind transitions.</div>
+      <div class="cge-modal-footer">
+        <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">Close</button>
       </div>
     </div>
   </div>
@@ -54,18 +54,18 @@ Take full advantage of Midudev’s `@import "tailwind-animations";` for entry an
      data-cge-animation="slide-up"
      data-cge-size="xl">
   
-  <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-md" data-cge-modal-backdrop></div>
+  <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
 
-  <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-indigo-500/30 p-6 shadow-2xl" data-cge-modal-dialog>
-    <div class="flex justify-between items-center pb-3 border-b border-slate-800">
-      <h3 class="text-lg font-bold text-indigo-400">Slide Up Animation</h3>
-      <button type="button" data-cge-modal-close class="text-slate-400 hover:text-white">✕</button>
+  <div class="cge-modal-dialog cge-modal-surface cge-modal-dark relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+    <div class="cge-modal-header">
+      <h3 class="cge-modal-title">Slide Up Animation</h3>
+      <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
     </div>
-    <p class="py-4 text-sm text-slate-300">
+    <p class="cge-modal-body">
       Enters using <code>animate-slide-in-bottom</code> and exits using <code>animate-slide-out-bottom</code>!
     </p>
-    <div class="pt-3 border-t border-slate-800 flex justify-end">
-      <button type="button" data-cge-modal-close class="px-4 py-2 bg-indigo-600 text-white rounded-sm text-xs">
+    <div class="cge-modal-footer">
+      <button type="button" data-cge-modal-close class="cge-modal-action rounded-sm bg-indigo-600 text-white">
         Done
       </button>
     </div>
@@ -114,25 +114,25 @@ Focus trap ensures keyboard navigation cycles cleanly between step inputs:
 
 ```html
 <div id="wizard-modal" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4" data-cge-size="2xl">
-  <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-sm" data-cge-modal-backdrop></div>
-  <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-slate-800 p-8 text-white shadow-2xl" data-cge-modal-dialog>
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-xl font-bold">Step 1 of 3: Workspace Profile</h2>
-      <button type="button" data-cge-modal-close class="text-slate-400 hover:text-white">✕</button>
+  <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+  <div class="cge-modal-dialog cge-modal-surface cge-modal-dark relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+    <div class="cge-modal-header">
+      <h2 class="cge-modal-title">Step 1 of 3: Workspace Profile</h2>
+      <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
     </div>
-    <div class="space-y-4">
+    <div class="cge-modal-body space-y-4">
       <div>
         <label class="block text-xs text-slate-400 mb-1">Workspace Name</label>
-        <input type="text" autofocus class="w-full bg-slate-950 border border-slate-800 rounded-sm px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="text" autofocus class="cge-modal-input rounded-sm">
       </div>
       <div>
         <label class="block text-xs text-slate-400 mb-1">Organization URL</label>
-        <input type="text" class="w-full bg-slate-950 border border-slate-800 rounded-sm px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <input type="text" class="cge-modal-input rounded-sm">
       </div>
     </div>
-    <div class="mt-8 pt-4 border-t border-slate-800 flex justify-between">
-      <button type="button" data-cge-modal-close class="px-4 py-2 text-slate-400 text-sm">Cancel</button>
-      <button type="button" class="px-6 py-2 bg-indigo-600 rounded-sm text-sm font-medium hover:bg-indigo-500">Next Step →</button>
+    <div class="cge-modal-footer">
+      <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">Cancel</button>
+      <button type="button" class="cge-modal-action rounded-sm bg-indigo-600 text-white hover:bg-indigo-500">Next Step →</button>
     </div>
   </div>
 </div>
@@ -150,3 +150,11 @@ await drawer.open();
 await drawer.close(); // modal retains its scroll/focus ownership
 await modal.close();
 ```
+
+## Compact surface (2026-10-05)
+
+Use `cge-modal-surface` on the dialog and `cge-modal-header`, `cge-modal-body`, `cge-modal-footer` for its slots. The surface defaults to light; add `cge-modal-dark` for dark colors (`cge-modal-light` is an explicit light marker). This is a markup/CSS choice, not a JavaScript theme option. Keep `rounded-sm`; all built-in compact controls use `var(--radius-sm, 0.25rem)`.
+
+Header/body spacing is 16 px on mobile and 20 px on desktop; titles are 16 px and body text 13 px. Footer spacing is 12 px vertically. Actions are at least 32 px high, or 36 px below 640 px; close targets are 32 px. Long labels wrap. The body scrolls within a viewport-bounded surface while header/footer remain visible. A form wrapping all slots must use `cge-modal-layout`; a submit button must not carry `data-cge-modal-close` (close after successful submission).
+
+Use `cge-modal-action` for sizing and add your Tailwind color classes; `cge-modal-action-secondary` provides a theme-aware neutral action. `cge-modal-close`, `cge-modal-input` and `cge-modal-description` are optional. Existing consumer markup without these surface/slot classes keeps its own styling. Public options, sizing presets, events and declarations are unchanged. Import the plugin stylesheet or `tailtools/style.css`.

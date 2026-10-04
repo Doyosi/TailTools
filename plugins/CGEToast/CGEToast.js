@@ -211,32 +211,32 @@ export class CGEToast {
       const bgClass = isDark
         ? 'bg-slate-900/95 text-slate-100 border-slate-800 shadow-2xl'
         : 'bg-white/95 text-slate-900 border-slate-200/90 shadow-lg';
-      toastEl.className = `cge-toast cge-toast-banner cge-toast-${activeTheme} pointer-events-auto relative w-full flex items-center justify-between px-6 py-3.5 backdrop-blur-md ${bgClass} border-y ${variantStyle.border} transition-all duration-300`;
+      toastEl.className = `cge-toast cge-toast-banner cge-toast-${activeTheme} pointer-events-auto relative w-full px-4 py-3 backdrop-blur-sm ${bgClass} border-y ${variantStyle.border} transition-all duration-300`;
     } else {
       // Floating card mode
       const bgClass = isDark
         ? 'bg-slate-900/95 text-slate-100 border-slate-800 shadow-2xl'
         : 'bg-white/95 text-slate-900 border-slate-200/90 shadow-xl';
-      toastEl.className = `cge-toast cge-toast-${activeTheme} pointer-events-auto relative w-full max-w-sm sm:max-w-md rounded-sm backdrop-blur-md p-4 ${bgClass} border ${variantStyle.border} overflow-hidden transition-all duration-300`;
+      toastEl.className = `cge-toast cge-toast-${activeTheme} pointer-events-auto relative w-full max-w-sm rounded-sm backdrop-blur-sm p-3 ${bgClass} border ${variantStyle.border} overflow-hidden transition-all duration-300`;
     }
 
     // 1. Icon or Avatar image
     let visualSlot = '';
     if (this.options.image && this.options.image.src) {
       const borderClass = isDark ? 'border-slate-700' : 'border-slate-200';
-      const imgClass = this.options.image.class || `w-10 h-10 rounded-sm object-cover shrink-0 border ${borderClass}`;
+      const imgClass = this.options.image.class || `w-8 h-8 rounded-sm object-cover shrink-0 border ${borderClass}`;
       visualSlot = `<img src="${this.options.image.src}" alt="${this.options.image.alt || 'Avatar'}" class="${imgClass}" />`;
     } else if (this.options.icon) {
       const iconSet = isDark ? CGEToast.DARK_ICONS : CGEToast.LIGHT_ICONS;
       visualSlot = typeof this.options.icon === 'string' && this.options.icon !== 'true'
-        ? `<div class="shrink-0 mt-0.5">${this.options.icon}</div>`
-        : `<div class="shrink-0 mt-0.5">${iconSet[this.options.variant] || iconSet.neutral}</div>`;
+        ? `<div class="cge-toast-custom-icon shrink-0">${this.options.icon}</div>`
+        : `<div class="cge-toast-icon w-8 h-8 rounded-sm flex items-center justify-center shrink-0 ${variantStyle.badge}" aria-hidden="true">${iconSet[this.options.variant] || iconSet.neutral}</div>`;
     }
 
     // 2. Action buttons
     let actionsHTML = '';
     if (Array.isArray(this.options.actions) && this.options.actions.length > 0) {
-      const containerClass = isBanner ? 'flex items-center gap-2.5 shrink-0' : 'flex items-center gap-2 mt-3';
+      const containerClass = `cge-toast-actions flex flex-wrap items-center gap-1.5${isBanner ? '' : ' mt-2'}`;
       const baseBtnClass = 'cge-toast-action-btn';
       const defaultBtnClass = 'cge-toast-btn-secondary';
 
@@ -254,8 +254,8 @@ export class CGEToast {
       ? 'text-slate-400 hover:text-white hover:bg-slate-800/80'
       : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100';
     const closeBtnHTML = this.options.dismissible ? `
-      <button type="button" data-cge-toast-close class="shrink-0 -mr-1 -mt-1 w-7 h-7 rounded-sm flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="${this.translations.close}">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button type="button" data-cge-toast-close class="shrink-0 -mr-1 -mt-1 w-8 h-8 rounded-sm flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="${this.translations.close}">
+        <svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
@@ -267,27 +267,25 @@ export class CGEToast {
 
     if (isBanner) {
       toastEl.innerHTML = `
-        <div class="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3 min-w-0">
-            ${visualSlot}
-            <div class="min-w-0">
-              ${title ? `<span class="text-xs font-bold uppercase tracking-wider ${variantStyle.badge} px-2.5 py-0.5 rounded-sm mr-2">${title}</span>` : ''}
-              <span class="text-xs sm:text-sm ${msgColor} font-medium">${this.options.message}</span>
+        <div class="max-w-7xl mx-auto w-full flex items-start gap-2.5">
+          ${visualSlot}
+          <div class="cge-toast-banner-main flex-1 min-w-0">
+            <div class="cge-toast-copy min-w-0">
+              ${title ? `<h4 class="cge-toast-title ${titleColor}">${title}</h4>` : ''}
+              <div class="cge-toast-message ${msgColor}">${this.options.message}</div>
             </div>
-          </div>
-          <div class="flex items-center gap-3 shrink-0">
             ${actionsHTML}
-            ${closeBtnHTML}
           </div>
+          ${closeBtnHTML}
         </div>
       `;
     } else {
       toastEl.innerHTML = `
-        <div class="flex items-start gap-3">
+        <div class="flex items-start gap-2.5">
           ${visualSlot}
           <div class="flex-1 min-w-0">
-            ${title ? `<h4 class="text-sm font-semibold ${titleColor} tracking-tight leading-snug">${title}</h4>` : ''}
-            <div class="text-xs ${msgColor} leading-relaxed mt-0.5">${this.options.message}</div>
+            ${title ? `<h4 class="cge-toast-title ${titleColor}">${title}</h4>` : ''}
+            <div class="cge-toast-message ${msgColor}">${this.options.message}</div>
             ${actionsHTML}
           </div>
           ${closeBtnHTML}
@@ -298,7 +296,7 @@ export class CGEToast {
     // 5. Progress bar if enabled & duration is set
     if (this.options.progressBar && this.options.duration && this.options.duration > 0) {
       const progressBar = document.createElement('div');
-      progressBar.className = `cge-toast-progress absolute bottom-0 left-0 h-1 ${variantStyle.progress} transition-none`;
+      progressBar.className = `cge-toast-progress absolute bottom-0 left-0 h-0.5 ${variantStyle.progress} transition-none`;
       progressBar.style.width = '100%';
       toastEl.appendChild(progressBar);
       this._progressBarEl = progressBar;
@@ -634,7 +632,7 @@ export class CGEToast {
     container.id = `cge-toast-portal-${position}`;
     container.setAttribute('aria-live', 'polite');
 
-    const baseClasses = 'fixed z-[99999] pointer-events-none flex flex-col gap-3 max-w-full';
+    const baseClasses = 'fixed z-[99999] pointer-events-none flex flex-col gap-2 max-w-full';
 
     switch (position) {
       case 'top-left':

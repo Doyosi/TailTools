@@ -7,6 +7,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { verifyGridUI } from './grid-ui.mjs';
 import { verifyNavigationUI } from './navigation-ui.mjs';
 import { verifyAlertUI } from './alert-ui.mjs';
+import { verifyToastModalUI } from './toast-modal-ui.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.TAILTOOLS_PLAYWRIGHT_MODULE || 'playwright');
 const baseline = process.argv.includes('--baseline');
@@ -42,6 +43,7 @@ try {
     results: process.argv.includes('--compact') ? results.filter(result => !result.ok) : results }, null, 2));
   if (!baseline && (errors.length || results.some(result => !result.ok))) process.exitCode = 1;
   if (process.argv.includes('--alert-ui')) console.log(JSON.stringify({ alertUI: await verifyAlertUI(browser, testUrl) }, null, 2));
+  if (process.argv.includes('--toast-modal-ui')) console.log(JSON.stringify({ toastModalUI: await verifyToastModalUI(browser, testUrl) }, null, 2));
   if (process.argv.includes('--demo')) {
     const demo = await browser.newPage();
     const demoErrors = [];
@@ -121,11 +123,24 @@ try {
           && alert.confirmBtn.getBoundingClientRect().height <= 34;
         alert.confirmBtn.click();
         const alertConfirmed = (await alertResult).isConfirmed;
-        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections, navigation, compactAlert, alertConfirmed };
+        const toast = api.CGEToast.success('Saved successfully.', { duration: false, actions: [{ label: 'Undo' }] });
+        const roundedSm = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--radius-sm')) * 16;
+        const compactToast = parseFloat(getComputedStyle(toast.el).paddingLeft) === 12
+          && parseFloat(getComputedStyle(toast.el).borderTopLeftRadius) === roundedSm
+          && toast.el.querySelector('.cge-toast-icon').offsetWidth === 32;
+        await toast.dismiss();
+        document.body.insertAdjacentHTML('beforeend', '<div id="packed-modal" class="cge-modal fixed inset-0 hidden items-center justify-center p-4"><div class="cge-modal-dialog cge-modal-surface relative w-full rounded-sm" data-cge-modal-dialog><div class="cge-modal-header"><h3 class="cge-modal-title">Saved</h3></div><div class="cge-modal-body">Your workspace is up to date.</div><div class="cge-modal-footer"><button class="cge-modal-action cge-modal-action-secondary rounded-sm" data-cge-modal-close>Close</button></div></div></div>');
+        const modal = new api.CGEModal('#packed-modal', { animationDriver: 'none', size: 'md' });
+        await modal.open();
+        const compactModal = parseFloat(getComputedStyle(modal.dialog).borderTopLeftRadius) === roundedSm
+          && parseFloat(getComputedStyle(modal.dialog.querySelector('.cge-modal-body')).paddingLeft) === 20
+          && modal.dialog.querySelector('.cge-modal-action').getBoundingClientRect().height === 32;
+        await modal.close(); modal.destroy();
+        return { plugins: Object.keys(api).filter(key => key.startsWith('CGE')).sort(), values, collections, navigation, compactAlert, alertConfirmed, compactToast, compactModal };
       });
       console.log(JSON.stringify({ bundle: format, ...result, errors: bundleErrors }));
       if (bundleErrors.length || JSON.stringify(result.plugins) !== JSON.stringify(expectedExports)
-        || !result.collections || !result.navigation || !result.compactAlert || !result.alertConfirmed || result.values.join(',') !== 'a,b') process.exitCode = 1;
+        || !result.collections || !result.navigation || !result.compactAlert || !result.alertConfirmed || !result.compactToast || !result.compactModal || result.values.join(',') !== 'a,b') process.exitCode = 1;
       await bundled.close();
     }
   }

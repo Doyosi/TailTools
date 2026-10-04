@@ -41,6 +41,7 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
     'id',
     'title' => null,
     'size' => 'lg',
+    'theme' => 'dark', // Markup theme only: light | dark
     'backdrop' => 'true',
     'animation' => 'zoom',
     'animationDriver' => 'auto',
@@ -62,18 +63,18 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
      data-cge-escape-close="{{ $escapeClose }}">
 
     <!-- Backdrop Overlay -->
-    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/80 backdrop-blur-sm" data-cge-modal-backdrop></div>
+    <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
 
     <!-- Dialog Card Container -->
-    <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-slate-900 border border-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col justify-between"
+    <div class="cge-modal-dialog cge-modal-surface {{ $theme === 'dark' ? 'cge-modal-dark' : 'cge-modal-light' }} relative z-10 w-full rounded-sm"
          data-cge-modal-dialog>
         
         <!-- Header -->
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="cge-modal-header">
             @if(isset($header))
                 {{ $header }}
             @elseif($title)
-                <h3 id="{{ $id }}-title" class="text-lg font-bold text-white tracking-tight">
+                <h3 id="{{ $id }}-title" class="cge-modal-title">
                     {{ $title }}
                 </h3>
             @endif
@@ -81,22 +82,18 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
             <!-- Standard Close Button -->
             <button type="button"
                     data-cge-modal-close
-                    class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                    aria-label="Close modal">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+                    class="cge-modal-close rounded-sm"
+                    aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
 
         <!-- Body / Content -->
-        <div class="py-4 text-sm text-slate-300">
+        <div class="cge-modal-body">
             {{ $slot }}
         </div>
 
         <!-- Footer -->
         @if(isset($footer))
-            <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
+            <div class="cge-modal-footer">
                 {{ $footer }}
             </div>
         @endif
@@ -118,13 +115,13 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
 </button>
 
 {{-- Component --}}
-<x-cge-modal id="welcome-modal" title="Welcome to the Platform" size="md">
+<x-cge-modal id="welcome-modal" title="Welcome to the Platform" size="md" theme="light">
     <p>
         Your account setup is complete. Explore your analytics or invite colleagues to collaborate on new projects.
     </p>
 
     <x-slot:footer>
-        <button type="button" data-cge-modal-close class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-sm">
+        <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">
             Got it
         </button>
     </x-slot:footer>
@@ -154,13 +151,13 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
     </p>
 
     <x-slot:footer>
-        <button type="button" data-cge-modal-close class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-sm">
+        <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">
             Cancel
         </button>
-        <form action="{{ route('projects.destroy', $project->id) }}" method="POST">
+        <form action="{{ route('projects.destroy', $project->id) }}" method="POST" class="min-w-0 max-w-full">
             @csrf
             @method('DELETE')
-            <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium rounded-sm">
+            <button type="submit" class="cge-modal-action rounded-sm bg-rose-600 hover:bg-rose-500 text-white">
                 Yes, Delete Permanently
             </button>
         </form>
@@ -179,22 +176,22 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
 </button>
 
 <x-cge-modal id="create-customer-modal" title="Add Customer" size="xl">
-    <form action="{{ route('customers.store') }}" method="POST" class="space-y-4">
+    <form id="create-customer-form" action="{{ route('customers.store') }}" method="POST" class="space-y-3">
         @csrf
         <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Company Name</label>
+            <label class="block text-xs font-medium mb-1">Company Name</label>
             <input type="text" name="company" autofocus required
-                   class="w-full px-3 py-2 rounded-sm bg-slate-950 border border-slate-800 text-white text-xs focus:ring-1 focus:ring-emerald-500">
+                   class="cge-modal-input rounded-sm">
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Contact Email</label>
+                <label class="block text-xs font-medium mb-1">Contact Email</label>
                 <input type="email" name="email" required
-                       class="w-full px-3 py-2 rounded-sm bg-slate-950 border border-slate-800 text-white text-xs focus:ring-1 focus:ring-emerald-500">
+                       class="cge-modal-input rounded-sm">
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-300 mb-1">Subscription Tier</label>
-                <select name="tier" class="w-full px-3 py-2 rounded-sm bg-slate-950 border border-slate-800 text-white text-xs focus:ring-1 focus:ring-emerald-500">
+                <label class="block text-xs font-medium mb-1">Subscription Tier</label>
+                <select name="tier" class="cge-modal-input rounded-sm">
                     <option value="starter">Starter</option>
                     <option value="pro">Professional</option>
                     <option value="enterprise">Enterprise</option>
@@ -202,15 +199,11 @@ Save this component template as `resources/views/components/cge-modal.blade.php`
             </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
-            <button type="button" data-cge-modal-close class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-sm">
-                Cancel
-            </button>
-            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-sm">
-                Create Customer
-            </button>
-        </div>
     </form>
+    <x-slot:footer>
+        <button type="button" data-cge-modal-close class="cge-modal-action cge-modal-action-secondary rounded-sm">Cancel</button>
+        <button type="submit" form="create-customer-form" class="cge-modal-action rounded-sm bg-emerald-600 hover:bg-emerald-500 text-white">Create Customer</button>
+    </x-slot:footer>
 </x-cge-modal>
 ```
 
@@ -231,3 +224,11 @@ If you are using Alpine.js alongside TailTools in Laravel:
     </button>
 </div>
 ```
+
+## Compact surface (2026-10-05)
+
+Use `cge-modal-surface` on the dialog and `cge-modal-header`, `cge-modal-body`, `cge-modal-footer` for its slots. The surface defaults to light; add `cge-modal-dark` for dark colors (`cge-modal-light` is an explicit light marker). This is a markup/CSS choice, not a JavaScript theme option. Keep `rounded-sm`; all built-in compact controls use `var(--radius-sm, 0.25rem)`.
+
+Header/body spacing is 16 px on mobile and 20 px on desktop; titles are 16 px and body text 13 px. Footer spacing is 12 px vertically. Actions are at least 32 px high, or 36 px below 640 px; close targets are 32 px. Long labels wrap. The body scrolls within a viewport-bounded surface while header/footer remain visible. A form wrapping all slots must use `cge-modal-layout`; a submit button must not carry `data-cge-modal-close` (close after successful submission).
+
+Use `cge-modal-action` for sizing and add your Tailwind color classes; `cge-modal-action-secondary` provides a theme-aware neutral action. `cge-modal-close`, `cge-modal-input` and `cge-modal-description` are optional. Existing consumer markup without these surface/slot classes keeps its own styling. Public options, sizing presets, events and declarations are unchanged. Import the plugin stylesheet or `tailtools/style.css`.

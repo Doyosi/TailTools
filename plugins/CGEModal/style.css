@@ -27,6 +27,7 @@
 /* Modal root positioning & default states */
 .cge-modal {
   --cge-modal-z: 50;
+  --cge-modal-inset: 1rem;
 }
 
 .cge-modal.hidden {
@@ -41,4 +42,168 @@
 /* Dialog scale & transform optimizations */
 .cge-modal-dialog {
   will-change: transform, opacity;
+}
+
+/* Optional compact surface. Consumer-owned markup without these hooks is unchanged. */
+.cge-modal-surface {
+  --cge-modal-bg: #fff;
+  --cge-modal-fg: #0f172a;
+  --cge-modal-muted: #64748b;
+  --cge-modal-line: #e2e8f0;
+  --cge-modal-soft: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 2 * var(--cge-modal-inset));
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--cge-modal-line);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--cge-modal-bg);
+  color: var(--cge-modal-fg);
+  box-shadow: 0 24px 64px -20px rgba(15, 23, 42, 0.3), 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.cge-modal-surface.m-4 {
+  max-height: calc(100dvh - 2 * var(--cge-modal-inset) - 2rem);
+}
+
+.cge-modal-surface.cge-modal-dark {
+  --cge-modal-bg: #0f172a;
+  --cge-modal-fg: #f8fafc;
+  --cge-modal-muted: #cbd5e1;
+  --cge-modal-line: #334155;
+  --cge-modal-soft: #172033;
+  box-shadow: 0 24px 64px -20px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.cge-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.cge-modal-title {
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.cge-modal-description {
+  margin-top: 0.25rem;
+  color: var(--cge-modal-muted);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.cge-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 1rem 1rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  color: var(--cge-modal-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+}
+
+.cge-modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--cge-modal-line);
+  background: var(--cge-modal-soft);
+  flex-shrink: 0;
+}
+
+.cge-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  margin: -0.25rem -0.25rem 0 0;
+  border-radius: var(--radius-sm, 0.25rem);
+  color: var(--cge-modal-muted);
+  cursor: pointer;
+}
+
+.cge-modal-close:hover { background: var(--cge-modal-soft); color: var(--cge-modal-fg); }
+
+.cge-modal-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 0.25rem);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.cge-modal-action-secondary {
+  border-color: var(--cge-modal-line);
+  color: var(--cge-modal-fg);
+  background: var(--cge-modal-bg);
+}
+.cge-modal-action-secondary:hover { background: var(--cge-modal-soft); }
+
+.cge-modal-input {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--cge-modal-line);
+  border-radius: var(--radius-sm, 0.25rem);
+  background: var(--cge-modal-bg);
+  color: var(--cge-modal-fg);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.cge-modal-close:focus-visible,
+.cge-modal-action:focus-visible,
+.cge-modal-input:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+/* A form wrapping the slots participates in the same bounded layout. */
+.cge-modal-surface > .cge-modal-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+@media (min-width: 640px) {
+  .cge-modal { --cge-modal-inset: 1.5rem; }
+  .cge-modal-header { padding: 1.25rem 1.25rem 0.75rem; }
+  .cge-modal-body { padding: 0 1.25rem 1.25rem; }
+  .cge-modal-footer { padding: 0.75rem 1.25rem; }
+}
+
+@media (max-width: 639px) {
+  .cge-modal-action { min-height: 2.25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cge-modal-action { transition: none; }
 }

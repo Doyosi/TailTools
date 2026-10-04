@@ -211,3 +211,9 @@ Nested document/subtree delegation handles a single click only once.
 Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Compact presentation (2026-10-05)
+
+Floating cards keep `rounded-sm` and use 12 px padding, 32 px semantic icon/image slots, 13 px text and quieter light/dark shadows. Floating portals are capped at 384 px with 16 px viewport gutters. Banners retain edge-to-edge square corners; at small widths their actions sit below the copy and wrap. Progress bars are 2 px high.
+
+Actions use `rounded-sm`, compact horizontal padding, a minimum height of 28 px on desktop and 32 px below 640 px, with visible keyboard focus and wrapping labels. Close targets are 32 px. Custom `image.class`, custom icon HTML and action color classes remain supported. No option, method, event or declaration changes are required.

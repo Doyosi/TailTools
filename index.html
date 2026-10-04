@@ -752,7 +752,7 @@
                     CGEModal Interactive Sandbox
                 </h2>
                 <p class="text-slate-600 text-sm sm:text-base max-w-3xl leading-relaxed">
-                    High-performance accessible modal plugin for Tailwind CSS v4 and Laravel Blade. Test dual-mode animations, static backdrop shake alerts, keyboard focus trapping, and responsive sizing presets.
+                    Compact rounded-sm surfaces, quieter shadows, and smaller actions in light and dark themes. Test animations, static backdrop alerts, keyboard focus trapping, and responsive sizing.
                 </p>
             </div>
 
@@ -4126,76 +4126,73 @@
     </main>
 
     <!-- Modal Elements for CGEModal Tab -->
-    <div id="modal-basic" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" data-cge-animation-driver="css" data-cge-size="md">
-        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/70 backdrop-blur-sm" data-cge-modal-backdrop></div>
-        <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-white border border-slate-200 p-6 shadow-2xl text-slate-800" data-cge-modal-dialog>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Basic Modal
-                </h3>
-                <button type="button" data-cge-modal-close class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">✕</button>
+    <div id="modal-basic" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-basic-title" data-cge-animation-driver="css" data-cge-size="md">
+        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+        <div class="cge-modal-dialog cge-modal-surface cge-modal-light relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+
+            <div class="cge-modal-header">
+                <h3 id="modal-basic-title" class="cge-modal-title">A little clarity, less clutter</h3>
+                <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="py-4 text-sm text-slate-600">Basic modal loaded via Tailwind v4 transitions.</div>
-            <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer">Cancel</button>
-                <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold cursor-pointer">Understood</button>
-            </div>
+            <div class="cge-modal-body">A compact dialog with balanced spacing and a quiet footer. Your content stays in focus.</div>
+            <div class="cge-modal-footer"><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm cge-modal-action-secondary">Cancel</button><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm bg-cyan-600 hover:bg-cyan-700 text-white">Understood</button></div>
+
         </div>
     </div>
 
-    <div id="modal-animated" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" data-cge-animation-driver="tailwind-animations" data-cge-animation="zoom" data-cge-size="lg">
-        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/70 backdrop-blur-md" data-cge-modal-backdrop></div>
-        <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-white border border-slate-200 p-6 shadow-2xl text-slate-800" data-cge-modal-dialog>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 class="text-lg font-bold text-slate-900">tailwind-animations Driver</h3>
-                <button type="button" data-cge-modal-close class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">✕</button>
+    <div id="modal-animated" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-animated-title" data-cge-animation-driver="tailwind-animations" data-cge-animation="zoom" data-cge-size="lg">
+        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+        <div class="cge-modal-dialog cge-modal-surface cge-modal-light relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+
+            <div class="cge-modal-header">
+                <h3 id="modal-animated-title" class="cge-modal-title">A smooth entrance</h3>
+                <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="py-4 text-sm text-slate-600">Rendered with Midudev's tailwind-animations.</div>
-            <div class="pt-4 border-t border-slate-100 flex justify-end">
-                <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold cursor-pointer">Dismiss</button>
-            </div>
+            <div class="cge-modal-body">The same compact surface, powered by tailwind-animations. Close it to see the exit transition.</div>
+            <div class="cge-modal-footer"><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm cge-modal-action-secondary">Dismiss</button></div>
+
         </div>
     </div>
 
-    <div id="modal-static" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" data-cge-backdrop="static" data-cge-keyboard="false" data-cge-size="md">
-        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/75 backdrop-blur-sm" data-cge-modal-backdrop></div>
-        <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-white border border-slate-200 p-6 shadow-2xl text-slate-800" data-cge-modal-dialog>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 class="text-lg font-bold text-slate-900">Static Shake Modal</h3>
-                <button type="button" data-cge-modal-close class="w-8 h-8 rounded-sm flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">✕</button>
+    <div id="modal-static" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-static-title" data-cge-backdrop="static" data-cge-escape-close="false" data-cge-size="md">
+        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+        <div class="cge-modal-dialog cge-modal-surface cge-modal-light relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+
+            <div class="cge-modal-header">
+                <h3 id="modal-static-title" class="cge-modal-title">Keep your changes safe</h3>
+                <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="py-4 text-sm text-slate-600">Clicking outside triggers shake vibration.</div>
-            <div class="pt-4 border-t border-slate-100 flex justify-between">
-                <button type="button" onclick="triggerManualShake()" class="px-3 py-2 rounded-sm bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold cursor-pointer">Trigger Shake</button>
-                <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs cursor-pointer">I Understand</button>
-            </div>
+            <div class="cge-modal-body">This dialog requires an explicit choice. Clicking outside gives a gentle shake.</div>
+            <div class="cge-modal-footer"><button type="button" onclick="triggerManualShake()" class="cge-modal-action rounded-sm bg-amber-50 text-amber-700 border-amber-200">Trigger Shake</button><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm bg-amber-600 hover:bg-amber-700 text-white">I Understand</button></div>
+
         </div>
     </div>
 
-    <div id="modal-form" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" data-cge-focus="true" data-cge-size="md">
-        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/70 backdrop-blur-sm" data-cge-modal-backdrop></div>
-        <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-white border border-slate-200 p-6 shadow-2xl text-slate-800" data-cge-modal-dialog>
-            <form onsubmit="event.preventDefault(); window.CGEToast.success('Form saved!');" class="py-2 space-y-4">
-                <h3 class="text-lg font-bold text-slate-900">Interactive Form</h3>
-                <input type="text" placeholder="Project name" class="w-full px-3 py-2 rounded-sm bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-indigo-500">
-                <div class="flex justify-end gap-2">
-                    <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" data-cge-modal-close class="px-4 py-2 rounded-sm bg-emerald-600 text-white text-xs font-semibold cursor-pointer">Save</button>
-                </div>
+    <div id="modal-form" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-form-title" data-cge-autofocus="true" data-cge-size="md">
+        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+        <div class="cge-modal-dialog cge-modal-surface cge-modal-light relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+            <form class="cge-modal-layout" onsubmit="event.preventDefault(); window.CGEToast.success('Form saved!'); window.CGEModal.getInstance('#modal-form').close();">
+            <div class="cge-modal-header">
+                <h3 id="modal-form-title" class="cge-modal-title">Create a project</h3>
+                <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div class="cge-modal-body"><label for="modal-project-name" class="block text-xs font-medium mb-1.5">Project name</label><input id="modal-project-name" name="project_name" type="text" autofocus placeholder="e.g. Design library" class="cge-modal-input rounded-sm" required></div>
+            <div class="cge-modal-footer"><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm cge-modal-action-secondary">Cancel</button><button type="submit" class="cge-modal-action rounded-sm bg-emerald-600 hover:bg-emerald-700 text-white">Save project</button></div>
             </form>
         </div>
     </div>
 
-    <div id="modal-size-demo" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" data-cge-size="md">
-        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/70 backdrop-blur-sm" data-cge-modal-backdrop></div>
-        <div class="cge-modal-dialog relative z-10 w-full rounded-sm bg-white border border-slate-200 p-6 shadow-2xl text-slate-800 flex flex-col justify-between" data-cge-modal-dialog>
-            <div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Size Demo</h3>
-                <p class="text-xs text-slate-600">Active size: <span id="current-size-label" class="font-bold text-rose-600">md</span></p>
+    <div id="modal-size-demo" class="cge-modal fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-size-demo-title" data-cge-size="md">
+        <div class="cge-modal-backdrop fixed inset-0 bg-slate-950/40 backdrop-blur-sm" data-cge-modal-backdrop></div>
+        <div class="cge-modal-dialog cge-modal-surface cge-modal-light relative z-10 w-full rounded-sm" data-cge-modal-dialog>
+
+            <div class="cge-modal-header">
+                <h3 id="modal-size-demo-title" class="cge-modal-title">A size for every task</h3>
+                <button type="button" data-cge-modal-close class="cge-modal-close rounded-sm" aria-label="Close modal"><svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div class="pt-4 border-t border-slate-100 flex justify-end">
-                <button type="button" data-cge-modal-close class="px-4 py-2 rounded-sm bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer">Dismiss</button>
-            </div>
+            <div class="cge-modal-body"><p>Active size: <span id="current-size-label" class="font-semibold text-rose-600">md</span></p><p class="mt-2">The compact header and footer stay consistent across all presets.</p></div>
+            <div class="cge-modal-footer"><button type="button" data-cge-modal-close class="cge-modal-action rounded-sm cge-modal-action-secondary">Dismiss</button></div>
+
         </div>
     </div>
 
@@ -4624,12 +4621,17 @@
             window.switchTab(window.currentTab || 'alert');
         });
 
-        // Global Theme Switcher for CGEAlert and CGEToast
+        // Global Theme Switcher for CGEAlert, CGEToast and demo CGEModal surfaces
         window.activePluginTheme = 'light';
         window.setGlobalPluginTheme = function(theme) {
             window.activePluginTheme = theme;
             if (window.CGEAlert) window.CGEAlert.setDefaultOptions({ theme });
             if (window.CGEToast) window.CGEToast.setDefaultOptions({ theme });
+            const modalDark = theme === 'dark' || (theme === 'auto' && (document.documentElement.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches));
+            document.querySelectorAll('.cge-modal-surface').forEach(surface => {
+                surface.classList.toggle('cge-modal-dark', modalDark);
+                surface.classList.toggle('cge-modal-light', !modalDark);
+            });
 
             const btnLight = document.getElementById('theme-btn-light');
             const btnDark = document.getElementById('theme-btn-dark');
