@@ -71,6 +71,32 @@ export async function stabilityFormsRegressions({ check, mount, fixture, track, 
     delete window.__cgeXss;
   });
 
+  await check('Dropzone: form mode keeps click-picked files for submission', async () => {
+    const form = mount('<form><div></div></form>');
+    const dz = track(new CGEDropzone(form.querySelector('div'), { uploadMode: 'form', paramName: 'photos' }));
+    const pick = (...files) => {
+      const dt = new DataTransfer();
+      files.forEach(file => dt.items.add(file));
+      dz.hiddenInput.files = dt.files;
+      dz.hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const image = new File(['img'], 'slide.png', { type: 'image/png' });
+    pick(image);
+    let data = new FormData(form);
+    assert(data.getAll('photos[]').length === 1 && data.getAll('photos[]')[0].name === 'slide.png', 'Click-picked file missing from form submission');
+    assert(!dz.hiddenInput.name && dz.hiddenInput.files.length === 0, 'Picker must stay unnamed and reset for re-selection');
+    pick(image);
+    data = new FormData(form);
+    assert(dz.files.length === 2 && data.getAll('photos[]').length === 2, 'Picking the same file again was lost');
+    dz.addFiles([new File(['b'], 'dropped.png', { type: 'image/png' })]);
+    assert(new FormData(form).getAll('photos[]').length === 3, 'Dropped and picked files do not combine');
+    dz.disable();
+    assert(new FormData(form).getAll('photos[]').length === 0, 'Disabled dropzone still submits files');
+    dz.enable();
+    dz.destroy();
+    assert(!form.querySelector('input[type="file"]'), 'destroy() left file inputs behind');
+  });
+
   await check('Dropzone: instant mode keeps files out of the form and submits server IDs', async () => {
     const form = mount('<form><div></div></form>');
     const dz = track(new CGEDropzone(form.querySelector('div'), { url: '/upload', paramName: 'docs', driver: 'xhr' }));

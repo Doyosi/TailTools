@@ -143,6 +143,7 @@ Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm;
 ## Stability fixes (October 2026)
 
 - Never build card markup from file data: names, extensions and errors are text nodes.
+- Form mode submits through a separate hidden named input (`dz.formInput`, `paramName[]`); the click picker `dz.hiddenInput` is never named and is reset after each pick. Read submitted files from `formInput`, not `hiddenInput`.
 - Instant mode never names/fills the native file input; server IDs (`id`/`path`/`data.id`/`data.path`) go into hidden `serverIdName` inputs (default `${paramName}_ids[]`, `false` disables). Laravel endpoints should return an `id`.
 - 422/419 messages are shown on the card; validation errors are not retryable; retries go through `_processQueue` (maxConcurrent, form mode).
 - `clickable` accepts a selector; `driver: 'fetch'` uploads with XHR (progress); `isUploading` is maintained; configured `axiosInstance` wins.

@@ -1,6 +1,6 @@
 {
   "name": "tailtools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native JavaScript UI plugins for Tailwind CSS and Laravel Blade.",
   "license": "MIT",
   "author": "Alper ER",

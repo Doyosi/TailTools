@@ -156,7 +156,10 @@ export declare class CGEDropzone {
   isDisabled: boolean;
   /** True while at least one upload request is in flight */
   isUploading: boolean;
+  /** File picker opened by clicks/keyboard; never named and reset after every selection. */
   hiddenInput: HTMLInputElement;
+  /** Form mode only: hidden named input (`paramName` / `paramName[]`) that carries the files on submit. */
+  formInput: HTMLInputElement | null;
   previewsContainer: HTMLElement | null;
   triggerContainer: HTMLElement | null;
   form: HTMLFormElement | null;

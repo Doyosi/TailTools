@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/) (while `0.x`, breaking changes bump the minor version).
 
+## [0.1.1] - 2026-10-11
+
+### Fixed
+- CGEDropzone form mode: files chosen by clicking the drop area were never submitted (only dragged files were). Resetting the picker so the same file can be chosen again also emptied the files synced for submission. The picker (`hiddenInput`) and the submitted files (new named `formInput`) are now separate inputs.
+
 ## [0.1.0] - 2026-10-11
 
 First public release on npm (`npm install tailtools`).

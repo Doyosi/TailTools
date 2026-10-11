@@ -67,6 +67,8 @@
 
 ## Stability fixes (October 2026)
 
+- [x] 0.1.1: form mode lost click-picked files (picker reset erased the synced FileList); picker and named `formInput` carrier are now separate, with a browser regression
+
 - [x] File data rendered as text
 - [x] Instant mode server IDs; file input untouched
 - [x] 422/419 messages on cards
