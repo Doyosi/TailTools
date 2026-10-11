@@ -210,7 +210,8 @@ export class CGEDropzone {
     this._destroyed = false;
 
     // DOM Elements
-    this.hiddenInput = null;
+    this.hiddenInput = null; // File picker; reset after every selection
+    this.formInput = null; // Named carrier for form mode submissions
     this.previewsContainer = null;
     this.triggerContainer = null;
     this.form = this.element.closest('form') || null;
@@ -327,14 +328,25 @@ export class CGEDropzone {
     if (this.options.maxFiles !== 1 && !isAvatar) {
       this.hiddenInput.multiple = true;
     }
-    // Only form mode submits the files natively. In instant mode the files were already
-    // uploaded, so the picker stays unnamed and server IDs go into hidden inputs instead.
-    if (this.options.paramName && this.options.uploadMode === 'form') {
-      this.hiddenInput.name = this.options.paramName + (this.hiddenInput.multiple ? '[]' : '');
-    }
-
     this.element.appendChild(this.hiddenInput);
     this._createdNodes.push(this.hiddenInput);
+
+    // Only form mode submits the files natively, through a separate named input. The picker
+    // is reset after each selection (so the same file can be chosen again); sharing one input
+    // would erase the files just synced for submission. In instant mode the files were already
+    // uploaded, so nothing is named and server IDs go into hidden inputs instead.
+    if (this.options.paramName && this.options.uploadMode === 'form') {
+      this.formInput = document.createElement('input');
+      this.formInput.type = 'file';
+      this.formInput.multiple = this.hiddenInput.multiple;
+      this.formInput.name = this.options.paramName + (this.formInput.multiple ? '[]' : '');
+      this.formInput.className = 'hidden sr-only';
+      this.formInput.tabIndex = -1;
+      this.formInput.setAttribute('aria-hidden', 'true');
+      this.formInput.setAttribute('data-cge-dropzone-files', '');
+      this.element.appendChild(this.formInput);
+      this._createdNodes.push(this.formInput);
+    }
 
     if (isAvatar) {
       this._buildAvatarUI();
@@ -526,11 +538,11 @@ export class CGEDropzone {
 
     // Native file input change
     this._onInputChange = (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        this.addFiles(e.target.files);
-        // Reset input value so same file can be selected again
-        this.hiddenInput.value = '';
-      }
+      const picked = Array.from(e.target.files || []);
+      if (picked.length === 0) return;
+      // Reset the picker so the same file can be selected again; submissions use formInput.
+      this.hiddenInput.value = '';
+      this.addFiles(picked);
     };
     this.hiddenInput.addEventListener('change', this._onInputChange);
 
@@ -1067,6 +1079,7 @@ export class CGEDropzone {
     this.isDisabled = true;
     this.element.classList.add(...this.options.ui.disabled.split(' '));
     this.hiddenInput.disabled = true;
+    if (this.formInput) this.formInput.disabled = true;
   }
 
   /**
@@ -1076,6 +1089,7 @@ export class CGEDropzone {
     this.isDisabled = false;
     this.element.classList.remove(...this.options.ui.disabled.split(' '));
     this.hiddenInput.disabled = false;
+    if (this.formInput) this.formInput.disabled = false;
   }
 
   /**
@@ -1354,12 +1368,12 @@ export class CGEDropzone {
   }
 
   /**
-   * Synchronizes internal files with hidden <input type="file"> via DataTransfer.
+   * Synchronizes internal files with the named form-mode <input type="file"> via DataTransfer.
    * @private
    */
   _syncFormInput() {
-    // Instant mode never mirrors files into the native input (they would be uploaded twice).
-    if (!this.hiddenInput || this.options.uploadMode !== 'form') return;
+    // Instant mode never mirrors files into a native input (they would be uploaded twice).
+    if (!this.formInput || this.options.uploadMode !== 'form') return;
 
     try {
       const dt = new DataTransfer();
@@ -1369,7 +1383,7 @@ export class CGEDropzone {
         dt.items.add(f.file);
       });
 
-      this.hiddenInput.files = dt.files;
+      this.formInput.files = dt.files;
     } catch (e) {
       // DataTransfer is supported in modern browsers; fail gracefully if restricted
     }

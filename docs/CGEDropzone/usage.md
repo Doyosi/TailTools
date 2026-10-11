@@ -11,7 +11,7 @@ Comprehensive configuration options, public methods, and event hooks for **CGEDr
 | `url` | `string \| null` | `null` | Remote endpoint URL for uploading files (required for `uploadMode: 'instant'`). |
 | `method` | `string` | `'POST'` | HTTP method for uploading files (`POST`, `PUT`, `PATCH`). |
 | `paramName` | `string` | `'file'` | FormData field name for uploaded file. Appends `[]` if multiple. |
-| `uploadMode` | `'instant' \| 'form'` | `'instant'` | Upload strategy: instant async queue or batch form submission. Only `form` mode names and fills the native file input; instant mode submits server IDs instead. |
+| `uploadMode` | `'instant' \| 'form'` | `'instant'` | Upload strategy: instant async queue or batch form submission. Only `form` mode submits files natively, through a separate hidden named input (`formInput`, name `paramName` / `paramName[]`); the click picker (`hiddenInput`) is never named. Instant mode submits server IDs instead. |
 | `serverIdName` | `string \| false \| null` | `null` | Instant mode: name of the hidden inputs holding each uploaded/existing file's server ID (response `id`, `path`, `data.id` or `data.path`). `null` means `${paramName}_ids[]`; `false` disables. |
 | `mode` | `'standard' \| 'avatar'` | `'standard'` | Visual mode: multi-file responsive grid or single avatar uploader. |
 | `aspectRatio` | `string` | `'auto'` | Thumbnail aspect ratio preset (`1:1`, `16:9`, `300x600`, `1200x630`, `50x50`, `auto`). |
@@ -164,6 +164,7 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 ## Stability fixes (October 2026)
 
 - **XSS:** file names, extensions, existing-file names and error messages are rendered with text nodes.
+- **Form mode keeps click-picked files** (0.1.1): the picker (`hiddenInput`) is reset after every selection so the same file can be chosen again, and the files for submission live in a separate named `formInput`. Before 0.1.1 that reset also emptied the submitted files, so only dragged files reached the server.
 - **Instant mode no longer re-uploads on submit** (behavior change): the native `<input type="file">` is unnamed and never filled; each successful upload (and each existing file with an `id`/`path`) writes `<input type="hidden" name="file_ids[]" value="...">` (see `serverIdName`), removed together with the file.
 - **Laravel errors:** 422 field messages (`errors.file`, `errors["file.0"]`) and `message` (419 "CSRF token mismatch.") appear on the card instead of "Server responded with 422".
 - **Retry:** hidden for client validation errors (size/type); retries go through the queue (respecting `maxConcurrent`; no uploads in form mode).
