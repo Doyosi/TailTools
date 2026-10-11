@@ -33,6 +33,7 @@ assert(!/window\.TailTools\s*=/.test(readFileSync(join(packed, 'dist/tailtools.j
 const auto = await import(pathToFileURL(join(packed, 'dist/auto.js')));
 assert.equal(auto.default.CGEModal, library.CGEModal);
 assert(!pkg.dependencies || Object.keys(pkg.dependencies).length === 0, 'Runtime dependencies must stay empty');
+assert(!pkg.private && pkg.publishConfig?.access === 'public' && files.has('CHANGELOG.md'), 'Package must be publishable with a changelog');
 assert.equal(typeof library.CGECollapse, 'function');
 assert.equal(library.default.CGECollapse, library.CGECollapse);
 const accordionBarrel = await import(pathToFileURL(join(packed, 'plugins/CGEAccordion/index.js')));
@@ -65,4 +66,4 @@ for (const [module, resolution] of [['NodeNext', 'NodeNext'], ['ESNext', 'Bundle
   execFileSync(process.execPath, [compiler, '--strict', '--noEmit', '--target', 'ES2022', '--module', module, '--moduleResolution', resolution, '--lib', 'ES2022,DOM,DOM.Iterable', join(packed, 'consumer.mts')], { stdio: 'pipe' });
 }
 // Archive retained in OS temp for inspection; no repository-generated output.
-console.log(JSON.stringify({ archive: archive.filename, plugins: plugins.length, strictTypes: ['NodeNext', 'Bundler'], size: archive.size, unpackedSize: archive.unpackedSize, private: pkg.private }, null, 2));
+console.log(JSON.stringify({ archive: archive.filename, plugins: plugins.length, strictTypes: ['NodeNext', 'Bundler'], size: archive.size, unpackedSize: archive.unpackedSize, version: pkg.version }, null, 2));

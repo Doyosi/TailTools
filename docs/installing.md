@@ -1,8 +1,14 @@
 # Installing TailTools
 
-This checkout builds a private local `tailtools@0.0.0` package. `private: true` prevents accidental npm publication. The archive and imports are tested locally; no registry/CDN release is claimed.
+## Install from npm
 
-## Local build and installation
+```bash
+npm install tailtools
+```
+
+TailTools has no runtime dependencies. In a Tailwind v4 / Laravel Vite app, `tailwindcss` is already installed; add `tailwind-animations` if you want the animation utilities.
+
+## Local build (contributors)
 
 ```powershell
 npm ci
@@ -10,11 +16,11 @@ npm test
 npm run build
 npm run test:package
 npm pack
-# From a consumer application:
-npm install /path/to/tailtools-0.0.0.tgz
+# Try the archive in another application before publishing:
+npm install /path/to/tailtools-<version>.tgz
 ```
 
-`npm pack` rebuilds the library through prepack. The archive includes ESM/UMD output, styles, plugin source/barrels/declarations and docs. Demo output, tests and node_modules are excluded.
+`npm pack` and `npm publish` rebuild the library through prepack. The archive includes ESM/UMD output, styles, plugin source/barrels/declarations and docs. Demo output, tests and node_modules are excluded. See [versioning](versioning.md) for the release process.
 
 ## JavaScript / TypeScript
 
@@ -98,7 +104,7 @@ Copy dist/tailtools.css and dist/tailtools.umd.cjs to static assets. The UMD bun
 <script>TailTools.CGEToast.success('Ready');</script>
 ```
 
-The bundle exposes TailTools and individual CGE globals. Before a public release, choose a release version and review/remove private. Publication is outside this maintenance.
+The bundle exposes TailTools and individual CGE globals.
 
 ## HTML contract
 

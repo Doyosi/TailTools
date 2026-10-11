@@ -1,9 +1,31 @@
 {
   "name": "tailtools",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Native JavaScript UI plugins for Tailwind CSS and Laravel Blade.",
   "license": "MIT",
+  "author": "Alper ER",
+  "keywords": [
+    "tailwindcss",
+    "tailwind",
+    "laravel",
+    "blade",
+    "livewire",
+    "vite",
+    "ui",
+    "components",
+    "modal",
+    "toast",
+    "datatable",
+    "dropzone",
+    "select",
+    "tabs",
+    "accordion",
+    "vanilla-js"
+  ],
+  "homepage": "https://github.com/Doyosi/TailTools#readme",
+  "bugs": {
+    "url": "https://github.com/Doyosi/TailTools/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Doyosi/TailTools.git"
@@ -30,7 +52,8 @@
     "styles.css",
     "docs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {
@@ -303,5 +326,11 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

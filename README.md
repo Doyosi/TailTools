@@ -84,11 +84,8 @@ TailTools is engineered for modern web development environments with minimal dep
 
 ### Step 1: Install Package
 
-```powershell
-# From local package build:
-npm run build:lib
-npm pack
-npm install /path/to/tailtools-0.0.0.tgz
+```bash
+npm install tailtools
 ```
 
 ### Step 2: Configure Styles (Tailwind CSS v4)
