@@ -192,7 +192,7 @@ No manual event binding is required when rows contain action buttons with `data-
 
 ## Stability rules (October 2026)
 
-- XSS: raw values render as text. Column `formatter` output is trusted developer HTML; always escape interpolated values with `escapeHTML` (exported from `tailtools/CGEDataTable`). Never pass user data to innerHTML.
+- XSS: raw values render as text. Server-rendered markup in a JSON/AJAX field (Blade action buttons) needs an explicit per-column `html: true` / `<th data-cge-html>`; such columns are excluded from global search. Column `formatter` output is trusted developer HTML; always escape interpolated values with `escapeHTML` (exported from `tailtools/CGEDataTable`). Never pass user data to innerHTML.
 - Laravel: `paginate()`, API Resource `{ data, meta, links }`, `simplePaginate()` (hasMore, no total) and `cursorPaginate()` (prev/next only) are parsed by `readCollectionResponse`; use `responseAdapter` for other APIs and `paramNames` for different query names. `setMetrics({ lastPage })` is honored.
 - "All" sends `per_page=-1` (`allValue`). Server examples must cast/clamp `per_page`, whitelist `sort_by` and validate `sort_dir` (never `orderBy($request->sort_by)`).
 - Requests: non-GET sends CSRF (`laravelHeaders`) and nested JSON (`nestParams`); GET arrays use `key[]` (`appendQuery`); `axiosInstance` beats `window.axios`; failures are `HttpError`. `fetch()` emits `error` + `fetch-error` and rejects; internal callers must `.catch()`.

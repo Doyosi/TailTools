@@ -6087,7 +6087,7 @@
                     item.status.toLowerCase().includes(q)
                 );
             }
-            if (sortBy && sortBy in filtered[0]) {
+            if (sortBy && filtered.length && sortBy in filtered[0]) {
                 filtered.sort((a, b) => {
                     const cmp = String(a[sortBy]).localeCompare(String(b[sortBy]), undefined, { numeric: true });
                     return sortDir === 'desc' ? -cmp : cmp;
@@ -6110,32 +6110,37 @@
             };
         }
 
-        window.testSimulateAjaxPage = async function(pageNum) {
-            if (!window.demoAjaxTableInstance) return;
-            const qStr = `/api/v1/subscriptions?page=${pageNum}&per_page=5`;
+        // Mock Laravel endpoint: GET /mock-api/subscriptions?page=&per_page=&search=&sort_by=&sort_dir=
+        const fetchBeforeTableDemo = window.fetch.bind(window);
+        window.fetch = async function(request, init = {}) {
+            const url = new URL(request instanceof Request ? request.url : String(request), window.location.href);
+            if (url.pathname !== '/mock-api/subscriptions') return fetchBeforeTableDemo(request, init);
             const qEl = document.getElementById('ajax-query-string');
-            if (qEl) qEl.textContent = qStr;
-
-            window.demoAjaxTableInstance.setLoading(true);
-            await new Promise(r => setTimeout(r, 600));
-
-            const res = simulateLaravelPaginatorResponse(pageNum, 5);
-            window.demoAjaxTableInstance._handleServerResponse(res);
-            window.demoAjaxTableInstance.setLoading(false);
+            if (qEl) qEl.textContent = `/api/v1/subscriptions${url.search}`;
+            const signal = init.signal || (request instanceof Request ? request.signal : null);
+            await new Promise((resolve, reject) => {
+                if (signal?.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
+                const abort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); };
+                const timer = setTimeout(() => { signal?.removeEventListener('abort', abort); resolve(); }, 600);
+                signal?.addEventListener('abort', abort, { once: true });
+            });
+            const requested = parseInt(url.searchParams.get('per_page'), 10) || 5;
+            const perPage = requested === -1 ? MOCK_LARAVEL_DB.length : Math.min(Math.max(requested, 1), 100);
+            return Response.json(simulateLaravelPaginatorResponse(
+                parseInt(url.searchParams.get('page'), 10) || 1, perPage,
+                url.searchParams.get('search') || '', url.searchParams.get('sort_by'), url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'));
         };
 
-        window.testSimulateAjaxSearch = async function() {
-            if (!window.demoAjaxTableInstance) return;
-            const qStr = `/api/v1/subscriptions?search=Pro&page=1&per_page=5`;
-            const qEl = document.getElementById('ajax-query-string');
-            if (qEl) qEl.textContent = qStr;
+        window.testSimulateAjaxPage = function(pageNum) {
+            window.demoAjaxTableInstance?.pagination.goTo(pageNum);
+        };
 
-            window.demoAjaxTableInstance.setLoading(true);
-            await new Promise(r => setTimeout(r, 600));
-
-            const res = simulateLaravelPaginatorResponse(1, 5, 'Pro');
-            window.demoAjaxTableInstance._handleServerResponse(res);
-            window.demoAjaxTableInstance.setLoading(false);
+        window.testSimulateAjaxSearch = function() {
+            const table = window.demoAjaxTableInstance;
+            if (!table) return;
+            const input = table.headerBar?.querySelector('[data-cge-filter-input]');
+            if (input) input.value = 'Pro';
+            table.filter.apply('Pro');
         };
 
         let bladeRowBatchCounter = 1;
@@ -6200,8 +6205,12 @@
             const ajaxContainer = document.getElementById('ajax-datatable-container');
             if (ajaxContainer && window.CGEDataTable && !window.demoAjaxTableInstance) {
                 window.demoAjaxTableInstance = new window.CGEDataTable(ajaxContainer, {
-                    source: 'json',
+                    source: 'ajax',
+                    url: '/mock-api/subscriptions',
+                    driver: 'fetch',
+                    serverSide: true,
                     perPage: 5,
+                    perPageOptions: [5, 10, 25, 'All'],
                     selectable: true,
                     columns: [
                         { key: 'id', label: 'Subscription ID', priority: 1 },
@@ -6210,11 +6219,10 @@
                         { key: 'renewal', label: 'Next Renewal', priority: 3, type: 'date' },
                         { key: 'cost', label: 'Cost', priority: 2, type: 'currency' },
                         { key: 'status', label: 'Status', priority: 3 },
-                        { key: 'actions', label: 'Actions', priority: 1 }
-                    ],
-                    data: MOCK_LARAVEL_DB.slice(0, 5)
+                        // Server-rendered Blade buttons: explicit HTML opt-in for this column only.
+                        { key: 'actions', label: 'Actions', priority: 1, sortable: false, html: true }
+                    ]
                 });
-                window.demoAjaxTableInstance.pagination.setMetrics({ total: 60, perPage: 5, page: 1 });
             }
 
             // Standalone CGEFilter demo

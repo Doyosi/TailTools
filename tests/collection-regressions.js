@@ -179,6 +179,21 @@ export async function collectionRegressions({ check, mount, track, assert, wait,
     assert(instance.tbody.querySelector('em') === node, 'Formatter Node not appended');
     assert(window.__cgeXss === undefined, 'Payload executed');
   });
+  await check('Table: html columns render server markup and stay out of global search', () => {
+    const button = '<button type="button" data-cge-action="delete">Cancel</button>';
+    const instance = create('Table', { data: [{ id: 1, name: 'Stripe', actions: button }, { id: 2, name: 'Vercel', actions: button }], columns: [
+      { key: 'name', label: 'Name' },
+      { key: 'actions', label: 'Actions', html: true, sortable: false },
+    ] });
+    assert(instance.tbody.querySelectorAll('button[data-cge-action="delete"]').length === 2, 'html column rendered as text');
+    instance.filter.apply('Cancel');
+    assert(instance.tbody.querySelectorAll('tr[data-cge-id]').length === 0, 'Markup in html column was searchable');
+    instance.filter.apply('Stripe');
+    assert(instance.tbody.querySelectorAll('button').length === 1, 'Search over text columns broke');
+    const th = mount('<table><thead><tr><th data-cge-key="name">Name</th><th data-cge-key="actions" data-cge-html>Actions</th></tr></thead><tbody></tbody></table>');
+    const declarative = track(new CGEDataTable(th, { source: 'json', autoBindActions: false, data: [{ id: 3, name: 'A', actions: button }] }));
+    assert(declarative.columns.find(c => c.key === 'actions')?.html === true && declarative.tbody.querySelector('button'), 'data-cge-html ignored');
+  });
   await check('Grid: renderer output is trusted while default cards stay text', () => {
     const payload = '<img src=x onerror="window.__cgeXss=1">';
     const instance = create('Grid', { data: [{ id: 1, title: payload }],

@@ -85,6 +85,7 @@
 ## Stability fixes (October 2026)
 
 - [x] XSS: raw values as text, trusted formatter HTML, `escapeHTML` exported and documented
+- [x] Per-column `html: true` / `data-cge-html` opt-in for server-rendered markup (AJAX demo action buttons), excluded from search
 - [x] Laravel paginate / Resource meta / simplePaginate / cursorPaginate, `responseAdapter`, `setMetrics({ lastPage })`
 - [x] `allValue` for All, per-page select sync, server docs with clamp + sort whitelist
 - [x] Shared Filter/Sort/Pagination core with Table and Grid aliases; module paths and `.d.ts` re-export it

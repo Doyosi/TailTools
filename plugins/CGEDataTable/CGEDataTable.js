@@ -502,6 +502,7 @@ export class CGEDataTable {
         type: c.type || 'auto',
         priority: c.priority !== undefined ? c.priority : (idx === 0 ? 1 : 2),
         formatter: c.formatter || null,
+        html: c.html === true,
         align: c.align || 'left',
         visible: c.visible !== false,
       }));
@@ -531,6 +532,7 @@ export class CGEDataTable {
         const sortable = key !== '_select' && th.getAttribute('data-cge-sortable') !== 'false';
         const type = th.getAttribute('data-cge-type') || 'auto';
         const prioAttr = th.getAttribute('data-cge-priority');
+        const html = th.hasAttribute('data-cge-html') && th.getAttribute('data-cge-html') !== 'false';
         const priority = prioAttr ? parseInt(prioAttr, 10) : (idx === 0 ? 1 : 2);
 
         // Apply attributes to th
@@ -539,7 +541,7 @@ export class CGEDataTable {
         th.setAttribute('data-cge-type', type);
         th.setAttribute('data-cge-sortable', String(sortable));
 
-        return { key, label, sortable, type, priority, visible: true };
+        return { key, label, sortable, type, priority, html, visible: true };
       });
 
       if (this.options.selectable && !this.columns.some(c => c.key === '_select')) {
@@ -672,7 +674,8 @@ export class CGEDataTable {
     }
 
     // 1. Filtering stage
-    this.filteredRows = this.filter ? this.filter.filterRows(this.rawRows, this.columns) : [...this.rawRows];
+    // HTML columns hold markup (action buttons), not searchable text.
+    this.filteredRows = this.filter ? this.filter.filterRows(this.rawRows, this.columns.filter(c => !c.html)) : [...this.rawRows];
 
     // 2. Sorting stage
     this.sortedRows = this.sort ? this.sort.sortRows(this.filteredRows, this.columns) : [...this.filteredRows];
@@ -864,6 +867,9 @@ export class CGEDataTable {
           else td.innerHTML = String(formatted ?? '');
         } else if (value instanceof Node) {
           td.appendChild(value);
+        } else if (col.html) {
+          // Explicit opt-in for server-rendered markup (e.g. Blade action buttons).
+          td.innerHTML = String(value);
         } else {
           td.textContent = String(value);
         }

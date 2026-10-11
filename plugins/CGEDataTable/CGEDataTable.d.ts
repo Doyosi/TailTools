@@ -25,6 +25,8 @@ export interface CGEDataTableColumn {
   priority?: number;
   /** Returned strings are trusted HTML (use escapeHTML for values); Nodes are appended. Without a formatter values render as text. */
   formatter?: (value: any, row: any, colIndex: number) => string | Node | number | null | undefined;
+  /** Render the raw value as trusted HTML (server-rendered Blade markup such as action buttons). Off by default; also `data-cge-html` on the th. HTML columns are excluded from global search. */
+  html?: boolean;
   align?: 'left' | 'center' | 'right';
   visible?: boolean;
 }
