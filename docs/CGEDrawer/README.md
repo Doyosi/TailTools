@@ -131,3 +131,7 @@ await drawer.toggle();
 Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+Missing targets throw a clear error, class selectors resolve correctly, `cge:drawer:open`/`close` are cancelable, non-modal drawers no longer join the modal stack, the mini rail stays visible and accessible after closing, focus traps recover escaped focus and reduced motion is honored. New: `CGEDrawer.destroyAll(root)`, `CGEDrawer.resolveTarget(target)` and typed `cge:drawer:*` DOM events. See [usage](usage.md#stability-fixes-october-2026).

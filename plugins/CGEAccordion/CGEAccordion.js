@@ -9,7 +9,15 @@
  * @package TailTools
  */
 
-import { captureAttributes, ownsNode, readHash, registeredInstance, setPanelAccess, applyDuration } from '../shared/navigation.js';
+import {
+  captureAttributes, ownsNode, readHash, registeredInstance, setPanelAccess, applyDuration,
+  hasCommandModifier, nestedInteractive
+} from '../shared/navigation.js';
+import { prefersReducedMotion, destroyInstances, pruneInstances } from '../shared/dom.js';
+
+const ACCORDION = '[data-cge-accordion], .cge-accordion';
+const ACCORDION_TRIGGER = '[data-cge-trigger], .cge-trigger';
+const scrollBehavior = () => (prefersReducedMotion() ? 'auto' : 'smooth');
 
 export class CGEAccordion {
   /**
@@ -71,6 +79,7 @@ export class CGEAccordion {
 
     this._restorers = [captureAttributes(element)];
     this._frames = new Set();
+    this._userOptions = options;
     this.element = element;
     this.id = element.id || `cge-accordion-${++CGEAccordion._counter}`;
     if (!element.id) {
@@ -163,14 +172,8 @@ export class CGEAccordion {
    */
   _discoverItems() {
     this.items = [];
-    const allItemEls = Array.from(
-      this.element.querySelectorAll('[data-cge-item], .cge-accordion-item')
-    );
-
-    // Filter to direct items belonging strictly to this accordion container
-    const directItemEls = allItemEls.filter(el => {
-      return ownsNode(this.element, el, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances);
-    });
+    // Direct items belonging strictly to this accordion container
+    const directItemEls = this._ownedItemElements();
 
     let autoItemIndex = 0;
     for (const itemEl of directItemEls) {
@@ -257,6 +260,36 @@ export class CGEAccordion {
         }
       }
     }
+  }
+
+  /**
+   * Item elements owned by this container (nested accordions excluded).
+   * @private
+   */
+  _ownedItemElements() {
+    return Array.from(this.element.querySelectorAll('[data-cge-item], .cge-accordion-item'))
+      .filter(el => ownsNode(this.element, el, ACCORDION, CGEAccordion.instances));
+  }
+
+  /**
+   * True when server-side morphing (e.g. Livewire) stripped plugin attributes or replaced items.
+   * @private
+   */
+  _isStale() {
+    if (this._destroyed || !this.element.isConnected || this.element.getAttribute('data-cge-accordion-ready') !== 'true') return true;
+    if (this.items.some(item => !this.element.contains(item.trigger) || !this.element.contains(item.wrapper) ||
+      !item.trigger.hasAttribute('aria-expanded') || item.wrapper.getAttribute('role') !== 'region')) return true;
+    return this._ownedItemElements().some(el => !this.items.some(item => item.el === el) &&
+      el.querySelector(`${ACCORDION_TRIGGER}, button, [role="button"]`));
+  }
+
+  /**
+   * Tears down listeners without restoring attributes the server has already replaced.
+   * @private
+   */
+  _discard() {
+    this._skipRestore = true;
+    this.destroy();
   }
 
   /**
@@ -389,7 +422,7 @@ export class CGEAccordion {
         const frame = requestAnimationFrame(() => {
           this._frames.delete(frame);
           if (this._destroyed) return;
-          firstOpened.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          firstOpened.el.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
         });
         this._frames.add(frame);
       }
@@ -401,19 +434,17 @@ export class CGEAccordion {
    * @private
    */
   _handleTriggerClick(e) {
-    if (this._destroyed) return;
+    if (this._destroyed || !(e.target instanceof Element)) return;
 
-    // Check closest trigger
-    const trigger = e.target.closest('[data-cge-trigger], .cge-trigger, button, [role="button"]');
-    if (!trigger) return;
-
-    // Verify trigger belongs directly to this accordion and not a nested child
-    const item = this.items.find(i => i.trigger === trigger || i.trigger.contains(trigger));
+    // Verify the click happened inside a trigger owned directly by this accordion
+    const item = this.items.find(i => i.trigger.contains(e.target));
     if (!item) return;
+    const { trigger } = item;
 
-    // Verify the item belongs directly to this container
+    // Buttons, links and form controls nested inside the trigger keep their own behavior.
+    if (nestedInteractive(trigger, e.target)) return;
     if (trigger.matches(':disabled, [aria-disabled="true"]')) return;
-    if (!ownsNode(this.element, trigger, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances)) return;
+    if (!ownsNode(this.element, trigger, ACCORDION, CGEAccordion.instances)) return;
 
     e.preventDefault();
     this.toggle(item.id);
@@ -424,7 +455,7 @@ export class CGEAccordion {
    * @private
    */
   _handleKeydown(e) {
-    if (this._destroyed) return;
+    if (this._destroyed || hasCommandModifier(e)) return;
     if (!this.options.keyboard && e.key !== 'Enter' && e.key !== ' ') return;
 
     const activeEl = document.activeElement;
@@ -434,9 +465,11 @@ export class CGEAccordion {
     const available = this.items.filter(item => !item.trigger.matches(':disabled, [aria-disabled="true"]'));
     const currentIndex = available.findIndex(i => i.trigger === activeEl || i.trigger.contains(activeEl));
     if (currentIndex === -1) return;
+    // Focused controls nested inside a trigger handle their own keys.
+    if (nestedInteractive(available[currentIndex].trigger, activeEl)) return;
 
     // Stop child accordion triggers from triggering parent navigation
-    if (!ownsNode(this.element, activeEl, '[data-cge-accordion], .cge-accordion', CGEAccordion.instances)) return;
+    if (!ownsNode(this.element, activeEl, ACCORDION, CGEAccordion.instances)) return;
 
     const total = available.length;
     let nextIndex = -1;
@@ -493,7 +526,7 @@ export class CGEAccordion {
     if (match && !this.isOpen(match.id)) {
       this.open(match.id);
       if (this.options.scrollIntoView) {
-        match.el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        match.el.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
       }
     }
   }
@@ -724,9 +757,9 @@ export class CGEAccordion {
       }
     }
 
-    // Optional tailwind-animations class on content
+    // Optional tailwind-animations class on content (skipped for reduced motion)
     if (this.options.animation && content && animate) {
-      if (isOpen) {
+      if (isOpen && !prefersReducedMotion()) {
         this._addClasses(content, this.options.animation);
       } else {
         this._removeClasses(content, this.options.animation);
@@ -847,7 +880,8 @@ export class CGEAccordion {
 
     for (const frame of this._frames) cancelAnimationFrame(frame);
     this._frames.clear();
-    for (const restore of this._restorers.reverse()) restore();
+    // Morphed markup is server-owned and is not restored.
+    if (!this._skipRestore) for (const restore of this._restorers.reverse()) restore();
 
     // Clear registry
     CGEAccordion.instances.delete(this.element);
@@ -863,27 +897,35 @@ export class CGEAccordion {
   }
 
   /**
-   * Static auto-initialization method.
+   * Static auto-initialization method. Safe to call repeatedly: detached instances are destroyed,
+   * instances whose attributes were morphed away are rebuilt and existing ones are reused.
    * @param {HTMLElement | Document | string} [root=document]
    * @param {Object} [options={}]
-   * @returns {CGEAccordion[]}
+   * @returns {CGEAccordion[]} Every instance under root (new and existing), in document order.
    */
   static init(root = document, options = {}) {
     const context = typeof root === 'string' ? document.querySelector(root) : root;
     if (!context) return [];
+    pruneInstances(CGEAccordion.instances, (key, instance) => instance.element);
 
-    const elements = Array.from(
-      context.querySelectorAll('[data-cge-accordion], .cge-accordion')
-    );
-    if (context instanceof HTMLElement && context.matches('[data-cge-accordion], .cge-accordion')) elements.unshift(context);
+    const elements = Array.from(context.querySelectorAll(ACCORDION));
+    if (context instanceof HTMLElement && context.matches(ACCORDION)) elements.unshift(context);
 
-    const instances = [];
-    for (const el of elements) {
-      if (!CGEAccordion.instances.has(el)) {
-        instances.push(new CGEAccordion(el, options));
-      }
-    }
-    return instances;
+    return elements.map(el => {
+      const existing = CGEAccordion.instances.get(el);
+      if (existing && !existing._isStale()) return existing;
+      if (existing) existing._discard();
+      return new CGEAccordion(el, existing ? { ...existing._userOptions, ...options } : options);
+    });
+  }
+
+  /**
+   * Destroys every instance whose element is inside root or no longer connected.
+   * @param {HTMLElement | Document} [root=document]
+   * @returns {CGEAccordion[]}
+   */
+  static destroyAll(root = document) {
+    return [...new Set(destroyInstances(CGEAccordion.instances, root, (key, instance) => instance.element))];
   }
 
   /**
@@ -952,6 +994,7 @@ export class CGECollapse {
     this._listeners = new Map();
     this._destroyed = false;
     this._restorers = [];
+    this._userOptions = options;
     this._resolveElements(element);
     const existing = CGECollapse.instances.get(this.wrapper);
     if (existing) {
@@ -976,7 +1019,8 @@ export class CGECollapse {
     applyDuration(this.wrapper, [], this.options.duration);
     this._onClick = this._handleClick.bind(this);
     this._onKeydown = e => {
-      if (!this._destroyed && e.currentTarget.tagName !== 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) this._handleClick(e);
+      if (this._destroyed || hasCommandModifier(e) || e.target !== e.currentTarget) return;
+      if (e.currentTarget.tagName !== 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) this._handleClick(e);
     };
     const triggers = this.triggers;
     this.triggers = [];
@@ -1050,6 +1094,7 @@ export class CGECollapse {
 
   _handleClick(e) {
     if (this._destroyed || e.currentTarget.matches(':disabled, [aria-disabled="true"]')) return;
+    if (nestedInteractive(e.currentTarget, e.target)) return;
     e.preventDefault();
     this.toggle();
   }
@@ -1109,7 +1154,7 @@ export class CGECollapse {
     this._removeClasses(this.wrapper, isOpen ? 'grid-rows-[0fr]' : (ui.activeWrapper || 'grid-rows-[1fr]'));
     this._addClasses(this.wrapper, isOpen ? (ui.activeWrapper || 'grid-rows-[1fr]') : 'grid-rows-[0fr]');
     if (this.options.animation) {
-      if (isOpen) this._addClasses(this.content, this.options.animation);
+      if (isOpen && !prefersReducedMotion()) this._addClasses(this.content, this.options.animation);
       else this._removeClasses(this.content, this.options.animation);
     }
   }
@@ -1155,13 +1200,13 @@ export class CGECollapse {
       }
     }
 
+    // Dispatched once on the panel; it bubbles, so document listeners see a single event.
     const customEvent = new CustomEvent(`cge:collapse:${eventName}`, {
       bubbles: true,
       cancelable: true,
       detail: eventData
     });
     this.wrapper.dispatchEvent(customEvent);
-    if (this.trigger) this.trigger.dispatchEvent(customEvent);
 
     return customEvent;
   }
@@ -1175,31 +1220,70 @@ export class CGECollapse {
       trigger.removeEventListener('keydown', this._onKeydown);
       CGECollapse.instances.delete(trigger);
     }
-    for (const restore of this._restorers.reverse()) restore();
+    if (!this._skipRestore) for (const restore of this._restorers.reverse()) restore();
     CGECollapse.instances.delete(this.wrapper);
     CGECollapse.instances.delete(this.id);
     this._listeners.clear();
   }
 
+  /**
+   * True when server-side morphing stripped plugin attributes or removed a bound control.
+   * @private
+   */
+  _isStale() {
+    return this._destroyed || !this.wrapper.isConnected || this.wrapper.getAttribute('role') !== 'region' ||
+      !this.wrapper.hasAttribute('data-cge-open') ||
+      this.triggers.some(trigger => !trigger.isConnected || !trigger.hasAttribute('aria-expanded'));
+  }
+
+  /** @private */
+  _discard() {
+    this._skipRestore = true;
+    this.destroy();
+  }
+
+  /**
+   * Initializes declarative collapse controls under root and returns every instance found.
+   * Controls that are triggers of an accordion item are skipped; collapses placed inside
+   * accordion bodies are initialized normally.
+   * @param {HTMLElement | Document | string} [root=document]
+   * @param {Object} [options={}]
+   * @returns {CGECollapse[]}
+   */
   static init(root = document, options = {}) {
     const context = typeof root === 'string' ? document.querySelector(root) : root;
     if (!context) return [];
+    pruneInstances(CGECollapse.instances, (key, instance) => instance.wrapper);
 
     const elements = Array.from(
       context.querySelectorAll('[data-cge-collapse], [data-cge-toggle]')
     );
 
     if (context instanceof HTMLElement && context.matches('[data-cge-collapse], [data-cge-toggle]')) elements.unshift(context);
+    const accordionTriggers = new Set([...CGEAccordion.instances.values()].flatMap(instance => instance.items.map(item => item.trigger)));
     const instances = [];
     for (const el of elements) {
-      // Don't auto-init if it's inside an accordion group trigger
-      if (el.closest('[data-cge-accordion], .cge-accordion')) continue;
+      // Skip only triggers owned by an accordion group, not collapses nested in accordion bodies.
+      if (accordionTriggers.has(el)) continue;
+      const accordion = el.closest(ACCORDION);
+      if (accordion && el.matches(ACCORDION_TRIGGER) && ownsNode(accordion, el, ACCORDION, CGEAccordion.instances)) continue;
       const target = el.getAttribute('data-cge-collapse') || el.getAttribute('data-cge-toggle');
       if (!target || !document.getElementById(target.replace(/^#/, ''))) continue;
-      const instance = new CGECollapse(el, options);
+      const existing = CGECollapse.instances.get(el);
+      if (existing?._isStale()) existing._discard();
+      const instance = new CGECollapse(el, existing?._destroyed ? { ...existing._userOptions, ...options } : options);
       if (!instances.includes(instance)) instances.push(instance);
     }
     return instances;
+  }
+
+  /**
+   * Destroys every collapse whose panel is inside root or no longer connected.
+   * @param {HTMLElement | Document} [root=document]
+   * @returns {CGECollapse[]}
+   */
+  static destroyAll(root = document) {
+    return [...new Set(destroyInstances(CGECollapse.instances, root, (key, instance) => instance.wrapper))];
   }
 
   static get(elementOrId) {

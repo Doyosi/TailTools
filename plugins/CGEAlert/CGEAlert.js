@@ -1,6 +1,7 @@
-import { acquireOverlay, releaseOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { acquireOverlay, releaseOverlay, claimOverlayKey, trapTab } from '../shared/overlay.js';
 import { submitConfirmedForm } from '../shared/form.js';
 import { Lifecycle } from '../shared/lifecycle.js';
+import { escapeHTML, prefersReducedMotion } from '../shared/dom.js';
 /**
  * CGEAlert - TailTools Plugin
  * Promise-based native JavaScript alert, confirmation, and dialog plugin designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -147,35 +148,37 @@ export class CGEAlert {
   _normalizeOptions(rawOptions) {
     const opts = { ...CGEAlert.defaults, ...rawOptions };
     const arch = opts.archetype || 'alert';
+    // Per-instance translations win over the global dictionary for archetype button labels.
+    const t = { ...CGEAlert.translations, ...(opts.translations || {}) };
 
     // Apply Archetype-specific intelligent defaults
     switch (arch) {
       case 'confirm':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
-        if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['confirm-button'];
-        if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
+        if (!opts.confirmButtonText) opts.confirmButtonText = t['confirm-button'];
+        if (!opts.cancelButtonText) opts.cancelButtonText = t['cancel-button'];
         if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs';
         break;
 
       case 'delete':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
-        if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['delete-button'];
-        if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
+        if (!opts.confirmButtonText) opts.confirmButtonText = t['delete-button'];
+        if (!opts.cancelButtonText) opts.cancelButtonText = t['cancel-button'];
         if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-xs';
         break;
 
       case 'restore':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
-        if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['restore-button'];
-        if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
+        if (!opts.confirmButtonText) opts.confirmButtonText = t['restore-button'];
+        if (!opts.cancelButtonText) opts.cancelButtonText = t['cancel-button'];
         if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs';
         break;
 
       case 'prompt':
         if (opts.showCancelButton === false && !('showCancelButton' in rawOptions)) opts.showCancelButton = true;
         if (!opts.input) opts.input = 'text';
-        if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['confirm-button'];
-        if (!opts.cancelButtonText) opts.cancelButtonText = CGEAlert.translations['cancel-button'];
+        if (!opts.confirmButtonText) opts.confirmButtonText = t['confirm-button'];
+        if (!opts.cancelButtonText) opts.cancelButtonText = t['cancel-button'];
         if (!opts.confirmButtonClass) opts.confirmButtonClass = 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-xs';
         break;
 
@@ -185,7 +188,7 @@ export class CGEAlert {
       case 'error':
       case 'alert':
       default:
-        if (!opts.confirmButtonText) opts.confirmButtonText = CGEAlert.translations['ok-button'];
+        if (!opts.confirmButtonText) opts.confirmButtonText = t['ok-button'];
         if (!opts.confirmButtonClass) {
           if (arch === 'error') opts.confirmButtonClass = 'bg-rose-600 hover:bg-rose-500 text-white shadow-xs';
           else if (arch === 'success') opts.confirmButtonClass = 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs';
@@ -274,9 +277,6 @@ export class CGEAlert {
     const overlay = document.createElement('div');
     const overlayBg = isDark ? 'bg-slate-950/80' : 'bg-slate-900/40';
     overlay.className = `cge-alert-overlay cge-alert-${activeTheme} fixed inset-0 ${overlayBg} backdrop-blur-xs pointer-events-auto flex items-center justify-center p-3 sm:p-5 overflow-y-auto`;
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-labelledby', `${this.id}-title`);
     this.overlayEl = overlay;
 
     // 2. Dialog Card
@@ -286,6 +286,9 @@ export class CGEAlert {
       : 'bg-white border border-slate-200/90 text-slate-900 shadow-2xl';
 
     dialog.className = `cge-alert-dialog cge-alert-${activeTheme} relative w-full ${sizeClass} rounded-xl ${cardBgClass} flex flex-col my-auto overflow-hidden`;
+    dialog.setAttribute('role', 'alertdialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('tabindex', '-1');
     this.dialogEl = dialog;
 
     // Close button (corner)
@@ -334,19 +337,21 @@ export class CGEAlert {
     const titleText = this.options.title || '';
     const titleColor = isDark ? 'text-white' : 'text-slate-900';
     const messageColor = isDark ? 'text-slate-300' : 'text-slate-600';
-    const titleHtml = titleText ? `<h2 id="${this.id}-title" class="cge-alert-title text-base font-semibold ${titleColor} ${this.options.showCloseButton ? 'pr-7' : ''} ${this.options.html || this.options.message ? 'mb-1.5' : 'mb-0'} leading-6 tracking-tight">${titleText}</h2>` : '';
+    const titleHtml = titleText ? `<h2 id="${this.id}-title" class="cge-alert-title text-base font-semibold ${titleColor} ${this.options.showCloseButton ? 'pr-7' : ''} ${this.options.html || this.options.message ? 'mb-1.5' : 'mb-0'} leading-6 tracking-tight">${escapeHTML(titleText)}</h2>` : '';
     
     let messageHtml = '';
     if (this.options.html) {
-      messageHtml = `<div class="cge-alert-message text-[13px] ${messageColor} leading-5">${this.options.html}</div>`;
+      // `html` is the explicit trusted-HTML opt-in; every other string is rendered as text.
+      messageHtml = `<div id="${this.id}-message" class="cge-alert-message text-[13px] ${messageColor} leading-5">${this.options.html}</div>`;
     } else if (this.options.message) {
-      messageHtml = `<p class="cge-alert-message text-[13px] ${messageColor} leading-5">${this.options.message}</p>`;
+      messageHtml = `<p id="${this.id}-message" class="cge-alert-message text-[13px] ${messageColor} leading-5">${escapeHTML(this.options.message)}</p>`;
     }
 
     // Input slot (Prompt or High Security RequireInput)
     let inputSlotHtml = '';
     if (this.options.requireInput) {
-      const helper = this.translations['type-to-confirm-helper'].replace(':match', this.options.requireInput);
+      // The translation string is trusted markup; the phrase itself is user data.
+      const helper = String(this.translations['type-to-confirm-helper']).replace(':match', () => escapeHTML(this.options.requireInput));
       const helperColor = isDark ? 'text-slate-400' : 'text-slate-500';
       const inputClass = isDark
         ? 'bg-slate-950 border-slate-800 text-white'
@@ -354,7 +359,7 @@ export class CGEAlert {
       inputSlotHtml = `
         <div class="cge-alert-input-slot mt-3.5 space-y-2">
           <p class="cge-alert-helper text-xs ${helperColor} leading-5">${helper}</p>
-          <input type="text" data-cge-alert-input autocomplete="off" spellcheck="false" placeholder="${this.options.inputPlaceholder || this.options.requireInput}"
+          <input type="text" data-cge-alert-input autocomplete="off" spellcheck="false" placeholder="${escapeHTML(this.options.inputPlaceholder || this.options.requireInput)}"
             class="w-full px-3 py-2 rounded-md border ${inputClass} text-[13px] font-mono focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition">
           <div data-cge-alert-error class="text-[11px] text-rose-500 font-medium hidden"></div>
         </div>
@@ -372,7 +377,7 @@ export class CGEAlert {
       const cancelText = this.options.cancelButtonText || this.translations['cancel-button'];
       buttonsHtml += `
         <button type="button" data-cge-alert-action="cancel" class="${buttonBase} ${this.options.cancelButtonClass}">
-          ${cancelText}
+          ${escapeHTML(cancelText)}
         </button>
       `;
     }
@@ -381,7 +386,7 @@ export class CGEAlert {
       const denyText = this.options.denyButtonText || this.translations['deny-button'];
       buttonsHtml += `
         <button type="button" data-cge-alert-action="deny" class="${buttonBase} ${this.options.denyButtonClass}">
-          ${denyText}
+          ${escapeHTML(denyText)}
         </button>
       `;
     }
@@ -391,7 +396,7 @@ export class CGEAlert {
       const initialDisabled = Boolean(this.options.requireInput);
       buttonsHtml += `
         <button type="button" data-cge-alert-action="confirm" ${initialDisabled ? 'disabled' : ''} class="${buttonBase} font-semibold ${this.options.confirmButtonClass} ${initialDisabled ? 'opacity-40 cursor-not-allowed' : ''}">
-          <span data-cge-alert-btn-text>${confirmText}</span>
+          <span data-cge-alert-btn-text>${escapeHTML(confirmText)}</span>
           <span data-cge-alert-spinner style="display: none;" class="hidden shrink-0 w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
         </button>
       `;
@@ -416,6 +421,10 @@ export class CGEAlert {
       ${buttonsHtml}
     `;
 
+    if (titleText) dialog.setAttribute('aria-labelledby', `${this.id}-title`);
+    else dialog.setAttribute('aria-label', String(this.options.message || this.options.archetype || 'Alert').slice(0, 120));
+    if (messageHtml) dialog.setAttribute('aria-describedby', `${this.id}-message`);
+
     overlay.appendChild(dialog);
     portal.appendChild(overlay);
 
@@ -425,6 +434,7 @@ export class CGEAlert {
     this.cancelBtn = dialog.querySelector('[data-cge-alert-action="cancel"]');
     this.inputEl = dialog.querySelector('[data-cge-alert-input]');
     this.inputErrorEl = dialog.querySelector('[data-cge-alert-error]');
+    this.closeBtn = dialog.querySelector('[data-cge-alert-action="close"]');
   }
 
   /**
@@ -434,8 +444,10 @@ export class CGEAlert {
   _buildInputHtml() {
     const isDark = this._resolveTheme(this.options.theme) === 'dark';
     const type = this.options.input;
-    const placeholder = this.options.inputPlaceholder || this.translations['input-placeholder'];
-    const val = this.options.inputValue || '';
+    const placeholder = escapeHTML(this.options.inputPlaceholder || this.translations['input-placeholder']);
+    const rawValue = this.options.inputValue ?? '';
+    const val = escapeHTML(rawValue);
+    const inputType = ['text', 'email', 'password', 'number'].includes(type) ? type : 'text';
     const baseClass = isDark
       ? 'w-full px-3 py-2 rounded-md bg-slate-950 border border-slate-800 text-white text-[13px] focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition'
       : 'w-full px-3 py-2 rounded-md bg-slate-50 border border-slate-300 text-slate-900 text-[13px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-2xs';
@@ -455,13 +467,13 @@ export class CGEAlert {
       const opts = this.options.inputOptions || {};
       if (Array.isArray(opts)) {
         opts.forEach((o) => {
-          const isSelected = String(o.value) === String(val) ? 'selected' : '';
-          optionsHtml += `<option value="${o.value}" ${isSelected}>${o.label}</option>`;
+          const isSelected = String(o.value) === String(rawValue) ? 'selected' : '';
+          optionsHtml += `<option value="${escapeHTML(o.value)}" ${isSelected}>${escapeHTML(o.label)}</option>`;
         });
       } else {
         Object.entries(opts).forEach(([key, label]) => {
-          const isSelected = String(key) === String(val) ? 'selected' : '';
-          optionsHtml += `<option value="${key}" ${isSelected}>${label}</option>`;
+          const isSelected = String(key) === String(rawValue) ? 'selected' : '';
+          optionsHtml += `<option value="${escapeHTML(key)}" ${isSelected}>${escapeHTML(label)}</option>`;
         });
       }
       return `
@@ -477,7 +489,7 @@ export class CGEAlert {
     // Standard inputs (text, email, password, number)
     return `
       <div class="cge-alert-input-slot mt-3.5 space-y-1.5">
-        <input type="${type}" data-cge-alert-input value="${val}" placeholder="${placeholder}"
+        <input type="${inputType}" data-cge-alert-input value="${val}" placeholder="${placeholder}"
           class="${baseClass}">
         <div data-cge-alert-error class="text-[11px] text-rose-500 font-medium hidden"></div>
       </div>
@@ -496,6 +508,8 @@ export class CGEAlert {
       e.preventDefault();
 
       const action = btn.getAttribute('data-cge-alert-action');
+      // preConfirm / inputValidator in flight: the result is not settled yet, so it cannot be dismissed.
+      if (this.isLoadingState && action !== 'confirm') return;
       if (action === 'confirm') {
         await this._handleConfirm();
       } else if (action === 'deny') {
@@ -510,6 +524,7 @@ export class CGEAlert {
     // Backdrop click
     this.overlayEl.addEventListener('click', (e) => {
       if (e.target === this.overlayEl) {
+        if (this.isLoadingState) return;
         if (this.options.backdropClose) {
           this.dismiss('backdrop');
         } else {
@@ -550,8 +565,9 @@ export class CGEAlert {
     if (!this.isOpen || !claimOverlayKey(this, e)) return;
 
     if (e.key === 'Escape') {
+      e.preventDefault();
+      if (this.isLoadingState) return;
       if (this.options.allowEscapeKey) {
-        e.preventDefault();
         this.dismiss('esc');
       } else {
         this.shake();
@@ -560,10 +576,16 @@ export class CGEAlert {
     }
 
     if (e.key === 'Enter') {
-      // Don't auto-confirm if user is writing in a multiline textarea
-      if (this.inputEl && this.inputEl.tagName === 'TEXTAREA' && document.activeElement === this.inputEl) {
+      // A held key (e.g. the Enter that opened the dialog) must never confirm.
+      if (e.repeat) {
+        e.preventDefault();
         return;
       }
+      const active = document.activeElement;
+      const fromInput = this.inputEl && active === this.inputEl && this.inputEl.tagName !== 'TEXTAREA';
+      const fromDialog = active === this.dialogEl || active === this.overlayEl;
+      // Focused buttons (cancel, deny, close, confirm) activate natively through their click handler.
+      if (!fromInput && !fromDialog) return;
       if (this.confirmBtn && !this.confirmBtn.disabled) {
         e.preventDefault();
         this._handleConfirm();
@@ -571,27 +593,9 @@ export class CGEAlert {
       return;
     }
 
-    // Focus trapping (Tab & Shift+Tab)
+    // Focus trapping (Tab & Shift+Tab), including focus that escaped the dialog.
     if (e.key === 'Tab' && this.options.trapFocus) {
-      const focusables = this.dialogEl.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusables.length === 0) return;
-
-      const firstEl = focusables[0];
-      const lastEl = focusables[focusables.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstEl) {
-          e.preventDefault();
-          lastEl.focus();
-        }
-      } else {
-        if (document.activeElement === lastEl) {
-          e.preventDefault();
-          firstEl.focus();
-        }
-      }
+      trapTab(this.dialogEl, e);
     }
   }
 
@@ -698,7 +702,7 @@ export class CGEAlert {
       this.options.beforeOpen(this.dialogEl);
     }
 
-    const driver = this.options.animationDriver;
+    const driver = prefersReducedMotion() ? 'none' : this.options.animationDriver;
     const hasAnimationsLib = document.documentElement.classList.contains('has-tailwind-animations') ||
       typeof window !== 'undefined' && Boolean(window.__TAILWIND_ANIMATIONS__);
 
@@ -735,6 +739,8 @@ export class CGEAlert {
         this.inputEl.focus();
       } else if (this.options.focusConfirm && this.confirmBtn) {
         this.confirmBtn.focus();
+      } else if (this.dialogEl && !this.dialogEl.contains(document.activeElement)) {
+        this.dialogEl.focus();
       }
     });
 
@@ -747,7 +753,7 @@ export class CGEAlert {
    * Shakes the alert card with tactile feedback.
    */
   shake() {
-    if (!this.dialogEl) return;
+    if (!this.dialogEl || prefersReducedMotion()) return;
     this.dialogEl.classList.remove('animate-shake', 'cge-alert-shake');
     void this.dialogEl.offsetWidth; // Force DOM reflow
     this.dialogEl.classList.add('animate-shake', 'cge-alert-shake');
@@ -776,6 +782,7 @@ export class CGEAlert {
     }
     if (this.cancelBtn) this.cancelBtn.setAttribute('disabled', 'true');
     if (this.denyBtn) this.denyBtn.setAttribute('disabled', 'true');
+    if (this.closeBtn) this.closeBtn.setAttribute('disabled', 'true');
   }
 
   /**
@@ -795,6 +802,7 @@ export class CGEAlert {
     }
     if (this.cancelBtn) this.cancelBtn.removeAttribute('disabled');
     if (this.denyBtn) this.denyBtn.removeAttribute('disabled');
+    if (this.closeBtn) this.closeBtn.removeAttribute('disabled');
   }
 
   /**
@@ -844,7 +852,7 @@ export class CGEAlert {
       }
     };
 
-    const driver = this.options.animationDriver;
+    const driver = prefersReducedMotion() ? 'none' : this.options.animationDriver;
     if (driver === 'tailwind-animations') {
       this.overlayEl.classList.add('animate-fade-out');
       this.dialogEl.classList.add('animate-zoom-out');
@@ -864,7 +872,8 @@ export class CGEAlert {
    * Locks document scrolling with scrollbar layout-shift compensation.
    * @private
    */
-  _lockScroll() { acquireOverlay(this, this.overlayEl, true); }
+  // The shared portal is the stacking context, so it receives the z-index bump above other overlays.
+  _lockScroll() { acquireOverlay(this, this.overlayEl, true, CGEAlert.getPortal()); }
 
   _unlockScroll() { releaseOverlay(this, this.previousActiveElement); }
 
@@ -1003,67 +1012,128 @@ export class CGEAlert {
   }
 
   /**
-   * Scans document and sets up global click event delegation for `[data-cge-alert]`.
-   * Intercepts form submissions and link clicks until confirmed.
-   * @param {Document | HTMLElement} [root=document]
+   * Triggers waiting for their confirmation dialog.
+   * @type {WeakSet<Element>}
    */
   static _pendingTriggers = new WeakSet();
 
+  /**
+   * Triggers whose confirmed click is being replayed; the delegated gate lets it through.
+   * @type {WeakSet<Element>}
+   */
+  static _confirmedTriggers = new WeakSet();
+
+  /**
+   * Bound delegation roots and their capture-phase listeners.
+   * @type {Map<Document | HTMLElement, (e: MouseEvent) => void>}
+   */
+  static _delegations = new Map();
+
+  /**
+   * Reads declarative `data-cge-*` alert options. Attribute values are already decoded by the
+   * browser (Blade `{{ }}` escaping is undone), so every value is passed on as plain text.
+   * @param {Element} trigger
+   * @returns {Object}
+   */
+  static optionsFromTrigger(trigger) {
+    return {
+      archetype: trigger.getAttribute('data-cge-alert') || 'confirm',
+      theme: trigger.getAttribute('data-cge-theme') || CGEAlert.defaults.theme,
+      title: trigger.getAttribute('data-cge-title') || 'Are you sure?',
+      message: trigger.getAttribute('data-cge-message') || '',
+      html: null,
+      confirmButtonText: trigger.getAttribute('data-cge-confirm-text') || null,
+      cancelButtonText: trigger.getAttribute('data-cge-cancel-text') || null,
+      requireInput: trigger.getAttribute('data-cge-require') || null,
+      size: trigger.getAttribute('data-cge-size') || 'md'
+    };
+  }
+
+  /**
+   * Replays the original click after confirmation so element handlers (wire:click, @click,
+   * onclick) and native link/submit behavior run exactly once.
+   * @private
+   */
+  static _proceed(trigger, result) {
+    let allowed;
+    CGEAlert._confirmedTriggers.add(trigger);
+    try {
+      allowed = trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window }));
+    } finally {
+      CGEAlert._confirmedTriggers.delete(trigger);
+    }
+    if (!allowed || !trigger.isConnected) return;
+    const form = trigger.form || trigger.closest('form');
+    const isLink = trigger.tagName === 'A' && trigger.hasAttribute('href');
+    const isSubmitter = form && (trigger.type === 'submit' || trigger.type === 'image')
+      && (trigger.tagName === 'BUTTON' || trigger.tagName === 'INPUT');
+    // Links and real submit buttons were completed natively by the replayed click.
+    if (isLink || isSubmitter) return;
+    if (form) submitConfirmedForm(form, trigger);
+    else trigger.dispatchEvent(new CustomEvent('cge:confirmed', { bubbles: true, detail: result }));
+  }
+
+  /**
+   * Sets up click delegation for `[data-cge-alert]` inside `root`.
+   * The listener runs in the capture phase and stops the click before element handlers
+   * (wire:click, @click, onclick), links and form submission; after confirmation the click is replayed.
+   * @param {Document | HTMLElement} [root=document]
+   */
   static init(root = document) {
-    if (root._cgeAlertBound) return;
+    for (const bound of Array.from(CGEAlert._delegations.keys())) {
+      if (bound !== document && !bound.isConnected) CGEAlert._unbind(bound);
+    }
+    if (CGEAlert._delegations.has(root)) return;
 
     const onDelegatedClick = async (e) => {
-      const trigger = e.target.closest('[data-cge-alert]');
-      if (!trigger) return;
-      if (CGEAlert._pendingTriggers.has(trigger)) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
+      const trigger = e.target instanceof Element ? e.target.closest('[data-cge-alert]') : null;
+      if (!trigger || (root !== document && !root.contains(trigger))) return;
+      if (CGEAlert._confirmedTriggers.has(trigger)) return;
 
-      // Extract declarative parameters
-      const archetype = trigger.getAttribute('data-cge-alert') || 'confirm';
-      const theme = trigger.getAttribute('data-cge-theme') || CGEAlert.defaults.theme;
-      const title = trigger.getAttribute('data-cge-title') || 'Are you sure?';
-      const message = trigger.getAttribute('data-cge-message') || '';
-      const confirmText = trigger.getAttribute('data-cge-confirm-text') || null;
-      const cancelText = trigger.getAttribute('data-cge-cancel-text') || null;
-      const requireInput = trigger.getAttribute('data-cge-require') || null;
-      const size = trigger.getAttribute('data-cge-size') || 'md';
-
-      // Intercept navigation or form submission
+      // Intercept before any other handler, navigation or form submission.
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (CGEAlert._pendingTriggers.has(trigger)) return;
 
       CGEAlert._pendingTriggers.add(trigger);
       let result;
-      try { result = await CGEAlert.fire({
-        archetype,
-        theme,
-        title,
-        message,
-        confirmButtonText: confirmText,
-        cancelButtonText: cancelText,
-        requireInput,
-        size
-      }); } finally { CGEAlert._pendingTriggers.delete(trigger); }
-
-      if (result.isConfirmed && trigger.isConnected) {
-        // If confirmed, proceed with original action:
-        const form = trigger.form || trigger.closest('form');
-        if (trigger.tagName === 'A' && trigger.href) {
-          window.location.href = trigger.href;
-        } else if (form) {
-          submitConfirmedForm(form, trigger);
-        } else {
-          // Dispatch custom confirmed action event on trigger
-          trigger.dispatchEvent(new CustomEvent('cge:confirmed', { bubbles: true, detail: result }));
-        }
+      try {
+        result = await CGEAlert.fire(CGEAlert.optionsFromTrigger(trigger));
+      } finally {
+        CGEAlert._pendingTriggers.delete(trigger);
       }
+
+      if (result.isConfirmed && trigger.isConnected) CGEAlert._proceed(trigger, result);
     };
 
-    root.addEventListener('click', onDelegatedClick);
+    root.addEventListener('click', onDelegatedClick, true);
+    CGEAlert._delegations.set(root, onDelegatedClick);
     root._cgeAlertBound = true;
+  }
+
+  /** @private */
+  static _unbind(root) {
+    const listener = CGEAlert._delegations.get(root);
+    if (!listener) return;
+    root.removeEventListener('click', listener, true);
+    CGEAlert._delegations.delete(root);
+    delete root._cgeAlertBound;
+  }
+
+  /**
+   * Teardown for Livewire/Turbo: closes the active alert and removes click delegation bound to
+   * `root`, to roots inside it, or to disconnected roots.
+   * @param {Document | HTMLElement} [root=document]
+   */
+  static destroyAll(root = document) {
+    if (CGEAlert.currentAlert?.isOpen) {
+      CGEAlert.currentAlert.isLoadingState = false;
+      CGEAlert.currentAlert.dismiss('close');
+    }
+    for (const bound of Array.from(CGEAlert._delegations.keys())) {
+      const inside = root === document || bound === root || (bound !== document && root.contains(bound));
+      if (inside || (bound !== document && !bound.isConnected)) CGEAlert._unbind(bound);
+    }
   }
 }
 

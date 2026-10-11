@@ -72,3 +72,13 @@
 
 - [x] **Phase 10: Validation & Build Verification**
   - [x] `npm run build` verification
+
+## Stability fixes (October 2026)
+
+- [x] CSRF + `asyncSource.headers` for POST search
+- [x] Remote icons as text/class
+- [x] Reset refresh via `setTimeout(0)`
+- [x] Trigger mirrors `aria-invalid`
+- [x] `py-0.5` badge
+- [x] `destroyAll(root)` + init pruning
+- [x] Docs, api.md, skill, Node + browser regressions

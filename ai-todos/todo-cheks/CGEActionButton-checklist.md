@@ -79,3 +79,15 @@ Track the design, implementation, testing, and documentation progress of **CGEAc
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## Stability fixes (October 2026)
+
+- [x] Capture-phase gating with single replay
+- [x] `requestSubmit` confirmed submits
+- [x] Anchors navigate unless AJAX is explicit
+- [x] Redirect state reset + `redirectTimeout`
+- [x] Shared CSRF helper (`X-XSRF-TOKEN`)
+- [x] String-only toasts, explicit redirect keys, `followRedirects`
+- [x] `init(root | selector)`, `destroyAll(root)`
+- [x] CSS base transition in `@layer components`
+- [x] Docs, api.md, skill, Node + browser regressions

@@ -144,3 +144,23 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 await dz.clear(); // remote deletes settle; failed cards remain
 await dz.clear({ remote: false }); // only remove local previews
 ```
+
+## Stability fixes (October 2026)
+
+### Instant uploads + regular form submit (server IDs)
+
+```html
+<form action="{{ route('posts.store') }}" method="POST" data-cge-form>
+    @csrf
+    <div data-cge-dropzone data-cge-url="{{ route('media.upload') }}" data-cge-param-name="attachments"></div>
+    <!-- After each upload: <input type="hidden" name="attachments_ids[]" value="{id from JSON}"> -->
+    <button>Publish</button>
+</form>
+```
+
+### External browse button
+
+```html
+<div id="docs-zone" data-cge-dropzone data-cge-clickable="#browse-docs"></div>
+<button type="button" id="browse-docs">Browse files…</button>
+```

@@ -142,8 +142,9 @@ export declare class CGEModal {
   options: CGEModalOptions;
 
   /**
-   * @param target - Modal element or selector
+   * @param target - Modal element, CSS selector or bare element ID
    * @param options - Custom configuration options
+   * @throws Error when the target element cannot be found
    */
   constructor(target: string | HTMLElement, options?: CGEModalOptions);
 
@@ -198,6 +199,11 @@ export declare class CGEModal {
   static getInstance(target: string | HTMLElement): CGEModal | undefined;
 
   /**
+   * Resolves an element, a CSS selector (`#id`, `.class`, `[data-x]`) or a bare element ID.
+   */
+  static resolveTarget(target: string | HTMLElement | null | undefined): HTMLElement | null;
+
+  /**
    * Gets existing instance or initializes a new CGEModal.
    */
   static getOrCreateInstance(target: string | HTMLElement, options?: CGEModalOptions): CGEModal;
@@ -209,8 +215,15 @@ export declare class CGEModal {
 
   /**
    * Scans document for declarative triggers and modals and attaches click behaviors.
+   * Instances whose elements were removed (Livewire morph, Turbo) are destroyed first.
    */
   static init(root?: Document | HTMLElement): void;
+
+  /**
+   * Destroys instances inside `root` (or already detached) and removes trigger delegation
+   * bound to `root` or roots inside it. Call before Livewire/Turbo replaces the subtree.
+   */
+  static destroyAll(root?: Document | HTMLElement): CGEModal[];
 }
 
 export default CGEModal;

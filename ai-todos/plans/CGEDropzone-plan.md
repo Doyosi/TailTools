@@ -144,3 +144,7 @@ Preserve existing public methods, CSS, Blade markup and exports. Verify programm
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## Stability fixes (October 2026)
+
+Scope: DOM/text rendering for file data (XSS), instant mode server-ID hidden inputs (`serverIdName`) instead of filling the file input, Laravel 422/419 card messages, `resolveAxios`, non-retryable validation errors and queued retries, `clickable` selector, XHR for `driver: 'fetch'`, `isUploading`, avatar error UI + revert, form reset handling, full destroy restoration, `destroyAll(root)` + init pruning.

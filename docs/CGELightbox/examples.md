@@ -234,3 +234,30 @@ await viewer.open(0, [{ type: 'inline', content: '<p>Trusted template</p>' }]);
 await viewer.close();
 viewer.destroy();
 ```
+
+## Stability fixes (October 2026)
+
+### User-generated captions in Blade (text by default)
+
+```blade
+@foreach ($photos as $photo)
+  <a href="{{ $photo->url }}" data-cge-lightbox data-cge-gallery="album"
+     data-cge-caption="{{ $photo->title }}" data-cge-description="{{ $photo->author }}">
+    <img src="{{ $photo->thumb_url }}" alt="{{ $photo->title }}">
+  </a>
+@endforeach
+```
+
+### Trusted rich caption
+
+```javascript
+CGELightbox.open([
+  { src: '/img/hero.jpg', caption: 'Shot on <em>film</em>', captionHtml: true }
+]);
+```
+
+### Turbo / Livewire teardown
+
+```javascript
+document.addEventListener('turbo:before-render', () => CGELightbox.destroyAll());
+```

@@ -94,3 +94,16 @@ const drawer = new CGEDrawer('#main-drawer', {
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases 1, 2 and 6.
+
+- Missing target throws; selectors no longer rewritten to `#.foo`; declarative missing targets warn only.
+- `cge:drawer:open`/`close` cancel honored; DOM events typed in `.d.ts`.
+- Non-modal drawers stay off the overlay stack (no focus stealing, no aria-modal, Escape only without modal overlays).
+- Mini rail: no aria-hidden/aria-modal when collapsed; closedClass not re-added after tailwind-animations close.
+- Full focus trap; reduced motion (0 ms, no bounce).
+- `destroyAll(root)`; `init(root)` prunes detached instances.
+- Shared: `plugins/shared/overlay.js` prunes disconnected overlays, supports a separate stacking layer and exports `trapTab`/`claimFreeKey`.
+- Tests: `tests/overlay-fixes.test.mjs` (Node) and `tests/stability-overlay-regressions.js` (browser).

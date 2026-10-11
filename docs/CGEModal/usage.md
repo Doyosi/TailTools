@@ -112,7 +112,13 @@ Retrieves the existing instance, or instantiates a new one if not yet initialize
 Closes all currently open `CGEModal` instances across the page.
 
 ### `CGEModal.init(root?: Document | HTMLElement): void`
-Scans the DOM subtree for declarative `data-cge-modal-target` buttons and `.cge-modal` containers and wires their behaviors automatically.
+Scans the DOM subtree for declarative `data-cge-modal-target` buttons and `.cge-modal` containers and wires their behaviors automatically. Instances whose elements were removed (Livewire morph, Turbo) are destroyed first, so morphed modals are re-initialized.
+
+### `CGEModal.destroyAll(root?: Document | HTMLElement): CGEModal[]`
+Destroys instances inside `root` (or already detached), releases their scroll lock and removes trigger delegation bound to `root` or roots inside it.
+
+### `CGEModal.resolveTarget(target): HTMLElement | null`
+Resolves an element, any CSS selector or a bare element ID.
 
 ---
 
@@ -160,3 +166,11 @@ Use `cge-modal-surface` on the dialog and `cge-modal-header`, `cge-modal-body`, 
 Header/body spacing is 16 px on mobile and 20 px on desktop; titles are 16 px and body text 13 px. Footer spacing is 12 px vertically. Actions are at least 32 px high, or 36 px below 640 px; close targets are 32 px. Long labels wrap. The body scrolls within a viewport-bounded surface while header/footer remain visible. A form wrapping all slots must use `cge-modal-layout`; a submit button must not carry `data-cge-modal-close` (close after successful submission).
 
 Use `cge-modal-action` for sizing and add your Tailwind color classes; `cge-modal-action-secondary` provides a theme-aware neutral action. `cge-modal-close`, `cge-modal-input` and `cge-modal-description` are optional. Existing consumer markup without these surface/slot classes keeps its own styling. Public options, sizing presets, events and declarations are unchanged. Import the plugin stylesheet or `tailtools/style.css`.
+
+## Stability fixes (October 2026)
+
+- **Missing targets:** `new CGEModal(target)` throws `[CGEModal] Target element "..." not found.` instead of returning a half-built instance that fails later.
+- **Focus trap:** Tab pulls focus back into the dialog when it escaped (backdrop click, page content) and keeps it on the dialog when nothing inside is focusable.
+- **Overlay robustness:** a modal removed from the DOM without `close()` (Livewire morph, Turbo swap) no longer leaves `overflow: hidden` on the body; the shared overlay stack prunes detached entries and restored focus never targets `tabindex="-1"` elements.
+- **Reduced motion:** with `prefers-reduced-motion: reduce` open/close are instant and `shake()` only dispatches `cge:modal:shake`.
+- **Lifecycle:** `CGEModal.destroyAll(root)` for Livewire/Turbo teardown.

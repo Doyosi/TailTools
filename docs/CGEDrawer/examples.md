@@ -207,3 +207,32 @@ drawer.destroy(); // cancels entry and restores pushed layout
 await opening;
 const replacement = new CGEDrawer(drawerElement);
 ```
+
+## Stability fixes (October 2026)
+
+### Persistent non-modal sidebar next to modals
+
+```blade
+<aside id="docs-nav" data-cge-drawer data-cge-backdrop="false" data-cge-placement="left" class="hidden">
+  <nav data-cge-drawer-dialog class="bg-white border-r">...</nav>
+</aside>
+<button data-cge-drawer-toggle="docs-nav">Menu</button>
+```
+
+Opening and closing a modal on top keeps focus on the modal trigger instead of jumping into the sidebar.
+
+### Guarding a drawer close
+
+```javascript
+const drawer = new CGEDrawer('.checkout-drawer'); // any CSS selector works
+drawer.drawer.addEventListener('cge:drawer:close', (event) => {
+  if (!confirm('Discard the cart changes?')) event.preventDefault();
+});
+```
+
+### Livewire re-initialization
+
+```javascript
+document.addEventListener('livewire:navigating', () => CGEDrawer.destroyAll());
+document.addEventListener('livewire:navigated', () => CGEDrawer.init());
+```

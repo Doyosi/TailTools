@@ -1,4 +1,7 @@
 import { Lifecycle } from '../shared/lifecycle.js';
+import { laravelHeaders, resolveAxios, HttpError, parseBody, errorMessage, wasRedirected } from '../shared/http.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
+import { submitConfirmedForm } from '../shared/form.js';
 /**
  * CGEActionButton - TailTools Plugin
  * High-performance, declarative action button and confirmation interceptor plugin
@@ -21,6 +24,15 @@ export class CGEActionButton {
    */
   static _delegationBound = false;
 
+  /** Selector used by the delegated capture-phase click listener. @private */
+  static _selector = '[data-cge-action], [data-cge-confirm]';
+
+  /** Elements whose next click is a post-confirmation replay and must not be intercepted. @private */
+  static _bypass = new WeakSet();
+
+  /** Weak references used to enumerate instances for destroyAll()/init() pruning. @private */
+  static _refs = new Set();
+
   /**
    * Default configuration options.
    */
@@ -40,9 +52,12 @@ export class CGEActionButton {
     successToast: null,
     errorToast: null,
     redirect: null,
+    followRedirects: true,
+    redirectTimeout: 5000,
     instant: false,
     simulate: 0,
     headers: {},
+    axiosInstance: null,
     translations: {
       loading: 'Processing...',
       'confirm-title': 'Are you sure?',
@@ -96,6 +111,7 @@ export class CGEActionButton {
     this._listeners = new Map();
 
     CGEActionButton.instances.set(element, this);
+    if (typeof WeakRef === 'function') CGEActionButton._refs.add(new WeakRef(element));
   }
 
   /**
@@ -105,6 +121,11 @@ export class CGEActionButton {
   _resolveOptions(options) {
     const el = this.element;
     const ds = el.dataset;
+    const ajax = ds.cgeAjax !== undefined ? ds.cgeAjax === 'true' || ds.cgeAjax === '' : (options.ajax || false);
+    const explicitMethod = ds.cgeMethod || options.method;
+    const href = el.getAttribute('href');
+    // Plain anchors navigate; their href is only an AJAX endpoint with data-cge-ajax or an explicit method.
+    const hrefUrl = el.tagName === 'A' ? (ajax || explicitMethod ? href : null) : href;
 
     const dataOpts = {
       action: ds.cgeAction || options.action || (ds.cgeConfirm ? 'confirm' : CGEActionButton.defaults.action),
@@ -113,10 +134,10 @@ export class CGEActionButton {
       confirmText: ds.cgeConfirmText || options.confirmText || null,
       cancelText: ds.cgeCancelText || options.cancelText || null,
       requireInput: ds.cgeRequire || ds.cgeRequireInput || options.requireInput || null,
-      url: ds.cgeUrl || el.getAttribute('href') || options.url || null,
-      method: (ds.cgeMethod || options.method || 'POST').toUpperCase(),
+      url: ds.cgeUrl || options.url || hrefUrl || null,
+      method: (explicitMethod || 'POST').toUpperCase(),
       form: ds.cgeForm || options.form || null,
-      ajax: ds.cgeAjax !== undefined ? ds.cgeAjax === 'true' || ds.cgeAjax === '' : (options.ajax || false),
+      ajax,
       loadingText: ds.cgeLoadingText || options.loadingText || null,
       lockGroup: ds.cgeLockGroup || options.lockGroup || null,
       successToast: ds.cgeSuccessToast || options.successToast || null,
@@ -150,6 +171,9 @@ export class CGEActionButton {
 
     const action = this.options.action.toLowerCase();
     const isDirect = this.options.instant || action === 'direct';
+    // A previous navigation that never left the page (download, target=_blank) must not block this run.
+    this._clearRedirecting();
+    this._triggerEvent = event;
 
     // 1. Confirmation Gatekeeper (if not direct)
     if (!isDirect) {
@@ -192,11 +216,67 @@ export class CGEActionButton {
       // 4. Restore button state (unless page is redirecting)
       this._formData = null;
       this._requestController = null;
+      this._triggerEvent = null;
       if (!this._destroyed && !this._isRedirecting) {
         this.unfreeze();
         this._emit('complete', { element: this.element, action });
       }
     }
+  }
+
+  /**
+   * Keeps the button busy while the page navigates. If the page is still alive after
+   * redirectTimeout (download, new tab, blocked navigation) the button recovers.
+   * @private
+   */
+  _markRedirecting() {
+    this._isRedirecting = true;
+    clearTimeout(this._redirectResetTimer);
+    const delay = Number(this.options.redirectTimeout);
+    if (!(delay > 0)) return;
+    this._redirectResetTimer = setTimeout(() => {
+      if (this._destroyed || !this._isRedirecting) return;
+      this._isRedirecting = false;
+      this.unfreeze();
+      this._emit('complete', { element: this.element, action: this.options.action.toLowerCase() });
+    }, delay);
+  }
+
+  /** @private */
+  _clearRedirecting() {
+    this._isRedirecting = false;
+    clearTimeout(this._redirectResetTimer);
+    clearTimeout(this._redirectTimer);
+  }
+
+  /**
+   * Replays the intercepted click once after confirmation so inline onclick, Alpine @click,
+   * Livewire wire:click and native anchor behavior run exactly one time.
+   * @private
+   * @returns {{ notPrevented: boolean, returned: any }}
+   */
+  _replayClick() {
+    const el = this.element;
+    const source = this._triggerEvent;
+    const original = el.onclick;
+    const wasDisabled = el.disabled === true;
+    let returned;
+    if (typeof original === 'function') {
+      el.onclick = function (event) { returned = original.call(this, event); return returned; };
+    }
+    CGEActionButton._bypass.add(el);
+    let notPrevented = true;
+    try {
+      if (wasDisabled) el.disabled = false;
+      const init = { bubbles: true, cancelable: true, view: typeof window !== 'undefined' ? window : null };
+      if (source) for (const key of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey', 'button']) init[key] = source[key];
+      notPrevented = el.dispatchEvent(new MouseEvent('click', init));
+    } finally {
+      CGEActionButton._bypass.delete(el);
+      if (typeof original === 'function') el.onclick = original;
+      if (wasDisabled) el.disabled = true;
+    }
+    return { notPrevented, returned };
   }
 
   /**
@@ -297,8 +377,16 @@ export class CGEActionButton {
         if (this._destroyed) return;
       }
       const dest = el.getAttribute('href');
-      if (dest && dest !== '#' && !dest.startsWith('#') && !dest.startsWith('javascript:')) {
-        this._isRedirecting = true;
+      const realUrl = dest && !dest.startsWith('#') && !/^\s*javascript:/i.test(dest);
+      if (el.tagName === 'A') {
+        // Replaying the click keeps target, download, rel and inline handlers intact.
+        const { notPrevented } = this._replayClick();
+        const sameTab = !el.target || el.target === '_self';
+        if (realUrl && notPrevented && sameTab && !el.hasAttribute('download')) this._markRedirecting();
+        return realUrl ? { redirect: dest } : { action: 'link', href: dest || '#' };
+      }
+      if (realUrl) {
+        this._markRedirecting();
         window.location.href = dest;
         return { redirect: dest };
       }
@@ -324,13 +412,12 @@ export class CGEActionButton {
       return await this.options.onExecute(this);
     }
 
-    // Target 5: Check inline onclick property or function
-    if (typeof el.onclick === 'function') {
-      const customRes = el.onclick.call(el, new Event('click'));
-      if (customRes && typeof customRes.then === 'function') {
-        const res = await customRes;
-        return res || { success: true };
-      }
+    // Target 5: Replay the intercepted click once (inline onclick, Alpine, Livewire listeners)
+    const { returned } = this._replayClick();
+    if (returned && typeof returned.then === 'function') {
+      const res = await returned;
+      if (this._destroyed) return;
+      return res || { success: true };
     }
 
     // Target 6: Simulated latency or default fallback
@@ -361,7 +448,36 @@ export class CGEActionButton {
     if (this.element.getAttribute('form')) {
       return document.getElementById(this.element.getAttribute('form'));
     }
-    return this.element.closest('form');
+    // Anchors never submit their enclosing form; type="button" controls only with data-cge-ajax.
+    const el = this.element;
+    if (el.tagName === 'A') return null;
+    const nonSubmit = (el.tagName === 'BUTTON' && el.type !== 'submit')
+      || (el.tagName === 'INPUT' && !['submit', 'image'].includes(el.type));
+    if (nonSubmit && !this.options.ajax) return null;
+    return el.closest('form');
+  }
+
+  /**
+   * Submits through requestSubmit (submit event + submitter) and reports whether the
+   * browser is about to navigate (event not prevented by CGEForm, Livewire, etc.).
+   * @private
+   */
+  _submitForm(form) {
+    let dispatched = false;
+    let prevented = false;
+    const onForm = event => { if (event.target === form) { dispatched = true; prevented = event.defaultPrevented; } };
+    const onWindow = event => { if (event.target === form) prevented = event.defaultPrevented; };
+    form.addEventListener('submit', onForm);
+    window.addEventListener('submit', onWindow);
+    try {
+      submitConfirmedForm(form, this.element);
+    } finally {
+      form.removeEventListener('submit', onForm);
+      window.removeEventListener('submit', onWindow);
+    }
+    if (typeof form.requestSubmit !== 'function') return true;
+    const target = form.getAttribute('target');
+    return dispatched && !prevented && (!target || target === '_self');
   }
 
   /**
@@ -400,11 +516,15 @@ export class CGEActionButton {
       methodInput.value = method;
     }
 
-    // Native form submit
-    this._isRedirecting = true;
+    // Native form submit through requestSubmit: fires the submit event (CGEForm, Livewire)
+    // and keeps the submitter name/value. The submitter must be enabled while the form data is built.
     this.unfreeze();
-    HTMLFormElement.prototype.submit.call(form);
-    return { submitted: true };
+    const navigating = this._submitForm(form);
+    if (navigating && !this._destroyed) {
+      this.freeze();
+      this._markRedirecting();
+    }
+    return { submitted: true, navigating };
   }
 
   /**
@@ -433,64 +553,53 @@ export class CGEActionButton {
       for (const [key, value] of params) target.searchParams.append(key, value);
       url = target.href; body = null;
     }
-    const csrfToken = this._getCsrfToken();
-    const headers = {
-      'X-Requested-With': 'XMLHttpRequest',
-      Accept: 'application/json',
-      ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
-      ...this.options.headers
-    };
+    // Plain tokens go out as X-CSRF-TOKEN; the encrypted XSRF-TOKEN cookie only as X-XSRF-TOKEN.
+    const headers = laravelHeaders(this.options.headers, { form: this._resolveForm() });
 
     if (body instanceof FormData) for (const key of Object.keys(headers)) {
       if (key.toLowerCase() === 'content-type') delete headers[key];
     }
-    let responseData = null;
 
-    // Driver 1: window.axios
-    if (typeof window !== 'undefined' && window.axios) {
-      const axiosConfig = {
+    // Driver 1: configured axiosInstance, then Laravel's window.axios
+    const axiosLib = resolveAxios(this.options.axiosInstance);
+    if (axiosLib) {
+      const res = await axiosLib.request({
         url,
         method: method.toLowerCase(),
         headers,
         data: body,
         signal: this._requestController?.signal
-      };
-      const res = await window.axios(axiosConfig);
-      responseData = res.data;
-    } else {
-      // Driver 2: Native fetch()
-      const fetchConfig = {
-        method,
-        signal: this._requestController?.signal,
-        headers
-      };
-
-      if (body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-        fetchConfig.body = body;
+      });
+      const finalUrl = res?.request?.responseURL;
+      if (this.options.followRedirects && finalUrl && wasRedirected({ responseURL: finalUrl }, url)) {
+        return { redirect: finalUrl, redirected: true };
       }
-
-      const res = await fetch(url, fetchConfig);
-
-      if (!res.ok) {
-        let errData = null;
-        try {
-          errData = await res.json();
-        } catch (_) {
-          errData = { message: res.statusText, status: res.status };
-        }
-        const error = new Error(errData.message || `HTTP ${res.status}`);
-        error.response = { status: res.status, data: errData };
-        throw error;
-      }
-
-      try {
-        responseData = await res.json();
-      } catch (_) {
-        responseData = { success: true };
-      }
+      return res?.data;
     }
 
-    return responseData;
+    // Driver 2: Native fetch()
+    const fetchConfig = {
+      method,
+      signal: this._requestController?.signal,
+      headers
+    };
+    if (body && method !== 'GET' && method !== 'HEAD') fetchConfig.body = body;
+
+    const res = await fetch(url, fetchConfig);
+    const data = parseBody(await res.text(), res.headers?.get?.('content-type') || '');
+
+    if (!res.ok) {
+      const error = new HttpError(res.status, res.statusText, data);
+      error.response = { status: res.status, data };
+      throw error;
+    }
+
+    // A Laravel redirect() was followed transparently: navigate to the final page.
+    if (this.options.followRedirects && wasRedirected(res, url)) {
+      return { redirect: res.url, redirected: true };
+    }
+
+    return data && typeof data === 'object' ? data : { success: true };
   }
 
   /**
@@ -498,22 +607,23 @@ export class CGEActionButton {
    * @private
    */
   _handleSuccess(data) {
-    // 1. Success Toast Notification
-    const toastMsg =
-      this.options.successToast ||
-      (data && typeof data === 'object' ? data.message || data.success : null);
+    const payload = data && typeof data === 'object' ? data : null;
+
+    // 1. Success Toast Notification (only explicit strings; `{ success: true }` is not a message)
+    const toastMsg = this.options.successToast
+      || (payload && typeof payload.message === 'string' && payload.message.trim() ? payload.message : null);
 
     if (toastMsg && typeof window !== 'undefined' && window.CGEToast) {
       window.CGEToast.success(toastMsg);
     }
 
-    // 2. Automated Redirect Handling
-    const redirectUrl =
-      this.options.redirect ||
-      (data && typeof data === 'object' ? data.redirect || data.url : null);
+    // 2. Automated Redirect Handling (explicit `redirect` / `redirect_url` keys only)
+    const pick = value => (typeof value === 'string' && value ? value : null);
+    const redirectUrl = this.options.redirect
+      || (payload ? pick(payload.redirect) || pick(payload.redirect_url) : null);
 
     if (redirectUrl) {
-      this._isRedirecting = true;
+      this._markRedirecting();
       this._redirectTimer = setTimeout(() => {
         if (this._destroyed) return;
         window.location.href = redirectUrl;
@@ -528,8 +638,7 @@ export class CGEActionButton {
   _handleError(error) {
     console.error('[CGEActionButton] Action failed:', error);
 
-    const status = error.response ? error.response.status : 0;
-    const data = error.response ? error.response.data : null;
+    const status = error?.status ?? error?.response?.status ?? 0;
     const t = this.options.translations;
 
     let errorMsg = this.options.errorToast;
@@ -537,47 +646,17 @@ export class CGEActionButton {
     if (!errorMsg) {
       if (status === 419) {
         errorMsg = t['csrf-error'];
-      } else if (data && data.message) {
-        errorMsg = data.message;
-      } else if (error.message) {
-        errorMsg = error.message;
       } else {
-        errorMsg = t['server-error'];
+        const message = errorMessage(error);
+        errorMsg = message && message !== 'Request failed.' ? message : t['server-error'];
       }
     }
 
     if (typeof window !== 'undefined' && window.CGEToast) {
       window.CGEToast.error(errorMsg);
-    } else {
-      alert(`Error: ${errorMsg}`);
+    } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(`Error: ${errorMsg}`);
     }
-  }
-
-  /**
-   * Retrieves CSRF token from document meta tag, window global, or cookie.
-   * @private
-   */
-  _getCsrfToken() {
-    if (typeof document === 'undefined') return null;
-
-    // 1. Meta tag
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    if (metaTag && metaTag.getAttribute('content')) {
-      return metaTag.getAttribute('content');
-    }
-
-    // 2. Global window object
-    if (typeof window !== 'undefined' && window.csrfToken) {
-      return window.csrfToken;
-    }
-
-    // 3. XSRF-TOKEN cookie (Laravel default)
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-    if (match) {
-      return decodeURIComponent(match[1]);
-    }
-
-    return null;
   }
 
   /**
@@ -754,6 +833,8 @@ export class CGEActionButton {
     this._lifecycle.cancel();
     this._requestController?.abort();
     clearTimeout(this._redirectTimer);
+    clearTimeout(this._redirectResetTimer);
+    this._isRedirecting = false;
     this.unfreeze();
     this._listeners.clear();
     CGEActionButton.instances.delete(this.element);
@@ -762,6 +843,32 @@ export class CGEActionButton {
   // =========================================================================
   // Static Registry & Controller Methods
   // =========================================================================
+
+  /**
+   * Live element -> instance entries (the public registry is a WeakMap and cannot be iterated).
+   * @private
+   * @returns {Map<HTMLElement, CGEActionButton>}
+   */
+  static _entries() {
+    const entries = new Map();
+    for (const ref of CGEActionButton._refs) {
+      const el = ref.deref();
+      const instance = el && CGEActionButton.instances.get(el);
+      if (instance) entries.set(el, instance);
+      else CGEActionButton._refs.delete(ref);
+    }
+    return entries;
+  }
+
+  /**
+   * Destroys instances whose element is inside root or no longer connected
+   * (Livewire morphing, Turbo visits, innerHTML swaps).
+   * @param {Document | Element} [root=document]
+   * @returns {CGEActionButton[]}
+   */
+  static destroyAll(root = document) {
+    return destroyInstances(CGEActionButton._entries(), root);
+  }
 
   /**
    * Retrieves an existing instance by DOM element or selector.
@@ -799,36 +906,41 @@ export class CGEActionButton {
   }
 
   /**
-   * Initializes global event delegation on document.body for declarative triggers.
-   * Works automatically for all current and dynamically injected DOM elements.
-   * @param {string} [selector='[data-cge-action], [data-cge-confirm]']
+   * Capture-phase delegated click handler. It runs before inline onclick, Alpine @click and
+   * wire:click so nothing executes before confirmation; the confirmed click is replayed once.
+   * @private
    */
-  static init(selector = '[data-cge-action], [data-cge-confirm]') {
-    if (CGEActionButton._delegationBound || typeof document === 'undefined') return;
+  static _onDocumentClick(event) {
+    const origin = event.target instanceof Element ? event.target : event.target?.parentElement;
+    const trigger = origin?.closest?.(CGEActionButton._selector);
+    if (!trigger) return;
 
-    document.addEventListener('click', async (event) => {
-      // Find closest trigger element
-      const trigger = event.target.closest(selector);
-      if (!trigger) return;
+    // Post-confirmation replay: let the click reach the element's own handlers.
+    if (CGEActionButton._bypass.has(trigger)) return;
 
-      // Ignore already disabled or busy buttons
-      if (trigger.disabled || trigger.getAttribute('aria-busy') === 'true') {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
+    event.preventDefault();
+    event.stopImmediatePropagation();
 
-      event.preventDefault();
-      event.stopPropagation();
+    // Ignore already disabled or busy buttons
+    if (trigger.disabled || trigger.getAttribute('aria-busy') === 'true') return;
 
-      const btn = CGEActionButton.getOrCreate(trigger);
-      try {
-        await btn.execute(event);
-      } catch (err) {
-        // Errors are already handled inside execute()
-      }
+    CGEActionButton.getOrCreate(trigger).execute(event).catch(() => {
+      // Errors are already handled inside execute()
     });
+  }
 
+  /**
+   * Initializes global event delegation for declarative triggers (capture phase).
+   * Accepts a custom trigger selector or a root (Document/Element) used to prune
+   * instances whose elements were removed. Safe to call repeatedly.
+   * @param {string | Document | Element} [target='[data-cge-action], [data-cge-confirm]']
+   */
+  static init(target) {
+    if (typeof document === 'undefined') return;
+    if (typeof target === 'string' && target.trim()) CGEActionButton._selector = target;
+    pruneInstances(CGEActionButton._entries());
+    if (CGEActionButton._delegationBound) return;
+    document.addEventListener('click', CGEActionButton._onDocumentClick, true);
     CGEActionButton._delegationBound = true;
   }
 }

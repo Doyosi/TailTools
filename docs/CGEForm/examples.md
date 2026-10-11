@@ -176,3 +176,40 @@ const pending = formPlugin.submit();
 formPlugin.destroy(); // abort request and restore controls
 await pending; // no success/error/complete after teardown
 ```
+
+## Stability fixes (October 2026)
+
+### Fields sharing one wrapper
+
+```html
+<form action="/profile" method="POST" data-cge-form>
+    <div class="grid grid-cols-2 gap-2">
+        <input name="first_name" class="border rounded-sm px-2 py-1">
+        <input name="last_name" class="border rounded-sm px-2 py-1">
+    </div>
+    <button>Save</button>
+</form>
+<!-- 422 { errors: { first_name: [...], last_name: [...] } } renders two separate messages;
+     typing in first_name only clears first_name. -->
+```
+
+### Custom visible error target
+
+```html
+<input type="hidden" name="color" id="color" data-cge-error-target="#color-swatches">
+<div id="color-swatches" class="flex gap-1 rounded-sm border p-1">...</div>
+```
+
+### Mock response from beforeSubmit
+
+```javascript
+new CGEForm('#demo-form', {
+  beforeSubmit: () => ({ status: 200, data: { message: 'Saved (demo)' } })
+});
+```
+
+### Livewire / Turbo teardown
+
+```javascript
+document.addEventListener('turbo:before-render', () => CGEForm.destroyAll());
+```

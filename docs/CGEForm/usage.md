@@ -11,22 +11,24 @@ Pass options via programmatic initialization (`new CGEForm(form, options)`) or d
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `driver` | `'axios' \| 'fetch' \| 'xhr'` | `'axios'` | HTTP client engine. Falls back cleanly to `fetch` if `axios` is missing. |
+| `axiosInstance` | `AxiosInstance \| null` | `null` | Axios instance used before `window.axios` by the `axios` driver. |
 | `url` | `string \| null` | `null` | Target URL. Defaults to the form's `action` attribute or the current window URL. |
 | `method` | `string \| null` | `null` | HTTP verb (`POST`, `GET`, `PUT`, `PATCH`, `DELETE`). Honors `<input name="_method">`. |
-| `headers` | `Record<string, string>` | `{}` | Additional headers. `X-CSRF-TOKEN`, `X-Requested-With`, and `Accept` are handled automatically. |
+| `headers` | `Record<string, string>` | `{}` | Additional headers (they win). `X-Requested-With`, `Accept` and CSRF are automatic: meta / `_token` / `window.csrfToken` as `X-CSRF-TOKEN`, otherwise the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN`. |
 | `feedback` | `string \| object` | `{ type: 'toast' }` | Pluggable notification bridge configuration (see Section 2). |
 | `autoClearErrors` | `boolean` | `true` | Automatically clear error styles and hide feedback messages as soon as the user types or changes the field. |
-| `invalidClass` | `string` | Tailwind red classes | CSS classes applied to inputs on validation failure. |
+| `invalidClass` | `string` | Tailwind red classes | CSS classes applied to inputs on validation failure, and to their visible proxy: the CGESelect trigger of a hidden native select, or the element referenced by the field's `data-cge-error-target="selector"`. |
 | `validClass` | `string` | `''` | CSS classes applied to valid inputs. |
 | `groupErrorClass`| `string` | `'has-error'` | CSS class applied to the parent `.cge-form-group` on validation failure. |
 | `showLoadingIndicator` | `boolean` | `true` | Transitions the submit button into a loading state during execution. |
 | `loadingText` | `string \| null` | `null` | Override HTML or text for the submit button while processing. Defaults to localized spinner. |
 | `freezeInputs` | `boolean` | `true` | Disables editable form fields during the request. |
 | `resetOnSuccess` | `boolean` | `false` | Automatically resets form inputs to their initial values upon 2xx response. |
-| `redirectDelay` | `number` | `0` | Milliseconds to wait before executing a server-guided redirect. |
+| `redirectDelay` | `number` | `0` | Milliseconds to wait before executing a server-guided redirect. The form stays frozen until the page unloads, so it cannot be resubmitted during the delay. |
+| `followRedirects` | `boolean` | `true` | When fetch/XHR/axios transparently followed a Laravel `redirect()`, navigate to the final URL (with `onRedirect`, `redirect` event and `redirectDelay`). |
 | `onRedirect` | `Function` | `null` | Interceptor callback `(url, payload) => boolean \| void`. Return `false` to abort redirection. |
 | `translations` | `Record<string, string>`| `{}` | Per-instance translation overrides. |
-| `beforeSubmit` | `Function` | `null` | Hook `(formData, formInstance) => boolean \| Promise<boolean>`. Return `false` to cancel submission. |
+| `beforeSubmit` | `Function` | `null` | Hook `(formData, formInstance) => boolean \| void \| CGEFormMockResponse` (or a Promise of it). Return `false` to cancel submission, or an object with `status` / `data` / `response` to skip the request and use it as the response. |
 
 ---
 
@@ -87,9 +89,12 @@ When an HTTP response arrives, messages are extracted in the following order:
 | `choices.0` | `name="choices[0]"` or `name="choices[]"` (0th item) | `[data-cge-feedback="choices.0"]` or `[data-cge-feedback="choices"]` |
 | `choices2.a` | `name="choices2[a]"` or `name="choices2.a"` | `[data-cge-feedback="choices2[a]"]` or `[data-cge-feedback="choices2.a"]` |
 | `user.profile.bio` | `name="user[profile][bio]"` or `name="user.profile.bio"` | `[data-cge-feedback="user.profile.bio"]` or `.cge-feedback` in group |
+| `items.0.name` | `name="items[0][name]"` | `[data-cge-feedback="items.0.name"]` or `[data-cge-feedback="items[0][name]"]` |
+| `items.0.tags.1` | `name="items[0][tags][]"` (index 1) | `[data-cge-feedback="items.0.tags.1"]` |
+| `tags` | `name="tags[]"` (all inputs) | `[data-cge-feedback="tags"]` or `[data-cge-feedback="tags[]"]` |
 
 ### Automatic Feedback Container Fallback
-If an explicit `[data-cge-feedback]` element is omitted in your HTML, `CGEForm` automatically searches for `.cge-feedback` or `.cge-error-feedback` within the parent `.cge-form-group`. If still not found, it generates a fallback `<span class="cge-feedback text-red-500 text-xs mt-1 block">` directly under the input.
+If an explicit `[data-cge-feedback]` element is omitted in your HTML, `CGEForm` searches for an unkeyed `.cge-feedback` / `.cge-error-feedback` within the field's `.cge-form-group`. Without a `.cge-form-group`, the parent element is only used when it contains no other field. Otherwise it generates one `<span class="cge-feedback text-red-500 text-xs mt-1 block" data-cge-feedback="<key>">` per error key, right after the field (after the label of a checkbox/radio, after the CGESelect wrapper, or after the last input of an array). Fields that share a parent therefore keep separate messages, and typing in one field only clears its own key. Generated spans get an `id` that is appended to `aria-describedby`; the author's original `aria-describedby` is restored when errors clear.
 
 ---
 
@@ -115,6 +120,7 @@ translations: {
   "error-message": "Please fix the highlighted errors and try again.",
   "server-error": "An unexpected server error occurred. Please try again later.",
   "network-error": "Network connection error. Check your internet connection.",
+  "csrf-expired": "Your session has expired. Please refresh the page and try again.",
   "save-button": "Save",
   "update-button": "Update",
   "delete-button": "Delete",
@@ -185,3 +191,13 @@ PUT/PATCH/DELETE forms use POST with `_method` across Axios, Fetch and XHR, incl
 All drivers send Laravel multipart PUT/PATCH/DELETE as POST plus _method. FormData is captured before freezing and includes the SubmitEvent submitter. Concurrent submissions are prevented. Destroy aborts Axios/Fetch/XHR, cancels redirect timers, restores frozen controls and suppresses late callbacks/events; delayed beforeSubmit cannot start a request afterward. Input/change listeners and plugin-added novalidate are restored on teardown.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+- **CSRF:** shared Laravel helper; the encrypted `XSRF-TOKEN` cookie is only sent as `X-XSRF-TOKEN`. A 419 response emits `error` and shows the `csrf-expired` translation.
+- **Axios:** `axiosInstance` wins over `window.axios`.
+- **Followed redirects:** when a controller answers with `redirect()`, fetch/XHR/axios follow it silently; `followRedirects` (default `true`) detects this (`response.redirected` / `responseURL`) and navigates to the final URL instead of reporting success. Return JSON `{ "redirect": "..." }` when the next page must still see flash data.
+- **Per-key feedback:** see *Automatic Feedback Container Fallback*; nested and array keys (`items.0.name`, `tags.1`) resolve to bracket names.
+- **Visible invalid state:** invalid classes and `aria-invalid` are mirrored to the CGESelect trigger or to `data-cge-error-target`.
+- **Submit button:** the spinner goes on `event.submitter` (the button that was clicked), not the first submit button; during `redirectDelay` the form stays frozen.
+- **Lifecycle:** `CGEForm.destroyAll(root = document)` destroys instances inside `root` or disconnected; `CGEForm.init(root)` prunes disconnected instances first.

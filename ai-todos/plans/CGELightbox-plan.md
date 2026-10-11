@@ -96,3 +96,15 @@ Preserve existing public methods, CSS, Blade markup and exports. Verify programm
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases 1, 2 and 6.
+
+- S4: caption/description/title via text nodes (opt-in `captionHtml` / `data-cge-caption-html`); image error and thumbnails built with DOM APIs.
+- Open token prevents concurrent-open races from orphaning portals and scroll locks.
+- Shortcuts ignored while typing in inline inputs; `aria-label` on glyph buttons and thumbnails.
+- Reduced motion disables fades; stage `touch-action` for custom zoom/pan.
+- `destroyAll(root)`, `itemFromElement(el)`, typed `cge:lightbox:*` DOM events.
+- Shared: `plugins/shared/overlay.js` prunes disconnected overlays, supports a separate stacking layer and exports `trapTab`/`claimFreeKey`.
+- Tests: `tests/overlay-fixes.test.mjs` (Node) and `tests/stability-overlay-regressions.js` (browser).

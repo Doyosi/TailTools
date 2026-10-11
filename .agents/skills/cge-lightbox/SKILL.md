@@ -171,3 +171,11 @@ Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()`
 Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGELightbox.d.ts](../../../../plugins/CGELightbox/CGELightbox.d.ts).
+
+## Stability rules (October 2026)
+
+- Captions/descriptions are text by default; opt in with `captionHtml` (option or item) or `data-cge-caption-html`. Image error text and thumbnails are built with DOM APIs. Inline `content` stays trusted developer HTML.
+- Concurrent `open()` calls are tokenized: only the latest builds a portal and takes the scroll lock.
+- Shortcuts (arrows, `+`/`-`/`=`, `f`) are ignored while typing in inline inputs or with Ctrl/Meta/Alt; glyph buttons have `aria-label`s.
+- Reduced motion disables fades; the stage sets `touch-action: none` for images.
+- `CGELightbox.destroyAll(root)` destroys instances opened from triggers in `root` (or all, plus delegation, for `document`); `CGELightbox.itemFromElement(el)` parses declarative items.

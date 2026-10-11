@@ -97,3 +97,7 @@ Preserve existing public methods, CSS, Blade markup and exports. Verify programm
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## Stability fixes (October 2026)
+
+Scope: capture-phase delegation with single click replay, `requestSubmit` via `submitConfirmedForm`, anchors navigate unless AJAX is explicit, `_isRedirecting` reset + `redirectTimeout`, shared CSRF helper (`X-XSRF-TOKEN` for cookies), `followRedirects`, `axiosInstance`, string-only toasts and `redirect`/`redirect_url` keys, `init(root | selector)`, `destroyAll(root)`, base transition in `@layer components`.

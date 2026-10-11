@@ -76,7 +76,8 @@ TailTools/
 │   └── CGE<X>/
 ├── src/                       # Library core & Vite development entry
 │   ├── style.css
-│   └── index.ts
+│   ├── index.ts               # Side-effect-free entry
+│   └── auto.ts                # Globals + auto-init + Livewire/Turbo hooks
 ├── index.html                 # Interactive testbed
 ├── package.json
 └── vite.config.ts

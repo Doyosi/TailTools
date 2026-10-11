@@ -6,6 +6,10 @@
 import { CGEFilter } from './modules/CGEFilter.js';
 import { CGESort } from './modules/CGESort.js';
 import { CGEPagination } from './modules/CGEPagination.js';
+import type { CGECollectionParamNames, CGECollectionResponseAdapter } from '../shared/collection.js';
+
+export { escapeHTML } from '../shared/collection.js';
+export type { CGECollectionParamNames, CGECollectionAdapterResult, CGECollectionResponseAdapter } from '../shared/collection.js';
 
 export type CGEDataGridSource = 'dom' | 'json' | 'ajax';
 export type CGEDataGridDriver = 'auto' | 'axios' | 'fetch';
@@ -60,6 +64,7 @@ export interface CGEDataGridTranslations {
   'sort-by'?: string;
   'per-page'?: string;
   info?: string;
+  'info-simple'?: string;
   'no-data'?: string;
   'selected-count'?: string;
   'select-all'?: string;
@@ -83,6 +88,7 @@ export interface CGEDataGridOptions {
   viewMode?: CGEDataGridViewMode;
   gridCols?: string;
   listGap?: string;
+  /** Renderer output is trusted HTML: escape item values with escapeHTML. */
   cardRendererGrid?: ((item: any, index: number) => string | HTMLElement) | null;
   cardRendererList?: ((item: any, index: number) => string | HTMLElement) | null;
   cardRenderer?: ((item: any, index: number, viewMode: CGEDataGridViewMode) => string | HTMLElement) | null;
@@ -91,6 +97,16 @@ export interface CGEDataGridOptions {
   selectable?: boolean;
   selectOnClick?: boolean;
   autoBindActions?: boolean;
+  /** Fields searched by the global query (default: primitive fields except _* and html_*). */
+  searchKeys?: string[] | null;
+  /** Search/sort locale (e.g. 'tr'); defaults to <html lang>. */
+  locale?: string | null;
+  /** per_page value sent for "All" (default -1). */
+  allValue?: number | string;
+  paramNames?: CGECollectionParamNames;
+  responseAdapter?: CGECollectionResponseAdapter | null;
+  /** Configured axios instance; falls back to window.axios. */
+  axiosInstance?: { request: (config: any) => Promise<any> } | null;
   ui?: CGEDataGridUIConfig;
   translations?: CGEDataGridTranslations;
 }
@@ -98,13 +114,22 @@ export interface CGEDataGridOptions {
 export interface CGEDataGridEventMap {
   init: { instance: CGEDataGrid };
   render: { items: any[]; total: number; instance: CGEDataGrid };
+  /** Alias of render (CGEDataTable name). */
+  rendered: { items: any[]; total: number; instance: CGEDataGrid };
   viewmode: { viewMode: CGEDataGridViewMode; instance: CGEDataGrid };
   'selection-change': { selectedIds: string[]; selectedItems: any[]; instance: CGEDataGrid };
+  /** Alias of selection-change (CGEDataTable name). */
+  'selection:change': { selectedIds: string[]; selectedItems: any[]; instance: CGEDataGrid };
   'data-loaded': { data: any[]; raw: any; instance: CGEDataGrid };
   'bulk-delete': { deletedCount: number; deletedIds: string[]; instance: CGEDataGrid };
   'card-removed': { id: string | null; card: HTMLElement; instance: CGEDataGrid };
+  /** fetch() also rejects with the error (an HttpError for HTTP failures). */
   'fetch-error': { error: any; instance: CGEDataGrid };
+  /** Alias of fetch-error (CGEDataTable name). */
+  error: { error: any; instance: CGEDataGrid };
   destroyed: { instance: CGEDataGrid };
+  /** Alias of destroyed (CGEDataTable name). */
+  destroy: { instance: CGEDataGrid };
 }
 
 export declare class CGEDataGrid {
@@ -152,7 +177,11 @@ export declare class CGEDataGrid {
   emit(event: string, detail?: any): void;
   destroy(): void;
 
+  /** Prunes detached instances, then initializes [data-cge-datagrid] elements inside root. */
   static init(root?: Document | HTMLElement): CGEDataGrid[];
+  /** Destroys instances inside root or detached from the document (Livewire/Turbo teardown). */
+  static destroyAll(root?: Document | HTMLElement): CGEDataGrid[];
+  static get(target: HTMLElement | string): CGEDataGrid | null;
 }
 
 export default CGEDataGrid;

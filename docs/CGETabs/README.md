@@ -101,8 +101,14 @@ tabs.prev();
 ## State, accessibility and teardown
 Programmatic roots need no declarative marker. Nested groups must have `data-cge-tabs` or be initialized as independent programmatic instances first. Initial `aria-selected="true"` is preserved when resolving the first tab. Keyboard navigation skips disabled triggers; manual mode moves focus before activation. Native buttons default to `type="button"` inside forms.
 
-Hashes are encoded/decoded and URL writes preserve the host application's `history.state`. Use `historyMode: 'push'` to create Back/Forward steps. Reduced-motion preferences disable panel, indicator and loading animations. Calling `show()` on the already active tab updates requested focus/history without repeating events or requests; use `loadAjaxTab(id, true)` for an explicit reload.
+Hash state is namespaced per group (`#account=billing&help=faq`), so several groups and nested groups keep independent deep links; legacy `#billing` links still resolve and a nested deep link opens its parent panel. URL writes preserve the host application's `history.state`. Use `historyMode: 'push'` to create Back/Forward steps; Back to a URL without tab state restores the initial tab. Alt/Ctrl/Meta shortcuts are ignored and `dir="rtl"` mirrors the arrow keys. Reduced-motion preferences disable panel, indicator and loading animations. Calling `show()` on the already active tab updates requested focus/history without repeating events or requests; use `loadAjaxTab(id, true)` for an explicit reload.
 
-`destroy()` aborts requests, disconnects observers and restores original owned attributes and panel nodes. Child plugins in replaced AJAX markup are destroyed before replacement and on teardown. This does not destroy independent static nested components that remain in the original DOM.
+`destroy()` aborts requests, disconnects observers and restores original owned attributes and panel nodes. `CGETabs.destroyAll(root)` tears down every instance inside a region or detached from the DOM, and `CGETabs.init(root)` prunes detached instances, rebuilds Livewire-morphed ones and returns all instances under root. `CGETabs.get()` returns `null` for unknown lookups. Child plugins in replaced AJAX markup are destroyed before replacement and on teardown. This does not destroy independent static nested components that remain in the original DOM.
 
 Horizontal tab lists gain scrolling when content overflows, so focused tabs remain reachable on narrow screens. Explicit overflow styling is respected.
+
+## AJAX security
+AJAX panels accept `text/html` (or `text/plain`) bodies and JSON only in the form `{ "html": "..." }`; any other JSON is rendered as the error state instead of being injected. Add `sanitize: html => DOMPurify.sanitize(html)` when partials may contain user-generated HTML. Non-GET requests send Laravel CSRF headers automatically and a configured `axiosInstance` wins over `window.axios`.
+
+## ESM imports and nested plugins
+The root `tailtools` import has no side effects. `tailtools/auto` registers `initTailTools` as the AJAX panel initializer; with plain ESM imports call `CGETabs.setPanelInitializer(panel => initTailTools(panel))` once or pass `initPanel` per instance.

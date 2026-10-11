@@ -12,6 +12,9 @@
  * @package TailTools
  */
 
+import { laravelHeaders, resolveAxios, wasRedirected } from '../shared/http.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
+
 export class CGEForm {
   /**
    * Registry of initialized form instances mapped to their HTMLFormElement.
@@ -25,6 +28,9 @@ export class CGEForm {
    */
   static currentLocale = 'en';
 
+  /** Counter for generated feedback element IDs. @private */
+  static _feedbackId = 0;
+
   /**
    * Global translations registry supporting multi-language dictionaries.
    */
@@ -36,6 +42,7 @@ export class CGEForm {
       'error-message': 'Please fix the highlighted errors and try again.',
       'server-error': 'An unexpected server error occurred. Please try again later.',
       'network-error': 'Network connection error. Check your internet connection.',
+      'csrf-expired': 'Your session has expired. Please refresh the page and try again.',
       'save-button': 'Save',
       'update-button': 'Update',
       'delete-button': 'Delete',
@@ -67,8 +74,10 @@ export class CGEForm {
     freezeInputs: true,
     resetOnSuccess: false,
     redirectDelay: 0,
+    followRedirects: true, // navigate when fetch/XHR/axios transparently followed a server redirect()
     onRedirect: null,
     translations: {},
+    axiosInstance: null,
     beforeSubmit: null,
     onSubmit: null,
     onSuccess: null,
@@ -162,6 +171,7 @@ export class CGEForm {
    */
   static init(root = document) {
     if (!root || typeof root.querySelectorAll !== 'function') return [];
+    pruneInstances(CGEForm.instances);
     const forms = root.querySelectorAll('form[data-cge-form]');
     const initialized = [];
 
@@ -203,6 +213,16 @@ export class CGEForm {
   }
 
   /**
+   * Destroys instances whose form is inside root or no longer connected
+   * (Livewire morphing, Turbo visits, innerHTML swaps).
+   * @param {Document | Element} [root=document]
+   * @returns {CGEForm[]}
+   */
+  static destroyAll(root = document) {
+    return destroyInstances(CGEForm.instances, root);
+  }
+
+  /**
    * Constructs and attaches a new CGEForm instance.
    * @param {HTMLFormElement | string} target
    * @param {Partial<typeof CGEForm.defaults>} [options]
@@ -230,6 +250,12 @@ export class CGEForm {
 
     // Track inputs with active error listeners to avoid listener duplicates
     this._errorBoundInputs = new Set();
+
+    // Bound validation errors: error key -> { inputs, container } (one feedback element per key)
+    this._errorEntries = new Map();
+
+    // Author aria-describedby values restored when errors are cleared
+    this._describedBy = new Map();
 
     // Submit button state memory
     this._submitButtonOriginalHTML = null;
@@ -385,18 +411,19 @@ export class CGEForm {
     if (event && typeof event.preventDefault === 'function') {
       event.preventDefault();
     }
-    if (this._isSubmitting || this._destroyed) return;
+    if (this._isSubmitting || this._redirecting || this._destroyed) return;
 
     // Clear previous errors before fresh submission
     this.clearErrors();
 
     // Construct FormData from the form BEFORE freezing inputs
-    const formData = new FormData(this.form, event?.submitter);
+    const submitter = event?.submitter || null;
+    const formData = new FormData(this.form, submitter);
     this._requestController = new AbortController();
     this._isSubmitting = true;
 
-    // Freeze inputs and transition submit button to loading state immediately
-    this._freezeForm();
+    // Freeze inputs and show the spinner on the button that actually submitted
+    this._freezeForm(submitter);
 
     let response = null;
     let ok = false;
@@ -438,8 +465,8 @@ export class CGEForm {
       if (this._destroyed) return;
       ok = true;
 
-      // Check for server-guided redirect
-      const redirectUrl = this._extractRedirect(response);
+      // Check for server-guided redirect (JSON redirect key, or a followed Laravel redirect())
+      const redirectUrl = this._extractRedirect(response) || this._followedRedirect(response);
       if (redirectUrl) {
         const redirectPayload = { form: this, url: redirectUrl, response };
         let allowRedirect = true;
@@ -453,6 +480,8 @@ export class CGEForm {
         this._dispatchDOMEvent('redirect', redirectPayload);
 
         if (allowRedirect) {
+          // Stay frozen until the page unloads so the form cannot be resubmitted during redirectDelay.
+          this._redirecting = true;
           const delay = Number(this.options.redirectDelay) || 0;
           if (delay > 0) {
             this._redirectTimer = setTimeout(() => { if (!this._destroyed) window.location.href = redirectUrl; }, delay);
@@ -485,7 +514,13 @@ export class CGEForm {
       ok = false;
       const res = err?.response || (err?.status ? err : null);
 
-      if (res && res.status === 422) {
+      if (res && res.status === 419) {
+        // Laravel CSRF token mismatch / expired session
+        const errorPayload = { form: this, error: err, response: res };
+        this._emit('error', errorPayload);
+        this._dispatchDOMEvent('error', errorPayload);
+        this._triggerFeedback('error', this.t('csrf-expired'), res);
+      } else if (res && res.status === 422) {
         // Laravel 422 Unprocessable Entity - Validation Errors
         const errors = res.data?.errors || {};
         this.bindErrors(errors);
@@ -510,8 +545,8 @@ export class CGEForm {
         this._triggerFeedback('error', errorMsg, res);
       }
     } finally {
-      // Re-enable fields respecting State Memory Guard
-      if (!this._destroyed) this._unfreezeForm();
+      // Re-enable fields respecting State Memory Guard (not while the page is redirecting)
+      if (!this._destroyed && !this._redirecting) this._unfreezeForm();
       this._isSubmitting = false;
       this._requestController = null;
       if (this._destroyed) return;
@@ -522,6 +557,25 @@ export class CGEForm {
     }
 
     return response;
+  }
+
+  /**
+   * Final URL when the driver transparently followed a server redirect (fetch `redirected`,
+   * XHR/axios `responseURL`). Laravel's redirect() after an AJAX submit lands here.
+   * @private
+   * @returns {string | null}
+   */
+  _followedRedirect(response) {
+    if (!this.options.followRedirects || !response || typeof response !== 'object') return null;
+    if (response.redirected === true && response.url) return response.url;
+    const finalUrl = response.responseURL || response.request?.responseURL;
+    let requested = response.requestUrl || response.config?.url;
+    if (!finalUrl || !requested) return null;
+    try {
+      const base = response.config?.baseURL ? new URL(response.config.baseURL, window.location.href) : window.location.href;
+      requested = new URL(requested, base).href;
+    } catch { return null; }
+    return wasRedirected({ responseURL: finalUrl }, requested) ? finalUrl : null;
   }
 
   /**
@@ -555,31 +609,8 @@ export class CGEForm {
    * @private
    */
   _buildHeaders() {
-    const headers = {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Accept': 'application/json',
-      ...this.options.headers
-    };
-
-    // Extract CSRF Token
-    let csrfToken = null;
-    const metaCsrf = document.querySelector('meta[name="csrf-token"]');
-    if (metaCsrf) {
-      csrfToken = metaCsrf.getAttribute('content');
-    }
-
-    if (!csrfToken) {
-      const tokenInput = this.form.querySelector('input[name="_token"]');
-      if (tokenInput && tokenInput.value) {
-        csrfToken = tokenInput.value;
-      }
-    }
-
-    if (csrfToken) {
-      headers['X-CSRF-TOKEN'] = csrfToken;
-    }
-
-    return headers;
+    // meta / _token / window.csrfToken -> X-CSRF-TOKEN; XSRF-TOKEN cookie -> X-XSRF-TOKEN.
+    return laravelHeaders(this.options.headers, { form: this.form });
   }
 
   /**
@@ -603,7 +634,7 @@ export class CGEForm {
    * @private
    */
   async _sendAxios(url, method, formData, headers) {
-    const axiosLib = window.axios || this.options.axiosInstance;
+    const axiosLib = resolveAxios(this.options.axiosInstance);
 
     if (!axiosLib) {
       console.warn('[CGEForm] Axios not found on window or options. Falling back cleanly to Fetch driver.');
@@ -706,7 +737,10 @@ export class CGEForm {
       statusText: response.statusText,
       data,
       headers: response.headers,
-      ok: response.ok
+      ok: response.ok,
+      redirected: response.redirected === true,
+      url: response.url || '',
+      requestUrl: finalUrl
     };
 
     if (!response.ok) {
@@ -784,7 +818,9 @@ export class CGEForm {
           status: xhr.status,
           statusText: xhr.statusText,
           data: responseData,
-          ok: xhr.status >= 200 && xhr.status < 300
+          ok: xhr.status >= 200 && xhr.status < 300,
+          responseURL: xhr.responseURL || '',
+          requestUrl: finalUrl
         };
 
         if (normalized.ok) {
@@ -818,10 +854,12 @@ export class CGEForm {
    * are NEVER inadvertently re-enabled if submission fails.
    * @private
    */
-  _freezeForm() {
+  _freezeForm(submitter = null) {
     this._previouslyDisabled.clear();
 
-    const submitBtn = this._getSubmitButton();
+    const ownsSubmitter = submitter && (submitter.form === this.form || this.form.contains(submitter));
+    const submitBtn = ownsSubmitter ? submitter : this._getSubmitButton();
+    this._activeSubmitButton = submitBtn;
     const elements = Array.from(this.form.elements);
 
     for (const el of elements) {
@@ -859,7 +897,8 @@ export class CGEForm {
    * @private
    */
   _unfreezeForm() {
-    const submitBtn = this._getSubmitButton();
+    const submitBtn = this._activeSubmitButton || this._getSubmitButton();
+    this._activeSubmitButton = null;
     const elements = Array.from(this.form.elements);
 
     for (const el of elements) {
@@ -936,37 +975,38 @@ export class CGEForm {
 
     for (const [errKey, messages] of Object.entries(errors)) {
       const messageText = Array.isArray(messages) ? messages.join(' ') : String(messages);
+      // Re-binding a key replaces its previous state instead of stacking feedback.
+      if (this._errorEntries.has(errKey)) this._clearErrorKey(errKey);
       const { inputs, container } = this._resolveErrorTarget(errKey);
+      this._errorEntries.set(errKey, { inputs, container });
 
-      // Apply invalid UI state to matching inputs
-      if (inputs && inputs.length > 0) {
-        for (const input of inputs) {
-          if (this.options.invalidClass) {
-            const classes = this.options.invalidClass.split(/\s+/).filter(Boolean);
-            input.classList.add(...classes);
-          }
-          if (this.options.validClass) {
-            const classes = this.options.validClass.split(/\s+/).filter(Boolean);
-            input.classList.remove(...classes);
-          }
-          input.setAttribute('aria-invalid', 'true');
+      // Apply invalid UI state to matching inputs and their visible proxies (e.g. CGESelect trigger)
+      for (const input of inputs) {
+        const proxy = this._visualTarget(input);
+        for (const target of new Set([input, proxy])) {
+          this._toggleClasses(target, this.options.invalidClass, true);
+          this._toggleClasses(target, this.options.validClass, false);
+          target.setAttribute('aria-invalid', 'true');
+        }
 
-          // Parent group state
-          const group = input.closest('.cge-form-group') || input.parentElement;
-          if (group && this.options.groupErrorClass) {
-            group.classList.add(this.options.groupErrorClass);
-          }
+        // Parent group state
+        const group = this._groupFor(input);
+        if (group && this.options.groupErrorClass) {
+          group.classList.add(this.options.groupErrorClass);
+        }
 
-          // Link aria-describedby if container has an ID
-          if (container && container.id) {
-            const existingDesc = input.getAttribute('aria-describedby') || '';
-            if (!existingDesc.includes(container.id)) {
-              input.setAttribute('aria-describedby', `${existingDesc} ${container.id}`.trim());
+        // Link aria-describedby if container has an ID (the author's value is restored on clear)
+        if (container && container.id) {
+          for (const target of new Set([input, proxy])) {
+            if (!this._describedBy.has(target)) this._describedBy.set(target, target.getAttribute('aria-describedby'));
+            const existingDesc = target.getAttribute('aria-describedby') || '';
+            if (!existingDesc.split(/\s+/).includes(container.id)) {
+              target.setAttribute('aria-describedby', `${existingDesc} ${container.id}`.trim());
             }
           }
-
-          // Input/change events bubble to the form's delegated clearing handler.
         }
+
+        // Input/change events bubble to the form's delegated clearing handler.
       }
 
       // Populate error text into feedback container
@@ -980,7 +1020,77 @@ export class CGEForm {
   }
 
   /**
-   * Discovers matching DOM input elements and feedback container for an error key.
+   * Adds or removes a space-separated class list.
+   * @private
+   */
+  _toggleClasses(element, classList, add) {
+    if (!element || !classList) return;
+    const classes = String(classList).split(/\s+/).filter(Boolean);
+    if (classes.length) element.classList[add ? 'add' : 'remove'](...classes);
+  }
+
+  /**
+   * Visible element that shows the invalid state for a field. Hidden native controls
+   * (CGESelect) delegate to their trigger; any field can point elsewhere with data-cge-error-target.
+   * @private
+   * @returns {HTMLElement}
+   */
+  _visualTarget(input) {
+    const selector = input.getAttribute?.('data-cge-error-target');
+    if (selector) {
+      try {
+        const target = this.form.querySelector(selector) || document.querySelector(selector);
+        if (target) return target;
+      } catch { /* invalid selector: fall back to the input */ }
+    }
+    const selectWrapper = input.classList?.contains('cge-select-native-hidden') ? input.closest('[data-cge-select-instance]') : null;
+    return selectWrapper?.querySelector('.cge-select-trigger') || input;
+  }
+
+  /**
+   * Element after which a generated feedback message is placed.
+   * @private
+   */
+  _placementAnchor(input) {
+    const selectWrapper = input.closest('[data-cge-select-instance]');
+    if (selectWrapper) return selectWrapper;
+    const proxy = this._visualTarget(input);
+    if (proxy !== input) return proxy;
+    if (['checkbox', 'radio'].includes(input.type)) {
+      const label = input.closest('label');
+      if (label && this.form.contains(label)) return label;
+    }
+    return input;
+  }
+
+  /**
+   * Group element that receives groupErrorClass.
+   * @private
+   */
+  _groupFor(input) {
+    return input.closest('.cge-form-group') || this._placementAnchor(input).parentElement;
+  }
+
+  /**
+   * Converts an input name to its Laravel error key: items[0][name] -> items.0.name, tags[] -> tags.
+   * @private
+   */
+  _nameToKey(name) {
+    return String(name || '').replace(/\[\]$/, '').replace(/\[([^\]]*)\]/g, '.$1');
+  }
+
+  /**
+   * Converts a dot error key to bracket notation: items.0.name -> items[0][name].
+   * @private
+   */
+  _keyToBracket(key) {
+    const parts = String(key).split('.');
+    return parts[0] + parts.slice(1).map(part => `[${part}]`).join('');
+  }
+
+  /**
+   * Resolves the matching DOM input elements and feedback container for an error key.
+   * Every key receives its own container, so fields sharing a parent never overwrite each other.
    * @param {string} errKey
    * @returns {{ inputs: HTMLElement[], container: HTMLElement | null }}
    * @private
@@ -989,9 +1099,9 @@ export class CGEForm {
     const inputs = this._findInputsForErrorKey(errKey);
     let container = this._findFeedbackContainer(errKey, inputs);
 
-    // If still missing, dynamically create a fallback container inside the form-group
+    // If still missing, dynamically create a dedicated container for this key
     if (!container && inputs.length > 0) {
-      container = this._createFallbackFeedback(errKey, inputs[0]);
+      container = this._createFallbackFeedback(errKey, inputs);
     }
 
     return { inputs, container };
@@ -1003,140 +1113,185 @@ export class CGEForm {
    * 2. Numeric: 'choices.0' -> [name="choices[0]"], [name="choices[]"][0], or [name="choices.0"]
    * 3. Keyed array: 'choices2.a' -> [name="choices2[a]"] or [name="choices2.a"]
    * 4. Nested dot: 'user.profile.bio' -> [name="user[profile][bio]"] or [name="user.profile.bio"]
+   * 5. Nested arrays: 'items.0.tags.1' -> [name="items[0][tags][]"][1]
+   * 6. Base key for arrays: 'tags' -> [name="tags[]"]
    *
    * @param {string} errKey
    * @returns {HTMLElement[]}
    * @private
    */
   _findInputsForErrorKey(errKey) {
+    const byName = name => Array.from(this.form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
+
     // Direct attribute match
-    const directMatches = Array.from(this.form.querySelectorAll(`[name="${CSS.escape(errKey)}"]`));
+    const directMatches = byName(errKey);
     if (directMatches.length > 0) return directMatches;
 
-    // Check if error key contains dot notation
     if (errKey.includes('.')) {
       const parts = errKey.split('.');
-      const root = parts[0];
 
       // Format: user[profile][bio]
-      const bracketName = `${root}[${parts.slice(1).join('][')}]`;
-      const bracketMatches = Array.from(this.form.querySelectorAll(`[name="${CSS.escape(bracketName)}"]`));
+      const bracketMatches = byName(this._keyToBracket(errKey));
       if (bracketMatches.length > 0) return bracketMatches;
 
-      // Format for numeric arrays: choices.0 -> choices[]
-      const isNumericLeaf = /^\d+$/.test(parts[parts.length - 1]);
-      if (isNumericLeaf) {
-        const index = parseInt(parts[parts.length - 1], 10);
-        const arrayInputs = Array.from(this.form.querySelectorAll(`[name="${CSS.escape(root)}[]"]`));
-        if (arrayInputs.length > 0 && arrayInputs[index]) {
-          return [arrayInputs[index]];
-        }
-        if (arrayInputs.length > 0) {
-          return arrayInputs;
-        }
+      // Numeric leaf: items.0.tags.1 -> items[0][tags][] (index 1); tags.0 -> tags[] or multiple select "tags"
+      const leaf = parts[parts.length - 1];
+      if (/^\d+$/.test(leaf)) {
+        const parentName = this._keyToBracket(parts.slice(0, -1).join('.'));
+        const arrayInputs = byName(`${parentName}[]`);
+        const index = parseInt(leaf, 10);
+        if (arrayInputs.length > 0) return arrayInputs[index] ? [arrayInputs[index]] : arrayInputs;
+        const parentMatches = byName(parentName);
+        if (parentMatches.length > 0) return parentMatches;
       }
 
       // Root name fallback (e.g. choices for choices.0)
-      const rootMatches = Array.from(this.form.querySelectorAll(`[name="${CSS.escape(root)}"], [name="${CSS.escape(root)}[]"]`));
+      const rootMatches = [...byName(parts[0]), ...byName(`${parts[0]}[]`)];
       if (rootMatches.length > 0) return rootMatches;
     }
 
-    // Try array syntax if key is base name but input is array (e.g. 'choices' -> [name="choices[]"])
-    const baseArrayMatches = Array.from(this.form.querySelectorAll(`[name="${CSS.escape(errKey)}[]"]`));
+    // Array syntax for a base key (e.g. 'choices' -> [name="choices[]"])
+    const baseArrayMatches = byName(`${this._keyToBracket(errKey)}[]`);
     if (baseArrayMatches.length > 0) return baseArrayMatches;
 
     return [];
   }
 
   /**
-   * Finds the appropriate feedback container element for an error key.
+   * Finds the feedback container for an error key without borrowing another field's element.
    * @param {string} errKey
    * @param {HTMLElement[]} matchedInputs
    * @returns {HTMLElement | null}
    * @private
    */
   _findFeedbackContainer(errKey, matchedInputs) {
-    // 1. Explicit data-cge-feedback matching exact key
-    let container = this.form.querySelector(`[data-cge-feedback="${CSS.escape(errKey)}"]`);
-    if (container) return container;
+    const keys = new Set([errKey, this._keyToBracket(errKey)]);
+    for (const input of matchedInputs || []) if (input.name) keys.add(input.name);
+    if (errKey.includes('.')) keys.add(errKey.split('.')[0]);
 
-    // 2. Bracket notation format if dot notation
-    if (errKey.includes('.')) {
-      const parts = errKey.split('.');
-      const root = parts[0];
-      const bracketName = `${root}[${parts.slice(1).join('][')}]`;
-
-      container = this.form.querySelector(`[data-cge-feedback="${CSS.escape(bracketName)}"]`);
-      if (container) return container;
-
-      // Root container (e.g., data-cge-feedback="choices" for choices.0)
-      container = this.form.querySelector(`[data-cge-feedback="${CSS.escape(root)}"]`);
+    // 1. Explicit data-cge-feedback matching the key, bracket name, input name or root key
+    for (const key of keys) {
+      const container = this.form.querySelector(`[data-cge-feedback="${CSS.escape(key)}"]`);
       if (container) return container;
     }
 
-    // 3. Search adjacent within the parent .cge-form-group of the matched input
+    // 2. Unkeyed feedback inside the field's group. A plain parent element only counts as the
+    //    field's group when it contains no other visible field.
     if (matchedInputs && matchedInputs.length > 0) {
       const firstInput = matchedInputs[0];
-      const group = firstInput.closest('.cge-form-group') || firstInput.parentElement;
-      if (group) {
-        container = group.querySelector(`[data-cge-feedback="${CSS.escape(errKey)}"]`)
-          || group.querySelector('[data-cge-feedback]')
-          || group.querySelector('.cge-feedback, .cge-error-feedback');
-        if (container) return container;
+      const explicitGroup = firstInput.closest('.cge-form-group');
+      const group = explicitGroup || this._placementAnchor(firstInput).parentElement;
+      if (!group) return null;
+      if (!explicitGroup) {
+        const others = Array.from(group.querySelectorAll('[name]')).filter(el => !matchedInputs.includes(el)
+          && el.tagName !== 'BUTTON' && !['hidden', 'submit', 'button', 'reset', 'image'].includes(el.type));
+        if (others.length > 0) return null;
       }
+      const claimed = new Set(Array.from(this._errorEntries.values()).map(entry => entry.container));
+      const candidates = Array.from(group.querySelectorAll('[data-cge-feedback], .cge-feedback, .cge-error-feedback'));
+      return candidates.find(el => !claimed.has(el) && !el.hasAttribute('data-cge-dynamic')
+        && (!el.getAttribute('data-cge-feedback') || keys.has(el.getAttribute('data-cge-feedback')))) || null;
     }
 
     return null;
   }
 
   /**
-   * Dynamically constructs a fallback feedback span directly beneath the target input or inside .cge-form-group.
+   * Creates a dedicated feedback span for one error key: appended to an explicit
+   * .cge-form-group, otherwise inserted right after the field (after the last input of a group).
    * @private
    */
-  _createFallbackFeedback(errKey, input) {
+  _createFallbackFeedback(errKey, inputs) {
+    const list = Array.isArray(inputs) ? inputs : [inputs];
     const span = document.createElement('span');
     span.className = 'cge-feedback text-red-500 text-xs mt-1 block';
+    span.id = `cge-feedback-${++CGEForm._feedbackId}`;
     span.setAttribute('data-cge-feedback', errKey);
     span.setAttribute('data-cge-dynamic', 'true');
 
-    const group = input.closest('.cge-form-group') || input.parentElement;
+    const group = list[0].closest('.cge-form-group');
     if (group) {
       group.appendChild(span);
     } else {
-      input.insertAdjacentElement('afterend', span);
+      this._placementAnchor(list[list.length - 1]).insertAdjacentElement('afterend', span);
     }
 
     return span;
   }
 
   /**
-   * Clears error state for a single input and hides its associated feedback.
+   * Removes the invalid state from one input and its visible proxy.
+   * @private
+   */
+  _resetInputState(input) {
+    const proxy = this._visualTarget(input);
+    for (const target of new Set([input, proxy])) {
+      this._toggleClasses(target, this.options.invalidClass, false);
+      target.removeAttribute('aria-invalid');
+      if (this._describedBy.has(target)) {
+        const original = this._describedBy.get(target);
+        if (original === null) target.removeAttribute('aria-describedby');
+        else target.setAttribute('aria-describedby', original);
+        this._describedBy.delete(target);
+      }
+    }
+    const group = this._groupFor(input);
+    if (group && this.options.groupErrorClass && !group.querySelector('[aria-invalid="true"]')) {
+      group.classList.remove(this.options.groupErrorClass);
+    }
+  }
+
+  /**
+   * Clears one bound error key: its inputs (unless another key still marks them) and its container.
+   * @private
+   */
+  _clearErrorKey(errKey) {
+    const entry = this._errorEntries.get(errKey);
+    if (!entry) return;
+    this._errorEntries.delete(errKey);
+    const remaining = Array.from(this._errorEntries.values());
+    for (const input of entry.inputs) {
+      if (!remaining.some(other => other.inputs.includes(input))) this._resetInputState(input);
+    }
+    const container = entry.container;
+    if (container && !remaining.some(other => other.container === container)) {
+      if (container.hasAttribute('data-cge-dynamic')) {
+        container.remove();
+      } else {
+        container.classList.add('hidden');
+        container.textContent = '';
+      }
+    }
+  }
+
+  /**
+   * Clears error state for a single input: only the error keys bound to this field are cleared,
+   * so typing in one field never hides another field's message.
    * @param {HTMLElement} input
    * @private
    */
   _clearInputError(input) {
     if (!input) return;
 
-    if (this.options.invalidClass) {
-      const classes = this.options.invalidClass.split(/\s+/).filter(Boolean);
-      input.classList.remove(...classes);
-    }
-    input.removeAttribute('aria-invalid');
+    const keys = Array.from(this._errorEntries.entries())
+      .filter(([, entry]) => entry.inputs.includes(input))
+      .map(([key]) => key);
 
-    const group = input.closest('.cge-form-group') || input.parentElement;
-    if (group) {
-      // Find associated feedback inside group
-      const feedbacks = group.querySelectorAll('.cge-feedback, .cge-error-feedback, [data-cge-feedback]');
+    if (keys.length > 0) {
+      keys.forEach(key => this._clearErrorKey(key));
+    } else if (input.getAttribute('aria-invalid') === 'true' || this._visualTarget(input).getAttribute('aria-invalid') === 'true') {
+      // Server-rendered (Blade @error) state that CGEForm did not bind itself
+      this._resetInputState(input);
+      const names = new Set([input.name, this._nameToKey(input.name)]);
+      const group = input.closest('.cge-form-group');
+      const feedbacks = [
+        ...Array.from(this.form.querySelectorAll('[data-cge-feedback]')).filter(fb => names.has(fb.getAttribute('data-cge-feedback'))),
+        ...(group ? Array.from(group.querySelectorAll('.cge-feedback, .cge-error-feedback, [data-cge-feedback=""]')) : [])
+      ];
       feedbacks.forEach((fb) => {
         fb.classList.add('hidden');
         fb.textContent = '';
       });
-
-      // Check if any other invalid inputs remain in this group
-      const remainingInvalids = group.querySelectorAll('[aria-invalid="true"]');
-      if (remainingInvalids.length === 0 && this.options.groupErrorClass) {
-        group.classList.remove(this.options.groupErrorClass);
-      }
     }
 
     this._errorBoundInputs.delete(input);
@@ -1146,16 +1301,21 @@ export class CGEForm {
    * Clears all validation errors and feedback across the entire form.
    */
   clearErrors() {
-    // Clear input classes and attributes
+    Array.from(this._errorEntries.keys()).forEach(key => this._clearErrorKey(key));
+
+    // Clear remaining (server-rendered) input classes and attributes
     const invalidInputs = this.form.querySelectorAll('[aria-invalid="true"]');
     invalidInputs.forEach((input) => {
-      if (this.options.invalidClass) {
-        const classes = this.options.invalidClass.split(/\s+/).filter(Boolean);
-        input.classList.remove(...classes);
-      }
+      this._toggleClasses(input, this.options.invalidClass, false);
       input.removeAttribute('aria-invalid');
-      input.removeAttribute('aria-describedby');
     });
+
+    // Restore author aria-describedby values
+    for (const [target, original] of this._describedBy) {
+      if (original === null) target.removeAttribute('aria-describedby');
+      else target.setAttribute('aria-describedby', original);
+    }
+    this._describedBy.clear();
 
     // Clear feedback containers
     const feedbacks = this.form.querySelectorAll('.cge-feedback, .cge-error-feedback, [data-cge-feedback]');
@@ -1170,7 +1330,7 @@ export class CGEForm {
 
     // Clear form groups
     if (this.options.groupErrorClass) {
-      const groups = this.form.querySelectorAll(`.${this.options.groupErrorClass}`);
+      const groups = this.form.querySelectorAll(`.${CSS.escape(this.options.groupErrorClass)}`);
       groups.forEach((g) => g.classList.remove(this.options.groupErrorClass));
     }
 
@@ -1444,7 +1604,8 @@ export class CGEForm {
     this._destroyed = true;
     this._requestController?.abort();
     clearTimeout(this._redirectTimer);
-    if (this._isSubmitting) this._unfreezeForm();
+    if (this._isSubmitting || this._redirecting) this._unfreezeForm();
+    this._redirecting = false;
     this.form.removeEventListener('submit', this._handleSubmit);
     if (this._handleClearError) {
       this.form.removeEventListener('input', this._handleClearError);

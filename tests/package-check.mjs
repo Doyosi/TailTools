@@ -13,7 +13,7 @@ if (!npmCli) throw new Error('Run this check with npm run test:package');
 const archive = JSON.parse(execFileSync(process.execPath, [npmCli, 'pack', '--ignore-scripts', '--json', '--pack-destination', temporary], { encoding: 'utf8' }))[0];
 const files = new Set(archive.files.map(file => file.path));
 assert(![...files].some(file => file.startsWith('node_modules/') || file.startsWith('dist/demo/')));
-for (const file of ['dist/tailtools.js', 'dist/tailtools.umd.cjs', 'dist/tailtools.css', 'src/index.d.ts', 'styles.css']) assert(files.has(file), `Missing ${file}`);
+for (const file of ['dist/tailtools.js', 'dist/auto.js', 'dist/tailtools.umd.cjs', 'dist/tailtools.css', 'src/index.d.ts', 'src/auto.d.ts', 'styles.css']) assert(files.has(file), `Missing ${file}`);
 const consumer = join(temporary, 'consumer');
 const modules = join(consumer, 'node_modules');
 mkdirSync(modules, { recursive: true });
@@ -26,6 +26,14 @@ assert.deepEqual(plugins.sort(), readdirSync(join(workspace, 'plugins')).filter(
 const library = await import(pathToFileURL(join(packed, 'dist/tailtools.js')));
 assert.equal(typeof library.init, 'function');
 assert.equal(typeof library.default.init, 'function');
+assert.equal(typeof library.destroyTailTools, 'function');
+assert.equal(library.default.destroy, library.destroyTailTools);
+assert(!/console\.log\(/.test(readFileSync(join(packed, 'dist/tailtools.js'), 'utf8')), 'Library logs to the console');
+assert(!/window\.TailTools\s*=/.test(readFileSync(join(packed, 'dist/tailtools.js'), 'utf8')), 'Root entry must stay side-effect free');
+const auto = await import(pathToFileURL(join(packed, 'dist/auto.js')));
+assert.equal(auto.default.CGEModal, library.CGEModal);
+assert(!pkg.dependencies || Object.keys(pkg.dependencies).length === 0, 'Runtime dependencies must stay empty');
+assert(!pkg.private && pkg.publishConfig?.access === 'public' && files.has('CHANGELOG.md'), 'Package must be publishable with a changelog');
 assert.equal(typeof library.CGECollapse, 'function');
 assert.equal(library.default.CGECollapse, library.CGECollapse);
 const accordionBarrel = await import(pathToFileURL(join(packed, 'plugins/CGEAccordion/index.js')));
@@ -58,4 +66,4 @@ for (const [module, resolution] of [['NodeNext', 'NodeNext'], ['ESNext', 'Bundle
   execFileSync(process.execPath, [compiler, '--strict', '--noEmit', '--target', 'ES2022', '--module', module, '--moduleResolution', resolution, '--lib', 'ES2022,DOM,DOM.Iterable', join(packed, 'consumer.mts')], { stdio: 'pipe' });
 }
 // Archive retained in OS temp for inspection; no repository-generated output.
-console.log(JSON.stringify({ archive: archive.filename, plugins: plugins.length, strictTypes: ['NodeNext', 'Bundler'], size: archive.size, unpackedSize: archive.unpackedSize, private: pkg.private }, null, 2));
+console.log(JSON.stringify({ archive: archive.filename, plugins: plugins.length, strictTypes: ['NodeNext', 'Bundler'], size: archive.size, unpackedSize: archive.unpackedSize, version: pkg.version }, null, 2));

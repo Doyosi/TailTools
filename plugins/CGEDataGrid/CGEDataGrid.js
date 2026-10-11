@@ -1,4 +1,6 @@
-import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection } from '../shared/collection.js';
+import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection,
+  readCollectionResponse, resolveParamNames } from '../shared/collection.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
 /**
  * CGEDataGrid - Modern Reactive Card Grid & List Engine
  * TailTools Plugin Library
@@ -11,6 +13,11 @@ import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection
 import { CGEFilter } from './modules/CGEFilter.js';
 import { CGESort } from './modules/CGESort.js';
 import { CGEPagination } from './modules/CGEPagination.js';
+
+export { escapeHTML };
+
+// Both collection plugins emit these synonyms so Grid and Table listeners are interchangeable.
+const EVENT_ALIASES = { render: 'rendered', 'selection-change': 'selection:change', destroyed: 'destroy', 'fetch-error': 'error' };
 
 export class CGEDataGrid {
   /**
@@ -52,6 +59,14 @@ export class CGEDataGrid {
 
     // Actions & Interceptors
     autoBindActions: true, // Automatically bind CGEActionButton on render
+
+    // Search, server parameters & responses
+    searchKeys: null, // Fields searched by the global query (default: primitive, non-underscore, non-html_* fields)
+    locale: null, // Search/sort locale; defaults to <html lang>
+    allValue: -1, // per_page value sent for the "All" option
+    paramNames: {}, // { page, perPage, sort, direction, search, filters, cursor }
+    responseAdapter: null, // (response) => ({ rows, total, page, perPage, lastPage, hasMore })
+    axiosInstance: null, // Configured axios instance (falls back to window.axios)
 
     ui: {
       wrapper: 'cge-datagrid-wrapper flex flex-col gap-4 font-sans text-slate-900 dark:text-slate-100',
@@ -103,6 +118,7 @@ export class CGEDataGrid {
       'sort-by': 'Sort by...',
       'per-page': 'Show :count items',
       info: 'Showing :from to :to of :total items',
+      'info-simple': 'Showing :from to :to items',
       'no-data': 'No matching records found',
       loading: 'Loading data...',
       prev: 'Previous',
@@ -124,6 +140,7 @@ export class CGEDataGrid {
    * @returns {CGEDataGrid[]}
    */
   static init(root = document) {
+    pruneInstances(CGEDataGrid.instances);
     const elements = [...root.querySelectorAll('[data-cge-datagrid]')];
     if (root.matches?.('[data-cge-datagrid]')) elements.unshift(root);
     const instances = [];
@@ -142,6 +159,25 @@ export class CGEDataGrid {
       }
     });
     return instances;
+  }
+
+  /**
+   * Destroys instances whose root is inside root or already detached (Livewire/Turbo teardown).
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {CGEDataGrid[]} Destroyed instances
+   */
+  static destroyAll(root = document) {
+    return destroyInstances(CGEDataGrid.instances, root);
+  }
+
+  /**
+   * Retrieves an existing instance by root element or selector.
+   * @param {HTMLElement | string} target
+   * @returns {CGEDataGrid | null}
+   */
+  static get(target) {
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    return el ? (CGEDataGrid.instances.get(el) || null) : null;
   }
 
   /**
@@ -188,13 +224,22 @@ export class CGEDataGrid {
     this._eventCleanups = [];
 
     // Initialize decoupled sub-modules
+    const names = resolveParamNames(this.options.paramNames);
     this.filter = new CGEFilter({
       debounce: 300,
+      locale: this.options.locale,
+      searchKeys: this.options.searchKeys,
+      excludeKeys: [this.options.htmlCardKey, this.options.htmlListKey],
+      searchParam: names.search,
+      filtersParam: names.filters,
       onChange: () => this._onFilterChange(),
     });
     this.filter.grid = this;
 
     this.sort = new CGESort({
+      locale: this.options.locale,
+      sortByParam: names.sort,
+      sortDirParam: names.direction,
       onChange: () => this._onSortChange(),
     });
     this.sort.grid = this;
@@ -202,8 +247,13 @@ export class CGEDataGrid {
     this.pagination = new CGEPagination({
       perPage: this.options.perPage,
       perPageOptions: this.options.perPageOptions,
+      allValue: this.options.allValue,
+      pageParam: names.page,
+      perPageParam: names.perPage,
+      cursorParam: names.cursor,
       translations: {
         info: this.options.translations.info,
+        'info-simple': this.options.translations['info-simple'],
         'per-page': this.options.translations['per-page'],
       },
       onChange: () => this._onPaginationChange(),
@@ -229,7 +279,7 @@ export class CGEDataGrid {
       this._ingestDOMCards();
       this.refresh();
     } else if (this.options.source === 'ajax') {
-      this.fetch();
+      this.fetch().catch(() => {});
     }
 
     this.emit('init', { instance: this });
@@ -337,7 +387,7 @@ export class CGEDataGrid {
         const optEl = document.createElement('option');
         optEl.value = String(opt);
         optEl.textContent = this.options.translations['per-page'].replace(':count', String(opt));
-        if (opt === this.pagination.perPage || (opt === 'All' && this.pagination.perPage <= 0)) {
+        if (String(opt) === String(this.pagination.perPage) || (String(opt).toLowerCase() === 'all' && this.pagination.perPage <= 0)) {
           optEl.selected = true;
         }
         perPageSelect.appendChild(optEl);
@@ -558,14 +608,15 @@ export class CGEDataGrid {
     cancelCollectionWork(this);
     this.setLoading(false);
     this._indexData(Array.isArray(data) ? [...data] : []);
-    this.pagination.page = 1;
+    this.pagination.resetPage();
     this.clearSelection();
     this.refresh();
     return this;
   }
 
   /**
-   * Fetches remote data from API (Laravel LengthAwarePaginator compatible).
+   * Fetches remote data (Laravel paginate, API Resource meta, simplePaginate, cursorPaginate,
+   * plain arrays or responseAdapter output). Failures emit 'fetch-error' and 'error' and reject.
    * @param {Record<string, any>} [extraParams={}]
    * @returns {Promise<any>}
    */
@@ -587,29 +638,26 @@ export class CGEDataGrid {
       const responseData = await fetchCollection(this.options, queryParams, controller.signal);
       if (this._destroyed || requestId !== this._requestId) return;
 
-      // Handle Laravel LengthAwarePaginator structure
-      if (responseData && Array.isArray(responseData.data)) {
-        this._indexData(responseData.data);
-        if (this.options.serverSide) this.pagination.total = responseData.total !== undefined ? responseData.total : responseData.data.length;
-        if (this.options.serverSide && responseData.current_page !== undefined) {
-          this.pagination.page = responseData.current_page;
-        }
-        if (this.options.serverSide && responseData.per_page !== undefined) {
-          this.pagination.perPage = this.pagination._normalizePerPage(responseData.per_page);
-        }
-      } else if (Array.isArray(responseData)) {
-        this._indexData(responseData);
-        this.pagination.total = responseData.length;
-      } else {
-        this._indexData([]);
-        this.pagination.total = 0;
+      const result = readCollectionResponse(responseData, this.options.responseAdapter);
+      const page = result.page ?? this.pagination.page;
+      this._indexData(result.rows, this.options.serverSide ? page : null);
+      if (this.options.serverSide) {
+        this.pagination.setMetrics({
+          mode: result.mode,
+          total: result.mode ? result.total : (result.total ?? result.rows.length),
+          page,
+          perPage: result.perPage,
+          lastPage: result.lastPage,
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+          prevCursor: result.prevCursor,
+          count: result.rows.length,
+        });
       }
 
       this.emit('data-loaded', { data: this.data, raw: responseData });
       if (this._destroyed || requestId !== this._requestId) return;
       if (this.options.serverSide) {
-        this.pagination.setTotal(this.pagination.total);
-        this.pagination.page = Math.max(1, Math.min(parseInt(this.pagination.page, 10) || 1, this.pagination.lastPage));
         this._renderCards(this.data);
         this._renderFooter();
         this._updateSelectionBar();
@@ -619,25 +667,42 @@ export class CGEDataGrid {
     } catch (err) {
       if (!this._destroyed && requestId === this._requestId && !controller.signal.aborted) {
         this.emit('fetch-error', { error: err });
+        throw err;
       }
     } finally {
       if (!this._destroyed && requestId === this._requestId) this.setLoading(false);
     }
   }
 
-  _indexData(data) {
+  _indexData(data, page = null) {
     ++this._dataVersion;
     this.data = data;
-    this._itemIds = new Map(data.map((item, index) => [item, String(item.id ?? `item-${index}`)]));
+    this._itemIds = new Map(data.map((item, index) => [item, this._fallbackId(item, index, page)]));
+  }
+
+  /**
+   * Item ID: item.id, otherwise a fallback. Server pages are prefixed with the page number so
+   * a selection on page 1 never matches the same position on page 2.
+   * @private
+   */
+  _fallbackId(item, index, page = null) {
+    if (item?.id !== undefined && item?.id !== null) return String(item.id);
+    if (page === null || page === undefined) return `item-${index}`;
+    if (!this._warnedFallbackIds) {
+      this._warnedFallbackIds = true;
+      console.warn('[CGEDataGrid] Server items without an id use page-scoped fallback IDs; add an "id" field for stable selection.');
+    }
+    return `p${page}-item-${index}`;
   }
 
   _getItemId(item, index) {
-    return this._itemIds?.get(item) ?? String(item.id ?? `item-${index}`);
+    return this._itemIds?.get(item) ?? String(item?.id ?? `item-${index}`);
   }
 
   _refreshAfterRemoval(count) {
     if (this.options.serverSide && this.options.source === 'ajax') {
-      this.pagination.setTotal(Math.max(0, this.pagination.total - count));
+      if (this.pagination.totalKnown) this.pagination.setTotal(Math.max(0, this.pagination.total - count));
+      else this.pagination.setMetrics({ count: this.data.length });
       this._renderCards(this.data);
       this._renderFooter();
       this._updateSelectionBar();
@@ -652,12 +717,12 @@ export class CGEDataGrid {
   refresh() {
     if (this._destroyed) return this;
     if (this.options.serverSide && this.options.source === 'ajax') {
-      this.fetch();
+      this.fetch().catch(() => {});
       return this;
     }
 
-    // 1. Filter
-    let items = this.filter.filterData(this.data);
+    // 1. Filter (global search only reads searchKeys or primitive public fields)
+    let items = this.filter.filterData(this.data, this.options.searchKeys);
 
     // 2. Sort
     items = this.sort.sortData(items);
@@ -805,6 +870,7 @@ export class CGEDataGrid {
   _renderFooter() {
     if (!this.footerEl) return;
     if (this.infoEl) this.infoEl.textContent = this.pagination.formatInfo();
+    this._syncPerPageSelect();
     if (!this.paginationEl) return;
     this.paginationEl.replaceChildren();
     this.paginationEl.setAttribute('role', 'navigation');
@@ -812,6 +878,20 @@ export class CGEDataGrid {
     if (this.pagination.lastPage <= 1) return;
     this._renderCompactPagination();
     this._renderDesktopPagination();
+  }
+
+  /**
+   * Shows the active limit in the per-page select (All stays selected when the server
+   * answers with per_page = total); unknown server values leave the selection untouched.
+   * @private
+   */
+  _syncPerPageSelect() {
+    const select = this.controlsWrap?.querySelector('.cge-datagrid-perpage');
+    if (!select) return;
+    const perPage = this.pagination.perPage;
+    const wanted = perPage > 0 ? [String(perPage)] : ['All', 'all', String(this.options.allValue)];
+    const option = Array.from(select.options).find(item => wanted.includes(item.value));
+    if (option && select.value !== option.value) select.value = option.value;
   }
 
   _paginationButton(label, action, { disabled = false, active = false } = {}) {
@@ -872,10 +952,11 @@ export class CGEDataGrid {
     navigation.className = 'flex items-center gap-1';
     const label = document.createElement('span');
     label.className = 'inline-flex items-center justify-center px-2.5 h-7 text-xs font-semibold rounded-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 select-none';
-    label.textContent = this.pagination.page + ' / ' + this.pagination.lastPage;
+    label.textContent = this.pagination.totalKnown ? this.pagination.page + ' / ' + this.pagination.lastPage : String(this.pagination.page);
     label.setAttribute('aria-live', 'polite');
     navigation.append(this._navigationButton('prev', true), label, this._navigationButton('next', true));
-    compact.append(navigation, this._renderJumpControls(true));
+    compact.append(navigation);
+    if (this.pagination.mode !== 'cursor') compact.append(this._renderJumpControls(true));
     this.paginationEl.append(compact);
   }
 
@@ -894,7 +975,7 @@ export class CGEDataGrid {
       }
     }
     desktop.append(this._navigationButton('next'));
-    if (this.pagination.lastPage > 5) desktop.append(this._renderJumpControls());
+    if (this.pagination.lastPage > 5 && this.pagination.mode !== 'cursor') desktop.append(this._renderJumpControls());
     this.paginationEl.append(desktop);
   }
 
@@ -1140,11 +1221,12 @@ export class CGEDataGrid {
   // --- Sub-module Event Handlers ---
 
   _onFilterChange() {
-    this.pagination.page = 1;
+    this.pagination.resetPage(); // page 1 and no stale cursor
     this.refresh();
   }
 
   _onSortChange() {
+    if (this.pagination.mode === 'cursor') this.pagination.resetPage();
     this.refresh();
   }
 
@@ -1190,7 +1272,12 @@ export class CGEDataGrid {
   emit(event, detail = {}) {
     if (this._destroyed && event !== 'destroyed') return;
     const payload = { ...detail, instance: this };
+    this._dispatch(event, payload);
+    if (EVENT_ALIASES[event]) this._dispatch(EVENT_ALIASES[event], payload);
+  }
 
+  /** @private */
+  _dispatch(event, payload) {
     if (this._listeners.has(event)) {
       this._listeners.get(event).forEach((fn) => {
         try {

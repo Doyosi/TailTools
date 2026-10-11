@@ -7,6 +7,10 @@ import { CGEFilter } from './modules/CGEFilter.js';
 import { CGESort } from './modules/CGESort.js';
 import { CGEPagination } from './modules/CGEPagination.js';
 import { CGEResponsive } from './modules/CGEResponsive.js';
+import type { CGECollectionParamNames, CGECollectionResponseAdapter } from '../shared/collection.js';
+
+export { escapeHTML } from '../shared/collection.js';
+export type { CGECollectionParamNames, CGECollectionAdapterResult, CGECollectionResponseAdapter } from '../shared/collection.js';
 
 export type CGEDataTableSource = 'dom' | 'json' | 'ajax';
 export type CGEDataTableDriver = 'auto' | 'axios' | 'fetch';
@@ -16,9 +20,13 @@ export interface CGEDataTableColumn {
   key: string;
   label?: string;
   sortable?: boolean;
-  type?: 'string' | 'number' | 'currency' | 'date';
+  /** Sort type; 'auto' (default) detects one type for the whole column. */
+  type?: 'auto' | 'string' | 'text' | 'number' | 'currency' | 'date';
   priority?: number;
-  formatter?: (value: any, row: any, colIndex: number) => any;
+  /** Returned strings are trusted HTML (use escapeHTML for values); Nodes are appended. Without a formatter values render as text. */
+  formatter?: (value: any, row: any, colIndex: number) => string | Node | number | null | undefined;
+  /** Render the raw value as trusted HTML (server-rendered Blade markup such as action buttons). Off by default; also `data-cge-html` on the th. HTML columns are excluded from global search. */
+  html?: boolean;
   align?: 'left' | 'center' | 'right';
   visible?: boolean;
 }
@@ -59,6 +67,7 @@ export interface CGEDataTableTranslations {
   'search-placeholder'?: string;
   'per-page'?: string;
   info?: string;
+  'info-simple'?: string;
   'no-data'?: string;
   loading?: string;
   prev?: string;
@@ -84,6 +93,16 @@ export interface CGEDataTableOptions {
   responsiveMode?: CGEDataTableResponsiveMode;
   autoBindActions?: boolean;
   selectable?: boolean;
+  /** Search/sort locale (e.g. 'tr'); defaults to <html lang>. */
+  locale?: string | null;
+  /** per_page value sent for "All" (default -1). */
+  allValue?: number | string;
+  paramNames?: CGECollectionParamNames;
+  responseAdapter?: CGECollectionResponseAdapter | null;
+  /** Configured axios instance; falls back to window.axios. */
+  axiosInstance?: { request: (config: any) => Promise<any> } | null;
+  /** CGEResponsive breakpoint (number or [phone, landscape, tablet]). */
+  responsiveBreakpoint?: number | [number, number, number] | null;
   ui?: CGEDataTableUIConfig;
   translations?: CGEDataTableTranslations;
 }
@@ -92,15 +111,23 @@ export interface CGEDataTableEventMap {
   init: { instance: CGEDataTable };
   loading: { loading: boolean; instance: CGEDataTable };
   rendered: { rows: any[]; total: number; instance: CGEDataTable };
+  /** Alias of rendered (CGEDataGrid name). */
+  render: { rows: any[]; total: number; instance: CGEDataTable };
   filter: { query: string; columns: Record<string, any>; instance: CGEDataTable };
   sort: { rules: any[]; instance: CGEDataTable };
   page: { page: number; perPage: number; instance: CGEDataTable };
   'selection:change': { selectedIds: string[]; count: number; instance: CGEDataTable };
+  /** Alias of selection:change (CGEDataGrid name). */
+  'selection-change': { selectedIds: string[]; count: number; instance: CGEDataTable };
   'row:deleted': { rowId: string | null; element: HTMLElement | null; instance: CGEDataTable };
   'rows:deleted': { ids: string[]; instance: CGEDataTable };
   refresh: { instance: CGEDataTable };
   error: { error: any; instance: CGEDataTable };
+  /** Emitted with error when fetch() fails (CGEDataGrid name); the error is an HttpError for HTTP failures. */
+  'fetch-error': { error: any; instance: CGEDataTable };
   destroy: { instance: CGEDataTable };
+  /** Alias of destroy (CGEDataGrid name). */
+  destroyed: { instance: CGEDataTable };
 }
 
 export declare class CGEDataTable {
@@ -149,7 +176,10 @@ export declare class CGEDataTable {
   off<K extends keyof CGEDataTableEventMap>(event: K, handler: (detail: CGEDataTableEventMap[K]) => void): this;
   destroy(): void;
 
+  /** Prunes detached instances, then initializes [data-cge-datatable] elements inside root. */
   static init(root?: Document | HTMLElement): CGEDataTable[];
+  /** Destroys instances inside root or detached from the document (Livewire/Turbo teardown). */
+  static destroyAll(root?: Document | HTMLElement): CGEDataTable[];
   static get(target: HTMLElement | string): CGEDataTable | null;
   static getInstance(target: HTMLElement | string): CGEDataTable | null;
   static getOrCreateInstance(target: HTMLElement | string, options?: CGEDataTableOptions): CGEDataTable;

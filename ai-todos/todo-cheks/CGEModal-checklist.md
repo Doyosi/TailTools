@@ -74,3 +74,14 @@ Track the execution and verification phases for the `CGEModal` plugin.
 - [x] Demo, dört belge ve skill eşitlemesi
 - [x] Açık/koyu tema, mobil ve etkileşim kontrolü
 - [x] Regresyon, type, build, paket kontrolü ve REPORTS.md
+
+## Stability fixes (October 2026)
+
+- [x] Missing target throws a clear error; `resolveTarget()` accepts elements, selectors and bare IDs.
+- [x] Full focus trap via shared `trapTab` (escaped focus, no focusables).
+- [x] Shared overlay stack prunes detached entries (Livewire/Turbo) and restores the body lock; focus fallback excludes negative tabindex.
+- [x] Reduced motion: instant open/close, shake only dispatches the event.
+- [x] `destroyAll(root)`; `init(root)` prunes detached instances.
+- [x] `.d.ts`, `docs/CGEModal/` (README, usage, examples, api) and skill updated
+- [x] Node tests (`tests/overlay-fixes.test.mjs`) and browser scenarios (`tests/stability-overlay-regressions.js`) added
+- [ ] Full browser regression run (`tests/run-browser.mjs`) by the release owner

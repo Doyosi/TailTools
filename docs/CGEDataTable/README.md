@@ -33,7 +33,7 @@ Built with a decoupled sub-module architecture: a lightweight core orchestrator 
 2. **Multi-Format Data Ingestion:**
    - **Static DOM Table (`source: 'dom'`):** Ingests existing `<thead>` and `<tbody>` rows with zero configuration.
    - **In-Memory JSON (`source: 'json'`):** Client-side rendering, instant client sorting, filtering, and pagination.
-   - **Laravel Paginated Ajax (`source: 'ajax'`):** Native support for Laravel `LengthAwarePaginator` (`data`, `current_page`, `last_page`, `total`, `per_page`).
+   - **Laravel Paginated Ajax (`source: 'ajax'`):** Native support for Laravel `LengthAwarePaginator` (`data`, `current_page`, `last_page`, `total`, `per_page`), API Resource collections (`meta`), `simplePaginate` and `cursorPaginate`; `responseAdapter` for custom APIs.
    - **Flat Ajax (`source: 'ajax'`):** Ingests unpaginated arrays with client-side or remote pagination.
    - **Server-Rendered Blade HTML Rows:** Seamlessly injects pre-rendered row strings (`data.full: "<tr>...</tr>"` or `data.html: { 1: "<tr>...</tr>" }`).
 3. **Automated `CGEActionButton` Binding:**
@@ -96,3 +96,13 @@ filter.attachSearchInput('#custom-search-input');
 ## Maintenance contracts
 
 Use stable unique IDs for remote data and enable `serverSide: true` for paginated endpoints. Removal methods update the local view. Cancellation, recreation and selection behavior are detailed in the [usage guide](usage.md#data-ownership-and-lifecycle). Regression checks run at [the browser test page](../../tests/regressions.html).
+
+## Stability fixes (October 2026)
+
+- **Safer default:** raw values are rendered as text. Column `formatter` output and server Blade markup stay trusted HTML; escape interpolated values with the exported `escapeHTML`.
+- Laravel `paginate()`, API Resource `{ data, meta, links }`, `simplePaginate()` and `cursorPaginate()` responses are read automatically; `responseAdapter` maps custom APIs and `paramNames` renames request parameters.
+- **Changed default:** "All" is sent as `per_page=-1` (`allValue`) instead of `'All'`. Clamp and whitelist on the server (see the examples).
+- Non-GET requests send Laravel CSRF headers and nested JSON; GET arrays use `key[]`; `axiosInstance` wins over `window.axios`; failures reject with `HttpError`.
+- Search is case/accent-insensitive with `locale` (Turkish İ/ı); sorting detects one type per column (`1.234,50`, `DD.MM.YYYY`), keeps empty values last and is stable.
+- Filter/Sort/Pagination are one shared implementation for Table and Grid with both method names; both plugins emit both event names.
+- `CGEDataTable.destroyAll(root)` and pruning `init(root)` support Livewire/Turbo; server rows without IDs use page-scoped fallback IDs.

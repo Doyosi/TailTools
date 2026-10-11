@@ -1,6 +1,9 @@
-// Internal helpers shared by the grid and table; no public API changes.
-export const escapeHTML = value => String(value).replace(/[&<>"']/g, char =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+// Internal helpers shared by the grid and table. escapeHTML is re-exported publicly by both plugins
+// so cell formatters and card renderers can escape values they interpolate into trusted HTML.
+import { laravelHeaders, resolveAxios, nestParams, appendQuery, HttpError, parseBody, hasHeader, isSafeMethod } from './http.js';
+
+export { escapeHTML } from './dom.js';
+export { readCollectionResponse, resolveParamNames } from './collection-core.js';
 
 // Keep original node identities and their consumer listeners when restoring DOM.
 export function captureDOM(node) {
@@ -59,27 +62,43 @@ export function frameCollection(owner, callback) {
   return frame;
 }
 
+/**
+ * Requests a collection page from Laravel. GET/HEAD send params as a query string (arrays as
+ * key[]=a&key[]=b); other methods send nested JSON ({ filters: { role } }) with CSRF headers.
+ * axiosInstance (or window.axios) is used for driver 'axios' and for 'auto' when available.
+ * HTTP failures reject with HttpError carrying the status and the parsed Laravel body.
+ */
 export async function fetchCollection(options, params, signal, html = false) {
   const method = String(options.method || 'GET').toUpperCase();
   const bodyless = method === 'GET' || method === 'HEAD';
-  const headers = { Accept: html ? 'application/json, text/html' : 'application/json',
-    'X-Requested-With': 'XMLHttpRequest', ...options.headers };
-  if (options.driver === 'axios' || (options.driver === 'auto' && window.axios)) {
-    if (!window.axios?.request) throw new Error('Axios driver requires window.axios.request');
-    const response = await window.axios.request({ url: options.url, method, headers, signal,
-      params: bodyless ? params : undefined, data: bodyless ? undefined : params });
-    return response.data;
+  const accept = html ? 'application/json, text/html' : 'application/json';
+  const headers = laravelHeaders(options.headers, { accept, csrf: !isSafeMethod(method) });
+  const driver = options.driver || 'auto';
+  const axios = driver === 'fetch' ? null : resolveAxios(options.axiosInstance);
+  if (driver === 'axios' || (driver === 'auto' && axios)) {
+    if (!axios) throw new Error('Axios driver requires an axiosInstance option or window.axios.request');
+    const nested = nestParams(params);
+    try {
+      const response = await axios.request({ url: options.url, method, headers, signal,
+        params: bodyless ? nested : undefined, data: bodyless ? undefined : nested });
+      return response.data;
+    } catch (error) {
+      if (error?.response) {
+        const failure = new HttpError(error.response.status, error.response.statusText, error.response.data);
+        failure.cause = error;
+        throw failure;
+      }
+      throw error;
+    }
   }
   const url = new URL(options.url, window.location.href);
-  if (bodyless) for (const [key, value] of Object.entries(params)) {
-    if (value != null && value !== '') url.searchParams.set(key, String(value));
-  }
-  if (!bodyless && !Object.keys(headers).some(key => key.toLowerCase() === 'content-type')) {
-    headers['Content-Type'] = 'application/json';
-  }
+  if (bodyless) appendQuery(url.searchParams, params);
+  if (!bodyless && !hasHeader(headers, 'content-type')) headers['Content-Type'] = 'application/json';
   const response = await fetch(url, { method, headers, signal,
-    body: bodyless ? undefined : JSON.stringify(params) });
-  if (!response.ok) throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-  return html && !(response.headers.get('content-type') || '').includes('json')
-    ? response.text() : response.json();
+    body: bodyless ? undefined : JSON.stringify(nestParams(params)) });
+  const contentType = response.headers.get('content-type') || '';
+  const text = await response.text();
+  if (!response.ok) throw new HttpError(response.status, response.statusText, parseBody(text, contentType));
+  if (html && !contentType.includes('json')) return text;
+  return text ? JSON.parse(text) : null;
 }

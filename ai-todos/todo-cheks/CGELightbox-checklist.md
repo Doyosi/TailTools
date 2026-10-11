@@ -75,3 +75,14 @@ Track the progress of designing, implementing, testing, and documenting the **CG
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## Stability fixes (October 2026)
+
+- [x] S4: caption/description/title via text nodes (opt-in `captionHtml` / `data-cge-caption-html`); image error and thumbnails built with DOM APIs.
+- [x] Open token prevents concurrent-open races from orphaning portals and scroll locks.
+- [x] Shortcuts ignored while typing in inline inputs; `aria-label` on glyph buttons and thumbnails.
+- [x] Reduced motion disables fades; stage `touch-action` for custom zoom/pan.
+- [x] `destroyAll(root)`, `itemFromElement(el)`, typed `cge:lightbox:*` DOM events.
+- [x] `.d.ts`, `docs/CGELightbox/` (README, usage, examples, api) and skill updated
+- [x] Node tests (`tests/overlay-fixes.test.mjs`) and browser scenarios (`tests/stability-overlay-regressions.js`) added
+- [ ] Full browser regression run (`tests/run-browser.mjs`) by the release owner

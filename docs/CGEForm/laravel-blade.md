@@ -215,3 +215,10 @@ class UserController extends Controller
     }
 }
 ```
+
+## Stability fixes (October 2026)
+
+- **`return redirect()->route(...)` after an AJAX submit** is followed by the browser transport; CGEForm now navigates to the final URL (`followRedirects: true`). Because that hidden request already rendered the target page, session flash data is consumed. Prefer `return response()->json(['message' => '...', 'redirect' => route('users.index')]);` (with `session()->flash()` before it) when the next page must show a flash message.
+- **419 Page Expired** shows the `csrf-expired` translation (override it with `CGEForm.setTranslations({ 'csrf-expired': '...' })`). Keep `<meta name="csrf-token">` in the layout; `@csrf` inputs are used as a fallback.
+- **Blade arrays** such as `name="items[{{ $i }}][name]"` and `name="tags[]"` bind to `items.0.name` / `tags.1` validation keys, each with its own message.
+- **`<x-cge-select>`** fields show validation errors on the visible trigger.

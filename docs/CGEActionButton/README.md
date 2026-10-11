@@ -126,3 +126,7 @@ Repeated execute calls while confirmation is pending are ignored, preventing dup
 Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+Confirmation now intercepts clicks in the capture phase (inline `onclick`, Alpine `@click` and `wire:click` run once, after confirmation), confirmed form submits go through `requestSubmit()` (CGEForm AJAX and submitter values work), plain anchors navigate after confirmation unless `data-cge-ajax` / `data-cge-method` / `data-cge-url` is set, and the encrypted `XSRF-TOKEN` cookie is only sent as `X-XSRF-TOKEN`. New options: `followRedirects`, `redirectTimeout`, `axiosInstance`; new static `destroyAll(root)`; `init()` accepts a root or selector. Only `redirect` / `redirect_url` JSON keys redirect and only string `message` values are toasted. See [usage](usage.md#stability-fixes-october-2026).

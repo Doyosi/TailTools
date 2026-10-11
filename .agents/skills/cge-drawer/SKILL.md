@@ -162,3 +162,12 @@ const drawer = new CGEDrawer('#mini-nav', {
 Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEDrawer.d.ts](../../../../plugins/CGEDrawer/CGEDrawer.d.ts).
+
+## Stability rules (October 2026)
+
+- `new CGEDrawer(target)` throws when the target is missing; selectors like `.foo` are used as-is and bare names resolve as IDs first. Declarative triggers with a missing target only warn.
+- `cge:drawer:open` / `cge:drawer:close` are cancelable with `preventDefault()`.
+- Non-modal drawers (`backdrop: false`) are not on the overlay stack: no focus stealing, no `aria-modal`; Escape closes them only when no modal overlay is open.
+- Mini rail: not `aria-hidden`/`aria-modal` while collapsed and keeps its open transform after closing with `tailwind-animations`.
+- Focus trap recovers escaped focus; reduced motion uses 0 ms transitions and skips bounce.
+- `CGEDrawer.destroyAll(root)` destroys drawers inside `root` or detached (with `document` it also removes trigger delegation); `init(root)` prunes detached instances first.

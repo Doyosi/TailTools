@@ -20,8 +20,8 @@ When instantiating manually (`new CGESelect(element, options)`):
 | `maxTagsVisible` | `number \| null` | `null` | Maximum visible badges before collapsing into `"+N more"` badge. |
 | `minSearchLength` | `number` | `0` | Minimum character threshold before filtering starts. |
 | `placement` | `'auto' \| 'bottom' \| 'top'` | `'auto'` | Dropdown placement mode with automatic viewport clearance calculation. |
-| `asyncSource` | `Object \| null` | `null` | Configuration for remote async queries (`{ url, driver, method, param, debounce, transform }`). |
-| `renderOption` | `Function \| null` | `null` | Custom render function for dropdown options: `(item: CGESelectItem) => string`. |
+| `asyncSource` | `Object \| null` | `null` | Configuration for remote async queries (`{ url, driver, method, param, debounce, headers, axiosInstance, iconHtml, transform }`). POST requests send Laravel CSRF headers. |
+| `renderOption` | `Function \| null` | `null` | Custom render function for dropdown options: `(item: CGESelectItem) => string`. The returned string is trusted HTML: escape remote values yourself. Default renderers use text nodes. |
 | `renderTag` | `Function \| null` | `null` | Custom render function for multi-select tags: `(item: CGESelectItem) => string`. |
 | `renderSelection` | `Function \| null` | `null` | Custom render function for single select trigger content: `(item: CGESelectItem) => string`. |
 | `ui` | `Object` | `{ ... }` | Custom Tailwind CSS class mappings for trigger, dropdown, tags, etc. |
@@ -51,7 +51,7 @@ All features can be declared directly in HTML or Laravel Blade markup without be
 | `data-cge-async-param` | `<select>` | Query parameter name; default q. | `data-cge-async-param="term"` |
 | `data-cge-async-debounce` | `<select>` | Delay in milliseconds; default 300. Zero is supported. | `data-cge-async-debounce="300"` |
 | `data-image` | `<option>` | Avatar/thumbnail image URL. | `data-image="/avatars/user.jpg"` |
-| `data-icon` | `<option>` | SVG or icon markup snippet. | `data-icon="<svg...>"` |
+| `data-icon` | `<option>` | SVG or icon markup snippet (author markup, rendered as HTML). Remote `icon` values are class names/text unless `asyncSource.iconHtml` is `true`. | `data-icon="<svg...>"` |
 | `data-subtext` | `<option>` | Secondary description or role label. | `data-subtext="Engineering Lead"` |
 | `data-badge` | `<option>` | Micro badge/pill label displayed on option. | `data-badge="Admin"` |
 
@@ -69,6 +69,8 @@ new CGESelect('#async-select', {
     method: 'GET',
     param: 'q',
     debounce: 300,
+    headers: { 'X-Tenant': 'acme' }, // win over Accept / X-Requested-With / CSRF
+    iconHtml: false, // remote `icon` = class names (e.g. 'fa-solid fa-user') or text
     transform: (response) => {
       // Return array of objects: { value, label, subtext, image, badge }
       return response.data.map(user => ({
@@ -130,3 +132,13 @@ Remote selections become native options and serialize through FormData. Native m
 The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+- **CSRF for POST search:** non-GET `asyncSource` requests send `X-CSRF-TOKEN` (meta / form `_token` / `window.csrfToken`) or the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN`, plus `asyncSource.headers`. GET searches send no CSRF header. HTTP failures become `HttpError` (status + Laravel payload).
+- **Axios:** `asyncSource.axiosInstance` is preferred over `window.axios` when `driver: 'axios'`.
+- **Remote icons are not HTML** (behavior change): an `icon` from JSON renders as `<i class="...">` when it looks like class names, otherwise as text. Set `asyncSource.iconHtml: true` only for trusted endpoints. `<option data-icon>` markup from your own Blade stays HTML; custom `renderOption` / `renderTag` / `renderSelection` output stays trusted.
+- **Form reset** refreshes in a `setTimeout(0)` task, after the browser has reset the native `<select>` (a microtask could run too early for a user-clicked reset button).
+- **Validation state:** when the native select gets `aria-invalid="true"` (CGEForm, Blade, custom code) the trigger receives `aria-invalid` and `ui.triggerInvalid` classes (`cge-select-invalid border-rose-500 dark:border-rose-500`).
+- **Badge padding:** the single-selection badge uses the valid Tailwind v4 step `py-0.5`.
+- **Lifecycle:** `CGESelect.destroyAll(root = document)`; `CGESelect.init()` prunes instances whose select was removed.

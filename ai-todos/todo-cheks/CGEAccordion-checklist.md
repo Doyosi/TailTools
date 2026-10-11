@@ -20,3 +20,12 @@ Tracking all development phases for `CGEAccordion` and `CGECollapse` in TailTool
 - [x] Run browser regressions, strict types, build and package checks; update REPORTS.md.
 
 Completed 2026-10-05: 27/27 Node, 116/116 Chrome, native demo at 390/1024 px, strict NodeNext/Bundler, library/demo build, ESM/UMD and real npm archive verified. Findings recorded in REPORTS.md.
+
+## Stability fixes (October 2026)
+- [x] Collapse inside accordion bodies initialized (ownership-based skip).
+- [x] Collapse events dispatched once on the panel.
+- [x] Nested interactive controls in triggers do not toggle; modifier keys ignored.
+- [x] `init` returns all instances, prunes detached and rebuilds morphed instances; `destroyAll(root)` for Accordion and Collapse.
+- [x] Reduced motion skips the `animation` class and smooth scrolling (`prefersReducedMotion`).
+- [x] Declarations, api.md, usage/README/examples/laravel-blade and skill updated.
+- [x] Node tests and browser scenarios added.

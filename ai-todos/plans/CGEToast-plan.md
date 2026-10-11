@@ -109,3 +109,14 @@ REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak
 
 ## 2026-10-05 kompakt görsel bakım
 Kullanıcının talebi: daha şık, dengeli ve kompakt UI; kart/kontrol köşeleri rounded-sm. Mevcut API ve lifecycle korunacak. Toast: semantik ikon yüzeyi, küçük eylemler, responsive banner/uzun metin. Modal: isteğe bağlı surface/header/body/footer sınıfları, açık/koyu tema, demo ve Blade örnekleri. Dört belge ve skill eşitlenecek; 320/390/1024 px görsel kontrol, regresyon, type, build ve paket doğrulaması yapılacak.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases 1, 2 and 6.
+
+- S6: `title`/`message`/action labels are text by default; `html: true` / `data-cge-html` opt-in; flash fallback uses `textContent`.
+- Entry rAF is canceled/guarded so a toast dismissed early never re-appears (maxToasts loops).
+- Reduced motion / `animationDriver: none` remove dismissed toasts immediately.
+- `destroyAll(root)` unbinds delegation (dismisses all for `document`); `init(root)` prunes detached toasts and roots.
+- Shared: `plugins/shared/overlay.js` prunes disconnected overlays, supports a separate stacking layer and exports `trapTab`/`claimFreeKey`.
+- Tests: `tests/overlay-fixes.test.mjs` (Node) and `tests/stability-overlay-regressions.js` (browser).

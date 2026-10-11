@@ -154,10 +154,26 @@ Create `resources/views/components/cge-collapse.blade.php`:
 
 ## 5. Livewire & Inertia.js Re-initialization
 
-When components dynamically re-render (e.g., Livewire morph or Inertia navigation), call:
+`tailtools/auto` already re-initializes on `livewire:navigated`, after Livewire commits and on `turbo:load`. Re-running `init()` is safe: instances whose markup was removed are destroyed (their `hashchange` listeners too) and instances whose `aria-*`/`role`/`data-cge-accordion-ready` attributes were reset by a morph are rebuilt.
+
+Without the auto entry, register the hooks yourself:
 
 ```javascript
-document.addEventListener('livewire:navigated', () => {
-    window.TailTools?.init?.();
+import { CGEAccordion, CGECollapse } from 'tailtools';
+
+const refresh = () => { CGEAccordion.init(document); CGECollapse.init(document); };
+document.addEventListener('livewire:navigated', refresh);
+document.addEventListener('livewire:init', () => {
+    Livewire.hook('commit', ({ succeed }) => succeed(() => queueMicrotask(refresh)));
 });
 ```
+
+A rebuilt accordion re-resolves its open items from the server markup. Keep client-side open state across component updates with `wire:ignore`:
+
+```blade
+<div wire:ignore>
+    <x-cge-accordion id="faq">...</x-cge-accordion>
+</div>
+```
+
+Before removing a region yourself, call `CGEAccordion.destroyAll(region)` and `CGECollapse.destroyAll(region)`.

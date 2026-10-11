@@ -79,3 +79,16 @@ Track the execution and verification phases for the `CGEAlert` plugin.
 - [x] Verify light/dark/mobile variants and existing behaviors; build/package checks and REPORTS.md.
 
 Completed: 27 Node / 116 Chrome, 11 visual variants at 320/390/1024 px, strict types, build, package and ESM/UMD compiled CSS checks. REPORTS.md records the measured 260→149 px desktop confirmation change.
+
+## Stability fixes (October 2026)
+
+- [x] S3: escape title, message, requireInput (helper + placeholder), input value/placeholder, select options and button texts; only `html`/`icon` stay HTML; declarative attributes are text.
+- [x] B1: Enter confirms only from the input/dialog, ignores `e.repeat`, lets focused buttons activate natively.
+- [x] B3: capture-phase delegation with `stopImmediatePropagation`; replay the confirmed click once (links/submitters native, other form triggers `submitConfirmedForm`, else `cge:confirmed`).
+- [x] Loading `preConfirm`/`inputValidator` blocks Escape, backdrop and close button.
+- [x] Portal is the stacking layer for the shared overlay z-index bump (renders above Lightbox).
+- [x] Per-instance translations for archetype buttons; `role="alertdialog"` with valid labelledby/describedby; full focus trap; reduced motion.
+- [x] `destroyAll(root)`, `optionsFromTrigger(el)`, `.d.ts` events `cge:alert:deny` and `cge:confirmed`.
+- [x] `.d.ts`, `docs/CGEAlert/` (README, usage, examples, api) and skill updated
+- [x] Node tests (`tests/overlay-fixes.test.mjs`) and browser scenarios (`tests/stability-overlay-regressions.js`) added
+- [ ] Full browser regression run (`tests/run-browser.mjs`) by the release owner

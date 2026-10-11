@@ -257,3 +257,11 @@ Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm;
 
 ## Compact UI guidance (2026-10-05)
 Use cge-modal-surface with cge-modal-header/body/footer, cge-modal-title, cge-modal-close, cge-modal-action, cge-modal-action-secondary and cge-modal-input. Keep default cards and controls rounded-sm. The surface defaults to light; cge-modal-dark selects dark colors in HTML, not JS options. A form wrapping slots uses cge-modal-layout; close after successful submission rather than putting data-cge-modal-close on submit controls. Body scrolls inside the bounded surface while header/footer stay visible. Legacy consumer markup remains supported. See docs/CGEModal/usage.md for spacing and styling contracts.
+
+## Stability rules (October 2026)
+
+- `new CGEModal(target)` throws when the target is missing; `CGEModal.resolveTarget()` accepts elements, selectors or bare IDs.
+- Focus trap recovers focus that escaped the dialog and handles dialogs without focusables.
+- The shared overlay stack prunes overlays removed by Livewire/Turbo, so the body scroll lock always recovers; restored focus skips `tabindex="-1"`.
+- Reduced motion makes open/close instant and skips the shake animation (the event still fires).
+- `CGEModal.destroyAll(root)` destroys instances inside `root` or detached; `init(root)` prunes detached instances before re-initializing.

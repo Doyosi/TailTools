@@ -20,7 +20,8 @@ When creating an instance (`new CGELightbox(options)`) or calling `CGELightbox.o
 | `download` | `boolean` | `true` | Shows the direct file download button in the top action toolbar. |
 | `backdropClose` | `boolean` | `true` | Closes the lightbox when clicking outside the media panel. |
 | `preload` | `boolean` | `true` | Automatically preloads adjacent previous and next media slides in the background. |
-| `animationDriver` | `'auto' \| 'tailwind-animations' \| 'css' \| 'none'` | `'auto'` | Animation driver. In `'auto'`, uses the explicit `has-tailwind-animations` or `window.__TAILWIND_ANIMATIONS__` marker. |
+| `captionHtml` | `boolean` | `false` | Render captions/descriptions as trusted HTML. Captions are plain text by default; items can override with `captionHtml`. |
+| `animationDriver` | `'auto' \| 'tailwind-animations' \| 'css' \| 'none'` | `'auto'` | Animation driver. In `'auto'`, uses the explicit `has-tailwind-animations` or `window.__TAILWIND_ANIMATIONS__` marker. `prefers-reduced-motion: reduce` always uses `'none'`. |
 | `duration` | `number` | `250` | Transition duration in milliseconds. |
 | `translations` | `Object` | `{ ... }` | Localization dictionary for action toolbar buttons, counter, and accessibility labels. |
 
@@ -38,6 +39,7 @@ All media items can be declared directly in HTML or Laravel Blade without writin
 | `data-cge-caption` | `<a>`, `<button>`, `<img>` | Primary title/caption displayed in the bottom footer. | `data-cge-caption="Grand Canyon at Dawn"` |
 | `data-cge-description` | `<a>`, `<button>`, `<img>` | Secondary descriptive text displayed under the caption. | `data-cge-description="Photo by Ansel Adams"` |
 | `data-cge-thumb` | `<a>`, `<button>`, `<img>` | URL for the bottom thumbnail ribbon preview image. | `data-cge-thumb="/img/thumb-1.jpg"` |
+| `data-cge-caption-html` | `<a>`, `<button>`, `<img>` | Opt-in: render this trigger's caption/description as trusted HTML. | `data-cge-caption-html` |
 | `href` / `src` | `<a>`, `<img>` | Media source URL or selector (for `data-cge-type="inline"`). | `href="/media/highres.jpg"` |
 
 ---
@@ -54,6 +56,8 @@ The lightbox automatically captures keyboard events while open:
 | `ArrowUp` or `+` | Zooms into the current media item. |
 | `ArrowDown` or `-` | Zooms out of the current media item. |
 | `f` or `F` | Toggles fullscreen mode for the viewer window. |
+
+Arrow, `+`/`-`/`=` and `f` shortcuts are ignored while focus is in an `input`, `textarea`, `select` or contenteditable element inside inline content, and when Ctrl/Meta/Alt is held. Escape and Tab (focus trap) always work.
 
 ---
 
@@ -214,3 +218,11 @@ Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()`
 Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+- **Captions are text (breaking, pre-release):** `caption`, `title` fallback and `description` render as text. Opt in with `captionHtml: true` (instance), `item.captionHtml` or `data-cge-caption-html`. The failed-image message and thumbnail `<img>` elements are built with DOM APIs, so URLs are never parsed as HTML. `content` of inline items stays trusted developer HTML.
+- **Concurrent opens:** every `open()` call takes a token and re-checks it after each await, so rapid clicks cannot orphan portals or scroll locks; superseded instances are dropped from `CGELightbox.instances`.
+- **Keyboard:** shortcuts are ignored while typing in inline forms; glyph buttons (close, fullscreen, zoom, download, prev/next) have `aria-label`s and thumbnails announce their position.
+- **Motion and touch:** reduced motion disables fades; the stage uses `touch-action: none` for images (custom pinch/pan/swipe) and `manipulation` for other media.
+- **Lifecycle:** `CGELightbox.destroyAll(root = document)` destroys instances opened from triggers inside `root` (or detached triggers); with `document` it destroys every instance and removes the trigger delegation. `init()` forgets idle instances whose triggers were removed. `CGELightbox.itemFromElement(el)` exposes declarative parsing.

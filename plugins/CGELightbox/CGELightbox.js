@@ -1,5 +1,6 @@
-import { acquireOverlay, releaseOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { acquireOverlay, releaseOverlay, claimOverlayKey, trapTab } from '../shared/overlay.js';
 import { Lifecycle } from '../shared/lifecycle.js';
+import { escapeHTML, prefersReducedMotion } from '../shared/dom.js';
 /**
  * CGELightbox - TailTools Plugin
  * Ultra-fast, touch-capable media lightbox and gallery viewer designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -30,6 +31,18 @@ export class CGELightbox {
   static _delegationBound = false;
 
   /**
+   * Document-level trigger listener (kept so destroyAll can remove it).
+   * @private
+   */
+  static _delegationListener = null;
+
+  /**
+   * Monotonic open request counter: only the latest open() call may build a portal.
+   * @private
+   */
+  static _openToken = 0;
+
+  /**
    * Default configuration options.
    */
   static defaults = {
@@ -44,6 +57,7 @@ export class CGELightbox {
     swipeClose: true, // swipe down to dismiss
     preload: true, // preload adjacent slides
     backdropClose: true, // click backdrop to dismiss
+    captionHtml: false, // render caption/description as trusted HTML (text by default)
     animationDriver: 'auto', // 'auto' | 'tailwind-animations' | 'css' | 'none'
     duration: 250, // transition duration in ms
     translations: {
@@ -134,9 +148,17 @@ export class CGELightbox {
    * @returns {Promise<void>}
    */
   async open(index = 0, items = null) {
+    // Rapid clicks: every await below re-checks that this is still the latest request,
+    // so superseded calls never build a second portal or take a second scroll lock.
+    const token = ++CGELightbox._openToken;
+    const superseded = () => token !== CGELightbox._openToken;
     if (this._closePromise) await this._closePromise;
-    if (CGELightbox.activeInstance && CGELightbox.activeInstance !== this) {
+    while (!superseded() && CGELightbox.activeInstance && CGELightbox.activeInstance !== this) {
       await CGELightbox.activeInstance.close();
+    }
+    if (superseded()) {
+      if (!this.isOpen && CGELightbox.activeInstance !== this) CGELightbox.instances.delete(this);
+      return;
     }
     if (this._destroyed) return;
     if (this.isOpen) {
@@ -381,6 +403,7 @@ export class CGELightbox {
     const topbar = document.createElement('div');
     topbar.className = 'cge-lightbox-topbar w-full px-4 py-3 flex items-center justify-between z-20 pointer-events-auto shrink-0';
 
+    const t = Object.fromEntries(Object.entries(this.options.translations).map(([key, value]) => [key, escapeHTML(value)]));
     const counterHtml = this.options.counter
       ? `<span class="cge-lightbox-counter px-2.5 py-1 rounded-sm bg-white/10 border border-white/10 text-xs font-mono text-white/90"></span>`
       : '<div></div>';
@@ -391,16 +414,16 @@ export class CGELightbox {
       </div>
       <div class="flex items-center gap-1.5 sm:gap-2">
         ${this.options.zoom ? `
-          <button type="button" data-cge-lb-action="zoom-out" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${this.options.translations['zoom-out']}">−</button>
-          <button type="button" data-cge-lb-action="zoom-in" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${this.options.translations['zoom-in']}">+</button>
+          <button type="button" data-cge-lb-action="zoom-out" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${t['zoom-out']}" aria-label="${t['zoom-out']}"><span aria-hidden="true">−</span></button>
+          <button type="button" data-cge-lb-action="zoom-in" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${t['zoom-in']}" aria-label="${t['zoom-in']}"><span aria-hidden="true">+</span></button>
         ` : ''}
         ${this.options.fullscreen ? `
-          <button type="button" data-cge-lb-action="fullscreen" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${this.options.translations.fullscreen}">⛶</button>
+          <button type="button" data-cge-lb-action="fullscreen" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${t.fullscreen}" aria-label="${t.fullscreen}"><span aria-hidden="true">⛶</span></button>
         ` : ''}
         ${this.options.download ? `
-          <button type="button" data-cge-lb-action="download" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${this.options.translations.download}">↓</button>
+          <button type="button" data-cge-lb-action="download" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${t.download}" aria-label="${t.download}"><span aria-hidden="true">↓</span></button>
         ` : ''}
-        <button type="button" data-cge-lb-action="close" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${this.options.translations.close}">✕</button>
+        <button type="button" data-cge-lb-action="close" class="w-8 h-8 rounded-sm bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center text-sm transition cursor-pointer" title="${t.close}" aria-label="${t.close}"><span aria-hidden="true">✕</span></button>
       </div>
     `;
 
@@ -413,14 +436,16 @@ export class CGELightbox {
     prevBtn.setAttribute('data-cge-lb-action', 'prev');
     prevBtn.className = 'cge-lightbox-prev absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-sm bg-black/40 hover:bg-black/70 border border-white/10 text-white flex items-center justify-center text-xl transition cursor-pointer';
     prevBtn.setAttribute('title', this.options.translations.prev);
-    prevBtn.innerHTML = '‹';
+    prevBtn.setAttribute('aria-label', this.options.translations.prev);
+    prevBtn.innerHTML = '<span aria-hidden="true">‹</span>';
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.setAttribute('data-cge-lb-action', 'next');
     nextBtn.className = 'cge-lightbox-next absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-sm bg-black/40 hover:bg-black/70 border border-white/10 text-white flex items-center justify-center text-xl transition cursor-pointer';
     nextBtn.setAttribute('title', this.options.translations.next);
-    nextBtn.innerHTML = '›';
+    nextBtn.setAttribute('aria-label', this.options.translations.next);
+    nextBtn.innerHTML = '<span aria-hidden="true">›</span>';
 
     // Content Wrapper for scaling/panning
     const wrapper = document.createElement('div');
@@ -512,10 +537,19 @@ export class CGELightbox {
       const captionText = item.caption || item.title || '';
       const descText = item.description || '';
       if (captionText || descText) {
-        this.captionEl.innerHTML = `
-          ${captionText ? `<div class="font-semibold text-white tracking-tight">${captionText}</div>` : ''}
-          ${descText ? `<div class="text-[11px] text-slate-300 mt-0.5 leading-snug">${descText}</div>` : ''}
-        `;
+        // Captions are text unless the instance or item explicitly opts into trusted HTML.
+        const allowHTML = item.captionHtml ?? this.options.captionHtml;
+        const line = (value, className) => {
+          const el = document.createElement('div');
+          el.className = className;
+          if (allowHTML) el.innerHTML = String(value);
+          else el.textContent = String(value);
+          return el;
+        };
+        this.captionEl.replaceChildren(...[
+          captionText && line(captionText, 'font-semibold text-white tracking-tight'),
+          descText && line(descText, 'text-[11px] text-slate-300 mt-0.5 leading-snug')
+        ].filter(Boolean));
         this.captionEl.classList.remove('hidden');
       } else {
         this.captionEl.classList.add('hidden');
@@ -537,6 +571,8 @@ export class CGELightbox {
     // Determine Media Type
     const type = this._resolveMediaType(item);
     let mediaNode = null;
+    // Images use the custom pinch/pan/swipe handlers; other media keep native double-tap zoom off.
+    if (this.stageEl) this.stageEl.style.touchAction = type === 'image' ? 'none' : 'manipulation';
 
     if (type === 'image') {
       let cancel;
@@ -636,7 +672,11 @@ export class CGELightbox {
         signal?.removeEventListener('abort', cancel);
         const errorDiv = document.createElement('div');
         errorDiv.className = 'p-6 rounded-sm bg-rose-950/80 border border-rose-500/40 text-rose-200 text-xs text-center';
-        errorDiv.innerHTML = `⚠️ Failed to load image: <br><span class="font-mono text-[11px] text-white/70">${item.src}</span>`;
+        errorDiv.setAttribute('role', 'alert');
+        const source = document.createElement('span');
+        source.className = 'font-mono text-[11px] text-white/70';
+        source.textContent = String(item.src ?? '');
+        errorDiv.append('⚠️ Failed to load image: ', document.createElement('br'), source);
         resolve(errorDiv);
       };
 
@@ -747,9 +787,18 @@ export class CGELightbox {
 
       const thumbSrc = item.thumb || item.src;
       const type = this._resolveMediaType(item);
+      thumb.setAttribute('aria-label', this.options.translations.counter
+        .replace(':current', String(idx + 1))
+        .replace(':total', String(this.items.length)));
+      if (isActive) thumb.setAttribute('aria-current', 'true');
 
       if (type === 'image' && thumbSrc) {
-        thumb.innerHTML = `<img src="${thumbSrc}" alt="Thumb" class="w-full h-full object-cover">`;
+        // Built with DOM APIs so a crafted URL cannot break out of the attribute.
+        const img = document.createElement('img');
+        img.src = thumbSrc;
+        img.alt = '';
+        img.className = 'w-full h-full object-cover';
+        thumb.appendChild(img);
       } else {
         const icon = type === 'video' ? '🎬' : (type === 'youtube' || type === 'vimeo' ? '▶️' : '📄');
         thumb.innerHTML = `<div class="w-full h-full bg-slate-800 flex items-center justify-center text-xs text-white">${icon}</div>`;
@@ -850,15 +899,10 @@ export class CGELightbox {
         e.preventDefault();
         this.close();
       } else if (e.key === 'Tab') {
-        const focusable = [...this.portalEl.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-          .filter(element => element.offsetWidth || element.offsetHeight);
-        const first = focusable[0] || this.portalEl;
-        const last = focusable.at(-1) || this.portalEl;
-        if (!this.portalEl.contains(document.activeElement) || document.activeElement === this.portalEl ||
-          e.shiftKey && document.activeElement === first || !e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          (e.shiftKey ? last : first).focus();
-        }
+        trapTab(this.portalEl, e);
+      } else if (CGELightbox._isTyping(e) || e.ctrlKey || e.metaKey || e.altKey) {
+        // Typing in inline content (forms, search fields) and browser shortcuts keep their native keys.
+        return;
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         this.next();
@@ -986,20 +1030,37 @@ export class CGELightbox {
    * @private
    */
   _collectDeclarativeItems() {
-    const nodes = document.querySelectorAll(this.options.selector);
-    const items = [];
-    nodes.forEach((el) => {
-      items.push({
-        src: el.getAttribute('href') || el.dataset.cgeSrc || el.getAttribute('src'),
-        thumb: el.dataset.cgeThumb || el.querySelector('img')?.getAttribute('src'),
-        caption: el.dataset.cgeCaption || el.getAttribute('title') || el.dataset.cgeTitle,
-        description: el.dataset.cgeDescription,
-        gallery: el.dataset.cgeGallery,
-        type: el.dataset.cgeType,
-        element: el
-      });
-    });
-    return items;
+    return Array.from(document.querySelectorAll(this.options.selector), el => CGELightbox.itemFromElement(el));
+  }
+
+  /**
+   * Builds a media item from a declarative trigger. Attribute values are plain text;
+   * `data-cge-caption-html` opts the caption/description into trusted HTML.
+   * @param {HTMLElement} el
+   * @returns {Object}
+   */
+  static itemFromElement(el) {
+    const item = {
+      src: el.getAttribute('href') || el.dataset.cgeSrc || el.getAttribute('src'),
+      thumb: el.dataset.cgeThumb || el.querySelector('img')?.getAttribute('src'),
+      caption: el.dataset.cgeCaption || el.getAttribute('title') || el.dataset.cgeTitle,
+      description: el.dataset.cgeDescription,
+      gallery: el.dataset.cgeGallery,
+      type: el.dataset.cgeType,
+      element: el
+    };
+    if ('cgeCaptionHtml' in el.dataset) item.captionHtml = el.dataset.cgeCaptionHtml !== 'false';
+    return item;
+  }
+
+  /**
+   * True when the key event comes from an editable field (inline content forms).
+   * @private
+   */
+  static _isTyping(e) {
+    const el = e.target;
+    if (!(el instanceof Element)) return false;
+    return el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
   }
 
   /**
@@ -1007,6 +1068,7 @@ export class CGELightbox {
    * @private
    */
   _resolveAnimationDriver() {
+    if (prefersReducedMotion()) return 'none';
     if (this.options.animationDriver !== 'auto') return this.options.animationDriver;
     return document.documentElement.classList.contains('has-tailwind-animations') || window.__TAILWIND_ANIMATIONS__
       ? 'tailwind-animations' : 'css';
@@ -1118,10 +1180,16 @@ export class CGELightbox {
    * @param {string} [selector='[data-cge-lightbox]']
    */
   static init(selector = '[data-cge-lightbox]') {
-    if (CGELightbox._delegationBound || typeof document === 'undefined') return;
+    if (typeof document === 'undefined') return;
+    // Forget idle instances whose declarative triggers were removed (Livewire morph, Turbo).
+    for (const instance of Array.from(CGELightbox.instances)) {
+      const elements = instance.items.map(item => item.element).filter(Boolean);
+      if (!instance.isOpen && elements.length && elements.every(el => !el.isConnected)) instance.destroy();
+    }
+    if (CGELightbox._delegationBound) return;
 
-    document.addEventListener('click', (e) => {
-      const trigger = e.target.closest(selector);
+    CGELightbox._delegationListener = (e) => {
+      const trigger = e.target instanceof Element ? e.target.closest(selector) : null;
       if (!trigger) return;
 
       e.preventDefault();
@@ -1132,31 +1200,42 @@ export class CGELightbox {
 
       if (galleryName) {
         const galleryNodes = Array.from(document.querySelectorAll(selector)).filter(el => el.dataset.cgeGallery === galleryName);
-        items = galleryNodes.map((el) => ({
-          src: el.getAttribute('href') || el.dataset.cgeSrc || el.getAttribute('src'),
-          thumb: el.dataset.cgeThumb || el.querySelector('img')?.getAttribute('src'),
-          caption: el.dataset.cgeCaption || el.getAttribute('title') || el.dataset.cgeTitle,
-          description: el.dataset.cgeDescription,
-          gallery: galleryName,
-          type: el.dataset.cgeType,
-          element: el
-        }));
+        items = galleryNodes.map(el => ({ ...CGELightbox.itemFromElement(el), gallery: galleryName }));
         initialIndex = Math.max(0, galleryNodes.indexOf(trigger));
       } else {
-        items = [{
-          src: trigger.getAttribute('href') || trigger.dataset.cgeSrc || trigger.getAttribute('src'),
-          thumb: trigger.dataset.cgeThumb || trigger.querySelector('img')?.getAttribute('src'),
-          caption: trigger.dataset.cgeCaption || trigger.getAttribute('title') || trigger.dataset.cgeTitle,
-          description: trigger.dataset.cgeDescription,
-          type: trigger.dataset.cgeType,
-          element: trigger
-        }];
+        const { gallery, ...item } = CGELightbox.itemFromElement(trigger);
+        items = [item];
         initialIndex = 0;
       }
 
       CGELightbox.open(items, {}, initialIndex);
-    });
+    };
+    document.addEventListener('click', CGELightbox._delegationListener);
 
     CGELightbox._delegationBound = true;
+  }
+
+  /**
+   * Destroys lightbox instances opened from triggers inside `root` (or detached triggers).
+   * Passing `document` destroys every instance and removes the trigger delegation.
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {CGELightbox[]} destroyed instances
+   */
+  static destroyAll(root = document) {
+    const destroyed = [];
+    for (const instance of Array.from(CGELightbox.instances)) {
+      const elements = instance.items.map(item => item.element).filter(el => el instanceof Element);
+      const affected = root === document
+        || elements.some(el => !el.isConnected || root.contains(el));
+      if (!affected) continue;
+      instance.destroy();
+      destroyed.push(instance);
+    }
+    if (root === document && CGELightbox._delegationListener) {
+      document.removeEventListener('click', CGELightbox._delegationListener);
+      CGELightbox._delegationListener = null;
+      CGELightbox._delegationBound = false;
+    }
+    return destroyed;
   }
 }

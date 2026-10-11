@@ -187,3 +187,45 @@ const grid = new CGEDataGrid("#clusters-grid", {
 ```
 
 Return `{ data, current_page, last_page, total, per_page }` from the endpoint. Mobile page jumps, page-size changes and search automatically request the next result; loading is managed by the plugin. Import the Grid stylesheet alongside Tailwind to include reduced-motion and loading interaction styles.
+
+## Escaping values, Turkish search and custom APIs
+
+```javascript
+import { CGEDataGrid, escapeHTML } from 'tailtools/CGEDataGrid';
+
+const grid = new CGEDataGrid('#cities', {
+  source: 'ajax',
+  url: '/api/cities',
+  serverSide: true,
+  locale: 'tr', // or <html lang="tr">: 'istanbul' matches 'İstanbul', 'igdir' matches 'IĞDIR'
+  searchKeys: ['name', 'region'], // client-side search fields (serverSide sends ?search=)
+  perPageOptions: [12, 24, 'All'], // All => per_page=-1
+  // Renderer output is trusted HTML, so escape every value:
+  cardRenderer: (city) => `<article class="p-4 rounded-sm border"><h3>${escapeHTML(city.name)}</h3><p>${escapeHTML(city.region)}</p></article>`,
+});
+
+grid.on('error', ({ error }) => console.error(error.status, error.errors)); // HttpError (alias of fetch-error)
+try { await grid.fetch(); } catch { /* explicit calls reject */ }
+
+// Custom (non-Laravel) API and parameter names:
+new CGEDataGrid('#products', {
+  source: 'ajax', url: '/api/products', serverSide: true,
+  responseAdapter: (res) => ({ rows: res.items, hasMore: res.has_next, page: res.page }),
+  paramNames: { perPage: 'limit', search: 'q' },
+});
+
+// Livewire / Turbo: tear down before the subtree is replaced, re-init afterwards.
+document.addEventListener('livewire:navigating', () => CGEDataGrid.destroyAll());
+```
+
+Laravel controller with a whitelisted sort and the "All" value:
+
+```php
+$sortable = ['name', 'region', 'created_at'];
+$sortBy = in_array($request->query('sort_by'), $sortable, true) ? $request->query('sort_by') : 'name';
+$sortDir = $request->query('sort_dir') === 'desc' ? 'desc' : 'asc';
+$perPage = (int) $request->input('per_page', 12);
+$perPage = $perPage === -1 ? max($query->count(), 1) : min(max($perPage, 1), 100);
+
+return CityResource::collection($query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString());
+```

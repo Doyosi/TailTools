@@ -68,14 +68,15 @@ TailTools is engineered for modern web development environments with minimal dep
 - **Laravel Framework:** Compatible with **Laravel 10.x** and **Laravel 11.x+**.
 - **Laravel Vite Plugin:** Standard `@tailwindcss/vite` or Vite asset pipeline.
 - **Laravel Contracts:**
-  - Automated CSRF token handling (`X-CSRF-TOKEN` meta tag or `@csrf`).
+  - Automated CSRF token handling (`<meta name="csrf-token">` or `@csrf` as `X-CSRF-TOKEN`; the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN`).
+  - TailTools ships JavaScript and CSS only. The `<x-cge-*>` examples in the docs are Blade components you create in your application; no Composer package is required.
   - Laravel RESTful method spoofing (`_method` parameter for `PUT`, `PATCH`, `DELETE`).
   - Laravel 422 JSON validation error response compatibility (e.g. from `FormRequest`).
   - Interception of Laravel session flash messages (e.g. `session('success')`, `session('error')`).
 
 ### 4. HTTP Client (For AJAX Features)
-- **Native Fetch:** Standard `window.fetch` works out of the box with zero external dependencies.
-- **Axios (Optional):** Supported as a pluggable HTTP driver for `CGEForm`, `CGEActionButton`, and remote `CGESelect` / `CGEDataTable` / `CGEDataGrid`.
+- **Native Fetch:** Standard `window.fetch` works out of the box with zero external dependencies. TailTools has no runtime npm dependencies.
+- **Axios (Optional):** Supported as a pluggable HTTP driver for `CGEForm`, `CGEActionButton`, and remote `CGESelect` / `CGEDataTable` / `CGEDataGrid`. TailTools uses a configured `axiosInstance` first, then Laravel's `window.axios`; it never bundles axios.
 
 ---
 
@@ -83,11 +84,8 @@ TailTools is engineered for modern web development environments with minimal dep
 
 ### Step 1: Install Package
 
-```powershell
-# From local package build:
-npm run build:lib
-npm pack
-npm install /path/to/tailtools-0.0.0.tgz
+```bash
+npm install tailtools
 ```
 
 ### Step 2: Configure Styles (Tailwind CSS v4)
@@ -107,20 +105,19 @@ In your main CSS file (e.g., `resources/css/app.css` in Laravel):
 In your main JavaScript file (e.g., `resources/js/app.js`):
 
 ```javascript
-// Import full bundle with automatic DOM initialization
-import TailTools, { initTailTools } from 'tailtools';
+// Zero-config: window globals, automatic initialization on DOM ready,
+// and re-initialization after Livewire (commit / wire:navigate) and Turbo updates.
+import 'tailtools/auto';
+
+// Or side-effect-free: nothing runs until you call initTailTools().
+import { initTailTools, destroyTailTools, CGEModal } from 'tailtools';
+initTailTools();
 
 // Or import specific plugins for tree-shaking:
-import { CGEModal } from 'tailtools/plugins/CGEModal';
 import { CGEToast } from 'tailtools/plugins/CGEToast';
-import { CGEForm } from 'tailtools/plugins/CGEForm';
 ```
 
-If you inject dynamic HTML via AJAX, Livewire, or Turbo, re-run initialization on the container:
-
-```javascript
-initTailTools(document.querySelector('#dynamic-container'));
-```
+Re-running `initTailTools(container)` after injecting HTML is safe: existing instances are reused and instances whose elements were removed (Livewire morph, Turbo, `innerHTML`) are destroyed first. Call `destroyTailTools(container)` before removing a subtree yourself. `tailtools/auto` can be configured before import with `window.TailToolsConfig = { autoInit, livewire, turbo, globals }`.
 
 ---
 

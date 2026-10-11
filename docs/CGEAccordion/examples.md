@@ -204,3 +204,30 @@ console.log(details.triggers.length); // 2
 details.destroy(); // restores the original controls and panel attributes
 ```
 Destroy nested instances before destroying their parent when managing independent programmatic lifecycles.
+
+## Collapse inside an accordion item and nested trigger actions
+
+```html
+<div id="orders" data-cge-accordion data-cge-url-sync="false">
+  <section data-cge-item="order-42">
+    <div data-cge-trigger tabindex="0" class="flex justify-between items-center">
+      <span>Order #42</span>
+      <!-- Does not toggle the item -->
+      <a href="/orders/42/edit" class="text-sm underline">Edit</a>
+    </div>
+    <div data-cge-body>
+      <div data-cge-content>
+        <button type="button" data-cge-collapse="#order-42-notes">Show notes</button>
+        <div id="order-42-notes"><div>Delivery notes...</div></div>
+      </div>
+    </div>
+  </section>
+</div>
+```
+
+```javascript
+import { CGEAccordion, CGECollapse } from 'tailtools';
+const [orders] = CGEAccordion.init(document.getElementById('orders'));
+const [notes] = CGECollapse.init(document.getElementById('orders')); // initialized inside the body
+document.addEventListener('cge:collapse:open', e => console.log('opened once', e.detail.instance.id));
+```

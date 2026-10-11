@@ -1,6 +1,6 @@
 ---
 name: cge-toast
-description: Lightweight, reactive notification and toast alert system engineered for Tailwind CSS v4.3+ and Laravel Blade. Features 8 standard floating positions plus top/bottom full-width banner modes, automated z-index portal isolation, semantic variants (success, error, warning, info, neutral), customizable duration timers with visual progress bars and hover-pause, full HTML/rich text interpolation, avatar/icon/image support, i18n translation dictionary, swipe-to-dismiss, and dual event hooks (instance callbacks + DOM CustomEvents).
+description: Lightweight, reactive notification and toast alert system engineered for Tailwind CSS v4.3+ and Laravel Blade. Features 8 standard floating positions plus top/bottom full-width banner modes, automated z-index portal isolation, semantic variants (success, error, warning, info, neutral), customizable duration timers with visual progress bars and hover-pause, text-by-default rendering with an explicit html opt-in, avatar/icon/image support, i18n translation dictionary, swipe-to-dismiss, and dual event hooks (instance callbacks + DOM CustomEvents).
 ---
 
 # CGEToast Agent Skill
@@ -230,9 +230,16 @@ Nested document/subtree delegation handles a single click only once.
 
 ## Verified maintenance contract (2026-10-04)
 
-Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast title/message are text by default; trusted markup needs `html: true` / `data-cge-html`. Use `CGEToast.destroyAll(root)` for Livewire/Turbo teardown.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEToast.d.ts](../../../plugins/CGEToast/CGEToast.d.ts).
 
 ## Compact UI guidance (2026-10-05)
 Preserve rounded-sm cards, default icon/image slots and actions. Cards use 12 px padding, 32 px semantic icon badges, 13 px text and 2 px countdown bars. Floating portals fit within 16 px viewport gutters at 320 px and are capped at 384 px. Banner actions wrap beneath copy below 640 px; long labels wrap in both layouts. Action minimum height is 28 px desktop / 32 px mobile and close targets are 32 px. Custom icon HTML, image.class and action color classes remain supported; public API is unchanged.
+
+## Stability rules (October 2026)
+
+- `title`, `message` and action labels are text unless `html: true` (programmatic) or `data-cge-html` / `data-cge-toast-html` (declarative). Never set `html: true` for server or user text; CGEForm/CGEActionButton messages rely on the text default.
+- Flash elements without `data-cge-message` use `textContent` (Blade-escaped content stays text).
+- A toast dismissed before its entry frames never reappears; reduced motion removes it immediately.
+- `CGEToast.destroyAll(root = document)` unbinds delegation (and with `document` dismisses all toasts); `init(root)` forgets detached toasts first.

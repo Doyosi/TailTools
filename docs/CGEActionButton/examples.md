@@ -162,3 +162,35 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 new CGEActionButton(button, { ajax: true, method: 'PATCH' });
 // Form button name/value and uploads are sent via POST + _method=PATCH.
 ```
+
+## Stability fixes (October 2026)
+
+### Alpine / Livewire handlers gated by confirmation
+
+```html
+<!-- The Livewire action runs once, only after the user confirms -->
+<button type="button" wire:click="archive({{ $post->id }})"
+        data-cge-confirm="Archive this post?" data-cge-action="warning">
+    Archive
+</button>
+
+<!-- Alpine handler: same guarantee -->
+<button type="button" x-on:click="open = false" data-cge-confirm="Discard changes?">Discard</button>
+```
+
+### Confirmed submit handled by CGEForm (422 errors, submitter value)
+
+```html
+<form action="{{ route('posts.update', $post) }}" method="POST" data-cge-form>
+    @csrf @method('PUT')
+    <input name="title" value="{{ $post->title }}">
+    <button name="intent" value="publish" data-cge-confirm="Publish now?">Publish</button>
+</form>
+```
+
+### Anchor that navigates vs. anchor that sends AJAX
+
+```html
+<a href="{{ route('billing.portal') }}" target="_blank" data-cge-confirm="Open the billing portal?">Billing</a>
+<a href="{{ route('users.destroy', $user) }}" data-cge-method="DELETE" data-cge-action="delete">Delete</a>
+```

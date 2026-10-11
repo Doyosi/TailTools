@@ -7,12 +7,18 @@
  * @package TailTools
  */
 
+import { laravelHeaders, resolveAxios, HttpError, parseBody, isSafeMethod } from '../shared/http.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
+
 export class CGESelect {
   /**
    * Static WeakMap registry mapping DOM elements to CGESelect instances.
    * @type {WeakMap<HTMLElement, CGESelect>}
    */
   static instances = new WeakMap();
+
+  /** Weak references used to enumerate instances for destroyAll()/init() pruning. @private */
+  static _refs = new Set();
 
   /**
    * Default configuration options.
@@ -28,7 +34,7 @@ export class CGESelect {
     maxTagsVisible: null,
     minSearchLength: 0,
     placement: 'auto', // 'auto' | 'bottom' | 'top'
-    asyncSource: null, // { url, driver: 'axios'|'fetch', method: 'GET', param: 'q', debounce: 300, transform: (data) => items }
+    asyncSource: null, // { url, driver: 'axios'|'fetch', method: 'GET', param: 'q', debounce: 300, headers: {}, iconHtml: false, transform: (data) => items }
     renderOption: null,
     renderTag: null,
     renderSelection: null,
@@ -37,6 +43,7 @@ export class CGESelect {
       trigger: 'cge-select-trigger flex items-center justify-between w-full min-h-[38px] px-3 py-1.5 text-xs rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer select-none',
       triggerActive: 'ring-1 ring-indigo-500 border-indigo-500 dark:border-indigo-500',
       triggerDisabled: 'opacity-50 cursor-not-allowed pointer-events-none bg-slate-50 dark:bg-slate-800/50',
+      triggerInvalid: 'cge-select-invalid border-rose-500 dark:border-rose-500',
       selectionContainer: 'cge-select-selection flex-1 flex flex-wrap items-center gap-1.5 overflow-hidden',
       placeholder: 'text-slate-400 dark:text-slate-500 select-none truncate',
       controls: 'cge-select-controls flex items-center gap-1.5 shrink-0 ml-2',
@@ -130,6 +137,7 @@ export class CGESelect {
 
     this._init();
     CGESelect.instances.set(this.element, this);
+    if (typeof WeakRef === 'function') CGESelect._refs.add(new WeakRef(this.element));
   }
 
   /**
@@ -229,6 +237,7 @@ export class CGESelect {
         disabled: opt.disabled || opt.parentElement?.disabled === true,
         image: opt.dataset.cgeImage || opt.dataset.image || null,
         icon: opt.dataset.cgeIcon || opt.dataset.icon || null,
+        iconHtml: true, // data-icon markup comes from the author's own Blade/HTML
         subtext: opt.dataset.cgeSubtext || opt.dataset.subtext || opt.dataset.cgeDescription || null,
         badge: opt.dataset.cgeBadge || opt.dataset.badge || null,
         optgroup: groupLabel,
@@ -415,12 +424,23 @@ export class CGESelect {
     this._onNativeChange = () => {
       if (!this._syncingNative && !this._destroyed) this.refresh();
     };
-    this._onFormReset = event => queueMicrotask(() => {
-      if (!event.defaultPrevented && !this._destroyed) this.refresh();
-    });
+    // Browsers reset controls after the reset event's listeners run; a task (not a microtask) sees the reset values.
+    this._onFormReset = event => {
+      clearTimeout(this._resetTimer);
+      this._resetTimer = setTimeout(() => {
+        if (!event.defaultPrevented && !this._destroyed) this.refresh();
+      }, 0);
+    };
     this._ownerForm = this.element.form;
     this.element.addEventListener('change', this._onNativeChange);
     this._ownerForm?.addEventListener('reset', this._onFormReset);
+
+    // Mirror validation state (CGEForm, Blade @error, custom scripts) onto the visible trigger.
+    this._syncInvalidState();
+    if (typeof MutationObserver === 'function') {
+      this._invalidObserver = new MutationObserver(() => this._syncInvalidState());
+      this._invalidObserver.observe(this.element, { attributes: true, attributeFilter: ['aria-invalid'] });
+    }
 
     // 1. Toggle Trigger Click
     this.trigger.addEventListener('click', (e) => {
@@ -607,11 +627,19 @@ export class CGESelect {
 
         let data = null;
 
-        // Driver 1: window.axios
-        if (cfg.driver === 'axios' && typeof window !== 'undefined' && window.axios) {
-          const res = await window.axios.request({
-            url: urlObj.toString(), method,
-            ...(method === 'POST' ? { data: { [paramName]: query } } : {}),
+        const hasBody = !isSafeMethod(method);
+        // Unsafe methods carry Laravel CSRF headers; asyncSource.headers win.
+        const headers = laravelHeaders(
+          { ...(hasBody ? { 'Content-Type': 'application/json' } : {}), ...(cfg.headers || {}) },
+          { form: this.element.form, csrf: hasBody }
+        );
+
+        // Driver 1: configured axiosInstance, then window.axios
+        const axiosLib = cfg.driver === 'axios' ? resolveAxios(cfg.axiosInstance) : null;
+        if (axiosLib) {
+          const res = await axiosLib.request({
+            url: urlObj.toString(), method, headers,
+            ...(hasBody ? { data: { [paramName]: query } } : {}),
             signal: controller.signal
           });
           data = res.data;
@@ -620,15 +648,12 @@ export class CGESelect {
           const res = await fetch(urlObj.toString(), {
             method,
             signal: controller.signal,
-            ...(method === 'POST' ? { body: JSON.stringify({ [paramName]: query }) } : {}),
-            headers: {
-              ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
-              Accept: 'application/json',
-              'X-Requested-With': 'XMLHttpRequest'
-            }
+            ...(hasBody ? { body: JSON.stringify({ [paramName]: query }) } : {}),
+            headers
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          data = await res.json();
+          const body = parseBody(await res.text(), res.headers?.get?.('content-type') || 'application/json');
+          if (!res.ok) throw new HttpError(res.status, res.statusText, body);
+          data = body;
         }
         if (this._destroyed || version !== this._searchVersion || controller.signal.aborted) return;
 
@@ -652,6 +677,8 @@ export class CGESelect {
           disabled: Boolean(raw.disabled),
           image: raw.image || raw.avatar || null,
           icon: raw.icon || null,
+          // Remote icons are text/class names unless the source explicitly trusts its HTML.
+          iconHtml: cfg.iconHtml === true,
           subtext: raw.subtext || raw.description || null,
           badge: raw.badge || null,
           optgroup: raw.optgroup || null,
@@ -774,10 +801,7 @@ export class CGESelect {
 
       // Icon
       if (item.icon) {
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'shrink-0 text-slate-500';
-        iconSpan.innerHTML = item.icon;
-        itemEl.appendChild(iconSpan);
+        itemEl.appendChild(this._renderIcon(item));
       }
 
       // Label
@@ -797,7 +821,7 @@ export class CGESelect {
       // Optional Badge
       if (item.badge) {
         const badge = document.createElement('span');
-        badge.className = 'px-1.5 py-0.2 rounded-sm bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-400';
+        badge.className = 'px-1.5 py-0.5 rounded-sm bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-400';
         badge.textContent = item.badge;
         itemEl.appendChild(badge);
       }
@@ -857,6 +881,41 @@ export class CGESelect {
       moreTag.textContent = this.options.translations['more-tags'].replace(':count', String(hiddenCount));
       container.appendChild(moreTag);
     }
+  }
+
+  /**
+   * Renders an option icon. Author markup (`data-icon` on <option>) and sources with
+   * `asyncSource.iconHtml: true` are HTML; remote icons are otherwise class names or text.
+   * @private
+   */
+  _renderIcon(item) {
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'shrink-0 text-slate-500';
+    const icon = String(item.icon);
+    if (item.iconHtml) {
+      iconSpan.innerHTML = icon;
+    } else if (/^[\w\s:/.[\]-]+$/.test(icon) && icon.trim()) {
+      const glyph = document.createElement('i');
+      glyph.className = icon;
+      glyph.setAttribute('aria-hidden', 'true');
+      iconSpan.appendChild(glyph);
+    } else {
+      iconSpan.textContent = icon;
+    }
+    return iconSpan;
+  }
+
+  /**
+   * Mirrors the native select's aria-invalid onto the visible trigger.
+   * @private
+   */
+  _syncInvalidState() {
+    if (!this.trigger || this._destroyed) return;
+    const invalid = this.element.getAttribute('aria-invalid') === 'true';
+    const classes = String(this.options.ui.triggerInvalid || '').split(/\s+/).filter(Boolean);
+    if (invalid) this.trigger.setAttribute('aria-invalid', 'true');
+    else this.trigger.removeAttribute('aria-invalid');
+    if (classes.length) this.trigger.classList[invalid ? 'add' : 'remove'](...classes);
   }
 
   /**
@@ -926,10 +985,7 @@ export class CGESelect {
         }
 
         if (item.icon) {
-          const iconSpan = document.createElement('span');
-          iconSpan.className = 'shrink-0 text-slate-500';
-          iconSpan.innerHTML = item.icon;
-          content.appendChild(iconSpan);
+          content.appendChild(this._renderIcon(item));
         }
 
         const textGroup = document.createElement('div');
@@ -1447,6 +1503,8 @@ export class CGESelect {
     ++this._searchVersion;
     clearTimeout(this._debounceTimer);
     clearTimeout(this._focusTimer);
+    clearTimeout(this._resetTimer);
+    this._invalidObserver?.disconnect();
     this.abortController?.abort();
     this.close();
 
@@ -1476,6 +1534,32 @@ export class CGESelect {
   // =========================================================================
   // Static Registry & Controller Methods
   // =========================================================================
+
+  /**
+   * Live element -> instance entries (the public registry is a WeakMap and cannot be iterated).
+   * @private
+   * @returns {Map<HTMLSelectElement, CGESelect>}
+   */
+  static _entries() {
+    const entries = new Map();
+    for (const ref of CGESelect._refs) {
+      const el = ref.deref();
+      const instance = el && CGESelect.instances.get(el);
+      if (instance) entries.set(el, instance);
+      else CGESelect._refs.delete(ref);
+    }
+    return entries;
+  }
+
+  /**
+   * Destroys instances whose select is inside root or no longer connected
+   * (Livewire morphing, Turbo visits, innerHTML swaps).
+   * @param {Document | Element} [root=document]
+   * @returns {CGESelect[]}
+   */
+  static destroyAll(root = document) {
+    return destroyInstances(CGESelect._entries(), root);
+  }
 
   /**
    * Retrieves an existing instance by DOM element or selector.
@@ -1510,6 +1594,7 @@ export class CGESelect {
   static init(selector = 'select[data-cge-select]', options = {}, root) {
     if (typeof document === 'undefined') return [];
     root = root || document;
+    pruneInstances(CGESelect._entries());
     const elements = Array.from(root.querySelectorAll(selector));
     if (root.matches?.(selector)) elements.unshift(root);
     return elements.map((el) => CGESelect.getOrCreate(el, options));

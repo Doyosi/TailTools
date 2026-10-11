@@ -88,3 +88,7 @@ Preserve existing public methods, CSS, Blade markup and exports. Verify programm
 
 ## 2026-10-04 ek bakım planı
 REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak uygulama: lifecycle/abort, ortak overlay sahipliği, erişilebilirlik, form verisi, paket/type doğrulaması ve belge tekilleştirme. Plugin özelindeki davranışlar regresyonlarla doğrulanacak.
+
+## Stability fixes (October 2026)
+
+Scope: shared HTTP helpers (`laravelHeaders`, `resolveAxios`, `wasRedirected`), per-key error feedback for shared parents, nested/array key mapping, visible invalid proxies (CGESelect trigger, `data-cge-error-target`), `aria-describedby` restoration, `event.submitter` spinner, frozen redirect delay, `followRedirects`, 419 `csrf-expired`, `destroyAll(root)` + init pruning, `beforeSubmit` mock-response typing.

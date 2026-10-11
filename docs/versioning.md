@@ -10,7 +10,7 @@
 - Fixed CGEToast repeated session flashes, persistent declarative durations and nested delegation.
 - Added request/API regressions, interactive browser checks and corrected consumer docs/skills.
 
-This records maintenance, not a published release. Local metadata is tailtools@0.0.0 with private:true; exports, strict declarations and ESM/UMD artifacts are validated locally. Public versioning, npm publication and CDN availability remain release decisions.
+These maintenance notes predate the first public release; see [CHANGELOG.md](../CHANGELOG.md) for published versions.
 
 - Completed the follow-up list: lifecycle cancellation, awaited Dropzone clear/avatar contract, Form/Action cancellation, Select ARIA/native synchronization, submitter handling, shared overlay ownership, Lightbox drivers and pending media.
 - Added type barrels, strict NodeNext/Bundler tests and library/archive/browser bundle checks.
@@ -58,16 +58,22 @@ While TailTools contains multiple `CGE` plugins (`plugins/CGETooltip`, `plugins/
 # 1. Ensure working directory is clean
 git status
 
-# 2. Run test suite & build
-npm run test
+# 2. Run test suite, build and archive checks
+npm test
 npm run build
+npm run test:package
+npm pack --dry-run   # review the file list
 
-# 3. Bump version (updates package.json and package-lock.json)
+# 3. Update CHANGELOG.md, then bump version (updates package.json/package-lock.json, commits and tags)
 npm version minor -m "Release v%s"
+git push --follow-tags
 
-# 4. Publish to npm registry
-npm publish --access public
+# 4. Publish to npm (prepack rebuilds dist/; publishConfig.access is public)
+npm login
+npm publish
 ```
+
+While the version is `0.x`, breaking changes bump the minor version (`0.1.0` → `0.2.0`) and fixes bump the patch version.
 
 ---
 

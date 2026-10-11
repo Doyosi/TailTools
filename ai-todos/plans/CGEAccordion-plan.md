@@ -163,3 +163,6 @@ Ultra-smooth, accessible accordion and collapsible panel plugin engineered for T
 Preserve public API, visual defaults and CSS Grid transitions. Verify programmatic and nested ownership, keyboard/hidden-panel access, initial/URL/storage state, duration and reduced motion, scoped init/get and DOM restoration. For Tabs verify AJAX cancellation/cache/retry and nested plugin lifecycle. Update declarations, four docs, consumer skill, browser/package checks and REPORTS.md.
 
 Completed 2026-10-05. Scoped fixes, docs/skills/types and 30 navigation regressions delivered. Validation: 27 Node / 116 Chrome, native mobile/desktop demo, NodeNext/Bundler, build, ESM/UMD and npm archive; see REPORTS.md.
+
+## Stability fixes (October 2026)
+Source: TailTools stability plan (Phase 5). `CGEAccordion.init` returns every instance under root; `destroyAll(root)` for Accordion and Collapse; `init` prunes detached instances and rebuilds Livewire-morphed ones; CGECollapse inside accordion bodies is initialized (only owned accordion triggers are skipped); `cge:collapse:*` dispatched once; nested interactive controls in triggers do not toggle; Alt/Ctrl/Meta keys ignored; reduced motion skips the `animation` class and smooth scrolling.

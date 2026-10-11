@@ -113,3 +113,7 @@ PUT/PATCH/DELETE forms use POST with `_method` across Axios, Fetch and XHR, incl
 All drivers send Laravel multipart PUT/PATCH/DELETE as POST plus _method. FormData is captured before freezing and includes the SubmitEvent submitter. Concurrent submissions are prevented. Destroy aborts Axios/Fetch/XHR, cancels redirect timers, restores frozen controls and suppresses late callbacks/events; delayed beforeSubmit cannot start a request afterward. Input/change listeners and plugin-added novalidate are restored on teardown.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+CGEForm now uses the shared Laravel HTTP helper (cookie tokens only as `X-XSRF-TOKEN`, 419 shows `csrf-expired`), prefers the configured `axiosInstance`, follows server `redirect()` responses (`followRedirects`, default `true`), creates one feedback element per error key (fields sharing a parent no longer overwrite each other), resolves `items.0.name` / `tags.1` keys, mirrors invalid styling to the CGESelect trigger or `data-cge-error-target`, restores author `aria-describedby`, puts the spinner on the clicked submitter, stays frozen during `redirectDelay`, and adds `CGEForm.destroyAll(root)`. See [usage](usage.md#stability-fixes-october-2026).

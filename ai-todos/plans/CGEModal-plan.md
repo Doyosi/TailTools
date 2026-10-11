@@ -144,3 +144,15 @@ REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak
 
 ## 2026-10-05 kompakt görsel bakım
 Kullanıcının talebi: daha şık, dengeli ve kompakt UI; kart/kontrol köşeleri rounded-sm. Mevcut API ve lifecycle korunacak. Toast: semantik ikon yüzeyi, küçük eylemler, responsive banner/uzun metin. Modal: isteğe bağlı surface/header/body/footer sınıfları, açık/koyu tema, demo ve Blade örnekleri. Dört belge ve skill eşitlenecek; 320/390/1024 px görsel kontrol, regresyon, type, build ve paket doğrulaması yapılacak.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases 1, 2 and 6.
+
+- Missing target throws a clear error; `resolveTarget()` accepts elements, selectors and bare IDs.
+- Full focus trap via shared `trapTab` (escaped focus, no focusables).
+- Shared overlay stack prunes detached entries (Livewire/Turbo) and restores the body lock; focus fallback excludes negative tabindex.
+- Reduced motion: instant open/close, shake only dispatches the event.
+- `destroyAll(root)`; `init(root)` prunes detached instances.
+- Shared: `plugins/shared/overlay.js` prunes disconnected overlays, supports a separate stacking layer and exports `trapTab`/`claimFreeKey`.
+- Tests: `tests/overlay-fixes.test.mjs` (Node) and `tests/stability-overlay-regressions.js` (browser).

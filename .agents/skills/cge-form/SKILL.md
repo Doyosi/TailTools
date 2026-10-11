@@ -162,3 +162,12 @@ PUT/PATCH/DELETE submissions use POST with `_method` across all drivers, includi
 All drivers send Laravel multipart PUT/PATCH/DELETE as POST plus _method. FormData is captured before freezing and includes the SubmitEvent submitter. Concurrent submissions are prevented. Destroy aborts Axios/Fetch/XHR, cancels redirect timers, restores frozen controls and suppresses late callbacks/events; delayed beforeSubmit cannot start a request afterward. Input/change listeners and plugin-added novalidate are restored on teardown.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEForm.d.ts](../../../../plugins/CGEForm/CGEForm.d.ts).
+
+## Stability fixes (October 2026)
+
+- CSRF comes from the shared helper: meta / `_token` / `window.csrfToken` as `X-CSRF-TOKEN`, otherwise the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN`. 419 shows the `csrf-expired` translation.
+- `axiosInstance` wins over `window.axios`. `followRedirects` (default true) navigates when a controller `redirect()` was followed by the transport; recommend JSON `{ redirect }` when flash data must survive.
+- Each error key gets its own feedback element; fields sharing a parent do not overwrite each other and typing clears only that key. `items.0.name` -> `items[0][name]`, `tags.1` -> `tags[]` (index 1).
+- Invalid classes/`aria-invalid` are mirrored to the CGESelect trigger or to `data-cge-error-target="selector"`. Author `aria-describedby` is restored.
+- The spinner goes on `event.submitter`; the form stays frozen during `redirectDelay`. `beforeSubmit` may return a mock response object.
+- Use `CGEForm.destroyAll(root)` for Livewire/Turbo teardown; `init()` prunes disconnected forms.

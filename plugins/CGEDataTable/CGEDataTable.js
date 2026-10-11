@@ -1,4 +1,6 @@
-import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection } from '../shared/collection.js';
+import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection,
+  readCollectionResponse, resolveParamNames } from '../shared/collection.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
 /**
  * CGEDataTable - Modular High-Performance Data Grid Engine
  * TailTools Plugin Library
@@ -18,6 +20,12 @@ import { CGEFilter } from './modules/CGEFilter.js';
 import { CGESort } from './modules/CGESort.js';
 import { CGEPagination } from './modules/CGEPagination.js';
 import { CGEResponsive } from './modules/CGEResponsive.js';
+
+export { escapeHTML };
+
+// Both collection plugins emit these synonyms so Table and Grid listeners are interchangeable
+// (fetch failures emit both 'error' and 'fetch-error').
+const EVENT_ALIASES = { rendered: 'render', 'selection:change': 'selection-change', destroy: 'destroyed' };
 
 export class CGEDataTable {
   /**
@@ -43,6 +51,12 @@ export class CGEDataTable {
     responsiveMode: 'collapse', // 'collapse' | 'scroll'
     autoBindActions: true, // Automatically bind CGEActionButton on render
     selectable: false, // Enable row selection checkboxes and bulk actions
+    locale: null, // Search/sort locale; defaults to <html lang>
+    allValue: -1, // per_page value sent for the "All" option
+    paramNames: {}, // { page, perPage, sort, direction, search, filters, cursor }
+    responseAdapter: null, // (response) => ({ rows, total, page, perPage, lastPage, hasMore })
+    axiosInstance: null, // Configured axios instance (falls back to window.axios)
+    responsiveBreakpoint: null, // CGEResponsive breakpoint (number or [phone, landscape, tablet])
     ui: {
       wrapper: 'cge-datatable-wrapper flex flex-col gap-3 font-sans text-slate-900 dark:text-slate-100',
       headerWrapper: 'cge-datatable-header flex flex-col sm:flex-row items-center justify-between gap-3',
@@ -194,6 +208,8 @@ export class CGEDataTable {
     if (el.hasAttribute('data-cge-per-page')) attrOpts.perPage = el.getAttribute('data-cge-per-page');
     if (el.hasAttribute('data-cge-responsive')) attrOpts.responsiveMode = el.getAttribute('data-cge-responsive');
     if (el.hasAttribute('data-cge-selectable')) attrOpts.selectable = el.getAttribute('data-cge-selectable') !== 'false';
+    if (el.hasAttribute('data-cge-locale')) attrOpts.locale = el.getAttribute('data-cge-locale');
+    if (el.hasAttribute('data-cge-all-value')) attrOpts.allValue = el.getAttribute('data-cge-all-value');
 
     return {
       ...CGEDataTable.defaults,
@@ -301,7 +317,7 @@ export class CGEDataTable {
       const perPageWrapper = document.createElement('div');
       perPageWrapper.className = this.options.ui.perPageWrapper;
       const selectHtml = this.options.perPageOptions
-        .map(opt => `<option value="${opt}" ${String(opt) === String(this.options.perPage) ? 'selected' : ''}>${opt === 'All' ? this.t('all') : opt}</option>`)
+        .map(opt => `<option value="${escapeHTML(opt)}" ${String(opt) === String(this.options.perPage) ? 'selected' : ''}>${escapeHTML(opt === 'All' ? this.t('all') : opt)}</option>`)
         .join('');
       perPageWrapper.innerHTML = `
         <label class="flex items-center gap-1.5 cursor-pointer">
@@ -376,9 +392,13 @@ export class CGEDataTable {
    */
   _initSubModules() {
     // 1. CGEFilter
+    const names = resolveParamNames(this.options.paramNames);
     const searchInput = this.headerBar?.querySelector('[data-cge-filter-input]');
     this.filter = new CGEFilter({
       input: searchInput,
+      locale: this.options.locale,
+      searchParam: names.search,
+      filtersParam: names.filters,
       onChange: () => this._onFilterChange(),
     });
     this.filter.table = this;
@@ -395,6 +415,9 @@ export class CGEDataTable {
 
     // 2. CGESort
     this.sort = new CGESort({
+      locale: this.options.locale,
+      sortByParam: names.sort,
+      sortDirParam: names.direction,
       onChange: () => this._onSortChange(),
     });
     this.sort.table = this;
@@ -406,6 +429,10 @@ export class CGEDataTable {
       perPage: this.options.perPage,
       total: 0,
       perPageOptions: this.options.perPageOptions,
+      allValue: this.options.allValue,
+      pageParam: names.page,
+      perPageParam: names.perPage,
+      cursorParam: names.cursor,
       translations: this.options.translations,
       onChange: () => this._onPaginationChange(),
     });
@@ -425,6 +452,7 @@ export class CGEDataTable {
       table: this.tableElement,
       container: this.tableContainer,
       collapseDetailsText: this.t('collapse-details'),
+      ...(this.options.responsiveBreakpoint ? { breakpoint: this.options.responsiveBreakpoint } : {}),
     });
     this.responsive.table = this;
   }
@@ -471,9 +499,10 @@ export class CGEDataTable {
         key: c.key || `col_${idx}`,
         label: c.label || c.key || `Column ${idx + 1}`,
         sortable: c.sortable !== false,
-        type: c.type || 'string',
+        type: c.type || 'auto',
         priority: c.priority !== undefined ? c.priority : (idx === 0 ? 1 : 2),
         formatter: c.formatter || null,
+        html: c.html === true,
         align: c.align || 'left',
         visible: c.visible !== false,
       }));
@@ -501,8 +530,9 @@ export class CGEDataTable {
         const key = th.getAttribute('data-cge-key') || `col_${idx}`;
         const label = th.innerText.trim() || key;
         const sortable = key !== '_select' && th.getAttribute('data-cge-sortable') !== 'false';
-        const type = th.getAttribute('data-cge-type') || 'string';
+        const type = th.getAttribute('data-cge-type') || 'auto';
         const prioAttr = th.getAttribute('data-cge-priority');
+        const html = th.hasAttribute('data-cge-html') && th.getAttribute('data-cge-html') !== 'false';
         const priority = prioAttr ? parseInt(prioAttr, 10) : (idx === 0 ? 1 : 2);
 
         // Apply attributes to th
@@ -511,7 +541,7 @@ export class CGEDataTable {
         th.setAttribute('data-cge-type', type);
         th.setAttribute('data-cge-sortable', String(sortable));
 
-        return { key, label, sortable, type, priority, visible: true };
+        return { key, label, sortable, type, priority, html, visible: true };
       });
 
       if (this.options.selectable && !this.columns.some(c => c.key === '_select')) {
@@ -553,7 +583,7 @@ export class CGEDataTable {
       th.className = this.options.ui.th;
       th.setAttribute('data-cge-key', col.key);
       th.setAttribute('data-cge-priority', String(col.priority || 2));
-      th.setAttribute('data-cge-type', col.type || 'string');
+      th.setAttribute('data-cge-type', col.type || 'auto');
       th.setAttribute('data-cge-sortable', String(col.sortable));
 
       if (col.key === '_select') {
@@ -573,10 +603,10 @@ export class CGEDataTable {
    * Ingests existing DOM table rows from tbody.
    * @private
    */
-  _ingestFromDOM() {
+  _ingestFromDOM(page = null) {
     const trs = Array.from(this.tbody.querySelectorAll('tr:not(.cge-child-row)'));
     this.rawRows = trs.map((tr, rowIdx) => {
-      const rowId = tr.getAttribute('data-cge-id') || tr.id || `row_${rowIdx}`;
+      const rowId = tr.getAttribute('data-cge-id') || tr.id || this._fallbackId('row', rowIdx, page);
       const rowData = {
         _id: rowId,
         _element: tr,
@@ -644,7 +674,8 @@ export class CGEDataTable {
     }
 
     // 1. Filtering stage
-    this.filteredRows = this.filter ? this.filter.filterRows(this.rawRows, this.columns) : [...this.rawRows];
+    // HTML columns hold markup (action buttons), not searchable text.
+    this.filteredRows = this.filter ? this.filter.filterRows(this.rawRows, this.columns.filter(c => !c.html)) : [...this.rawRows];
 
     // 2. Sorting stage
     this.sortedRows = this.sort ? this.sort.sortRows(this.filteredRows, this.columns) : [...this.filteredRows];
@@ -692,6 +723,7 @@ export class CGEDataTable {
     } catch (error) {
       if (!this._destroyed && requestId === this._requestId && !controller.signal.aborted) {
         this._emit('error', { error });
+        this._emit('fetch-error', { error });
         throw error;
       }
     } finally {
@@ -701,33 +733,57 @@ export class CGEDataTable {
     }
   }
 
-  /** Accepts Laravel JSON and trusted Blade rows. */
-
+  /**
+   * Accepts Laravel JSON (paginate, API Resource meta, simplePaginate, cursorPaginate,
+   * plain arrays or responseAdapter output) and trusted Blade rows ({ full } / { html }).
+   * @private
+   */
   _handleServerResponse(res) {
     ++this._dataVersion;
-    const html = typeof res === 'string' ? res : typeof res?.full === 'string' ? res.full
-      : res?.html && typeof res.html === 'object' ? Object.values(res.html).join('') : null;
-    if (html !== null) {
-      this.tbody.innerHTML = html;
-      this._ingestFromDOM();
+    const result = readCollectionResponse(res, this.options.responseAdapter);
+    const page = this.options.serverSide ? (result.page ?? this.pagination.page) : null;
+    if (result.html !== null) {
+      this.tbody.innerHTML = result.html;
+      this._ingestFromDOM(page);
     } else {
-      const data = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-      this.rawRows = this._normalizeRows(data);
+      this.rawRows = this._normalizeRows(result.rows, page);
     }
     if (this.options.serverSide) {
       this.pagedRows = this.rawRows;
-      this.pagination.setMetrics({ total: res?.total ?? this.rawRows.length,
-        page: res?.current_page ?? res?.page ?? this.pagination.page,
-        perPage: res?.per_page ?? res?.perPage ?? this.pagination.perPage });
+      this.pagination.setMetrics({
+        mode: result.mode,
+        total: result.mode ? result.total : (result.total ?? this.rawRows.length),
+        page: result.page ?? this.pagination.page,
+        perPage: result.perPage ?? this.pagination.perPage,
+        lastPage: result.lastPage,
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+        prevCursor: result.prevCursor,
+        count: this.rawRows.length,
+      });
       this._renderRows(this.pagedRows);
       this._finalizeRender();
     } else this.refresh();
   }
 
-  _normalizeRows(data) {
+  _normalizeRows(data, page = null) {
     return data.map((item, idx) => typeof item === 'object' && item !== null
-      ? { ...item, _id: item._id ?? item.id ?? `item_${idx}` }
-      : { _id: `item_${idx}`, value: item });
+      ? { ...item, _id: item._id ?? item.id ?? this._fallbackId('item', idx, page) }
+      : { _id: this._fallbackId('item', idx, page), value: item });
+  }
+
+  /**
+   * Fallback row ID for records without id/data-cge-id. Server pages are prefixed with the
+   * page number so a selection on page 1 never matches the same position on page 2.
+   * @private
+   */
+  _fallbackId(prefix, index, page) {
+    if (!this.options.serverSide || page === null || page === undefined) return `${prefix}_${index}`;
+    if (!this._warnedFallbackIds) {
+      this._warnedFallbackIds = true;
+      console.warn('[CGEDataTable] Server rows without an id use page-scoped fallback IDs; add an "id" field or data-cge-id for stable selection.');
+    }
+    return `p${page}_${prefix}_${index}`;
   }
 
   /** Finalizes controls, responsive state and delegated actions. */
@@ -802,17 +858,20 @@ export class CGEDataTable {
           return;
         }
 
-        let cellContent = row[col.key] !== undefined ? row[col.key] : '';
+        const value = row[col.key] !== undefined && row[col.key] !== null ? row[col.key] : '';
 
-        // Run custom formatter if defined
+        // Formatter output is trusted developer HTML (or a Node); raw values are always text.
         if (typeof col.formatter === 'function') {
-          cellContent = col.formatter(cellContent, row, colIdx);
-        }
-
-        if (cellContent instanceof HTMLElement) {
-          td.appendChild(cellContent);
+          const formatted = col.formatter(value, row, colIdx);
+          if (formatted instanceof Node) td.appendChild(formatted);
+          else td.innerHTML = String(formatted ?? '');
+        } else if (value instanceof Node) {
+          td.appendChild(value);
+        } else if (col.html) {
+          // Explicit opt-in for server-rendered markup (e.g. Blade action buttons).
+          td.innerHTML = String(value);
         } else {
-          td.innerHTML = String(cellContent);
+          td.textContent = String(value);
         }
 
         tr.appendChild(td);
@@ -831,6 +890,7 @@ export class CGEDataTable {
     if (this.infoEl) {
       this.infoEl.textContent = this.pagination.getMetricsString();
     }
+    this._syncPerPageSelect();
 
     if (!this.paginationControls) return;
 
@@ -849,7 +909,7 @@ export class CGEDataTable {
             <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd"/></svg>
           </button>
           <span class="inline-flex items-center justify-center px-2.5 h-7 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 select-none">
-            ${currPage} / ${lastPage}
+            ${this.pagination.totalKnown ? `${currPage} / ${lastPage}` : currPage}
           </span>
           <button type="button" class="${this.options.ui.pageButton} px-2 h-7 ${nextDisabled}" data-cge-page-action="next" ${currPage >= lastPage ? 'disabled' : ''} aria-label="${this.t('next')}">
             <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/></svg>
@@ -890,7 +950,7 @@ export class CGEDataTable {
       </button>
     `;
 
-    if (lastPage > 5) {
+    if (lastPage > 5 && this.pagination.mode !== 'cursor') {
       desktopHtml += `
         <div class="${this.options.ui.jumpWrapper}">
           <span class="text-slate-400 text-[11px]">${this.t('go-to-page')}:</span>
@@ -940,6 +1000,20 @@ export class CGEDataTable {
   }
 
   /**
+   * Shows the active limit in the per-page select (All stays selected when the server
+   * answers with per_page = total); unknown server values leave the selection untouched.
+   * @private
+   */
+  _syncPerPageSelect() {
+    const select = this.headerBar?.querySelector('[data-cge-per-page-select]');
+    if (!select) return;
+    const perPage = this.pagination.perPage;
+    const wanted = perPage > 0 ? [String(perPage)] : ['All', 'all', String(this.options.allValue)];
+    const option = Array.from(select.options).find(item => wanted.includes(item.value));
+    if (option && select.value !== option.value) select.value = option.value;
+  }
+
+  /**
    * Automatically initializes CGEActionButton on newly injected row elements.
    * @private
    */
@@ -960,7 +1034,7 @@ export class CGEDataTable {
    * @private
    */
   _onFilterChange() {
-    this.pagination.page = 1; // Reset to page 1 on filter
+    this.pagination.resetPage(); // Reset to page 1 (and drop any cursor) on filter
     this.refresh();
     this._emit('filter', { query: this.filter.globalQuery, columns: this.filter.columnFilters });
   }
@@ -970,6 +1044,7 @@ export class CGEDataTable {
    * @private
    */
   _onSortChange() {
+    if (this.pagination.mode === 'cursor') this.pagination.resetPage();
     this.refresh();
     this._emit('sort', { rules: this.sort.rules });
   }
@@ -1054,7 +1129,12 @@ export class CGEDataTable {
   _emit(eventName, detail = {}) {
     if (this._destroyed && eventName !== 'destroy') return;
     const fullDetail = { ...detail, instance: this };
+    this._dispatch(eventName, fullDetail);
+    if (EVENT_ALIASES[eventName]) this._dispatch(EVENT_ALIASES[eventName], fullDetail);
+  }
 
+  /** @private */
+  _dispatch(eventName, fullDetail) {
     // 1. Instance callbacks
     if (this._listeners.has(eventName)) {
       for (const fn of this._listeners.get(eventName)) {
@@ -1400,7 +1480,8 @@ export class CGEDataTable {
   _refreshAfterRemoval(count) {
     if (this.options.serverSide && this.options.source === 'ajax') {
       this.pagedRows = this.rawRows;
-      this.pagination.setMetrics({ total: Math.max(0, this.pagination.total - count) });
+      if (this.pagination.totalKnown) this.pagination.setMetrics({ total: Math.max(0, this.pagination.total - count), lastPage: null });
+      else this.pagination.setMetrics({ count: this.rawRows.length });
       this._renderRows(this.pagedRows); this._finalizeRender();
     } else this.refresh();
   }
@@ -1439,6 +1520,7 @@ export class CGEDataTable {
    * @returns {CGEDataTable[]}
    */
   static init(root = document) {
+    pruneInstances(CGEDataTable.instances);
     const selector = '[data-cge-datatable]';
     const elements = root.querySelectorAll ? Array.from(root.querySelectorAll(selector)) : [];
     if (root.matches && root.matches(selector)) {
@@ -1446,6 +1528,15 @@ export class CGEDataTable {
     }
 
     return elements.map(el => CGEDataTable.getOrCreateInstance(el));
+  }
+
+  /**
+   * Destroys instances whose table is inside root or already detached (Livewire/Turbo teardown).
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {CGEDataTable[]} Destroyed instances
+   */
+  static destroyAll(root = document) {
+    return [...new Set(destroyInstances(CGEDataTable.instances, root))];
   }
 
   /**

@@ -19,10 +19,11 @@
   transition: opacity 150ms ease-in-out;
 }
 
-/* Base button sizing preservation */
-[data-cge-action],
-[data-cge-confirm] {
-  transition: opacity 150ms ease-in-out, background-color 150ms ease-in-out;
+/* Base transition: layered and zero-specificity so Tailwind `transition-*` utilities win */
+@layer components {
+  :where([data-cge-action], [data-cge-confirm]) {
+    transition: opacity 150ms ease-in-out, background-color 150ms ease-in-out;
+  }
 }
 
 /* Smooth Rotation Animation for Loading Spinners */

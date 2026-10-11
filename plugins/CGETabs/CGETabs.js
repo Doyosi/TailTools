@@ -9,8 +9,14 @@
  * @package TailTools
  */
 
-import { captureAttributes, ownsNode, readHash, registeredInstance } from '../shared/navigation.js';
-import { escapeHTML } from '../shared/collection.js';
+import {
+  captureAttributes, ownsNode, registeredInstance, parseHashState, updateHashState,
+  hasCommandModifier, isRtl, panelHtmlFromResponse
+} from '../shared/navigation.js';
+import { escapeHTML, setContent, prefersReducedMotion, destroyInstances, pruneInstances } from '../shared/dom.js';
+import { laravelHeaders, resolveAxios, isSafeMethod, HttpError, parseBody } from '../shared/http.js';
+
+const OWNED_TAB = '[data-cge-tabs]';
 
 export class CGETabs {
   /**
@@ -20,10 +26,21 @@ export class CGETabs {
   static instances = new Map();
 
   /**
+   * Initializer used for nested plugins inside freshly loaded AJAX panels.
+   * Set by `tailtools/auto` (or the application) through setPanelInitializer().
+   * @type {((panel: HTMLElement, tabId: string, instance: CGETabs) => void) | null}
+   */
+  static _panelInitializer = null;
+
+  /** Counterpart of _panelInitializer called before panel content is replaced. */
+  static _panelDestroyer = null;
+
+  /**
    * Default configuration options.
    */
   static defaults = {
     urlSync: 'hash', // 'hash' | 'query' | false
+    hashKey: null, // string | null: key of this group in the namespaced hash (#<hashKey>=<tabId>), defaults to element id
     queryParamKey: 'tab', // Query parameter name when urlSync is 'query'
     historyMode: 'replace', // 'replace' | 'push'
     storage: false, // 'localStorage' | 'sessionStorage' | false
@@ -35,6 +52,10 @@ export class CGETabs {
     ajaxDriver: 'auto', // 'auto' | 'axios' | 'fetch'
     ajaxHeaders: {}, // Record<string, string>
     ajaxTabs: {}, // Record<string, string | { url: string, method?: string, driver?: string }>
+    axiosInstance: null, // configured axios instance (wins over window.axios)
+    sanitize: null, // (html, tabId) => string | Node: applied to every AJAX response before injection
+    initPanel: null, // (panelEl, tabId, instance) => void: initializes nested plugins in loaded panels
+    destroyPanel: null, // (panelEl, instance) => void: tears nested plugins down before content is replaced
     manual: false, // boolean: if true, arrows move focus and Enter/Space activates; if false, arrows activate immediately
     transition: true, // boolean (enables animated panel visibility transition)
     animationIn: 'animate-fade-in', // CSS animation/transition class for active panel entry
@@ -85,6 +106,8 @@ export class CGETabs {
 
     this._restorers = [captureAttributes(element)];
     this._originalContent = new Map();
+    this._userOptions = options;
+    this._disabledStyled = new Map();
     this.element = element;
     this.id = element.id || `cge-tabs-${++CGETabs._counter}`;
     if (!element.id) {
@@ -92,6 +115,7 @@ export class CGETabs {
     }
 
     this.options = this._resolveOptions(options);
+    this._hashKey = String(this.options.hashKey || this.id);
 
     // State
     this.activeTabId = null;
@@ -123,11 +147,15 @@ export class CGETabs {
       CGETabs.instances.set(this.element.id, this);
     }
 
-    // Determine and activate initial tab
-    const initialTabId = this._resolveInitialTab();
+    // Determine and activate initial tab; Back without URL state returns to the non-URL initial tab.
+    this._initialTabId = this._resolveInitialTab({ url: false });
+    const urlTabId = this._urlTab();
+    const initialTabId = urlTabId || this._nestedUrlTab() || this._initialTabId;
     if (initialTabId) {
       this.show(initialTabId, { focus: false, updateHistory: false });
     }
+    if (urlTabId) this._revealInParents();
+    this.element.setAttribute('data-cge-tabs-ready', 'true');
   }
 
   // =========================================================================
@@ -137,10 +165,31 @@ export class CGETabs {
   /**
    * Retrieves an existing CGETabs instance by DOM element or ID.
    * @param {string | HTMLElement} elementOrId
-   * @returns {CGETabs | undefined}
+   * @returns {CGETabs | null}
    */
   static get(elementOrId) {
-    return registeredInstance(CGETabs.instances, elementOrId) || undefined;
+    return registeredInstance(CGETabs.instances, elementOrId) || null;
+  }
+
+  /**
+   * Destroys every instance whose element is inside root or no longer connected
+   * (Livewire morph / wire:navigate, Turbo visits, innerHTML swaps).
+   * @param {HTMLElement | Document} [root=document]
+   * @returns {CGETabs[]}
+   */
+  static destroyAll(root = document) {
+    return [...new Set(destroyInstances(CGETabs.instances, root, (key, instance) => instance.element))];
+  }
+
+  /**
+   * Registers the initializer used for nested plugins inside loaded AJAX panels.
+   * `tailtools/auto` registers initTailTools automatically; ESM users can pass their own.
+   * @param {((panel: HTMLElement, tabId: string, instance: CGETabs) => void) | null} initializer
+   * @param {((panel: HTMLElement, instance: CGETabs) => void) | null} [destroyer=null]
+   */
+  static setPanelInitializer(initializer, destroyer = null) {
+    CGETabs._panelInitializer = typeof initializer === 'function' ? initializer : null;
+    CGETabs._panelDestroyer = typeof destroyer === 'function' ? destroyer : null;
   }
 
   /**
@@ -170,12 +219,37 @@ export class CGETabs {
       elements.unshift(queryRoot);
     }
 
+    // Drop instances whose markup was removed, then rebuild ones whose attributes were morphed away.
+    pruneInstances(CGETabs.instances, (key, instance) => instance.element);
     return elements.map(el => {
-      if (CGETabs.instances.has(el)) {
-        return CGETabs.instances.get(el);
-      }
-      return new CGETabs(el, config);
+      const existing = CGETabs.instances.get(el);
+      if (existing && !existing._isStale()) return existing;
+      if (existing) existing._discard();
+      return new CGETabs(el, existing ? { ...existing._userOptions, ...config } : config);
     });
+  }
+
+  /**
+   * True when server-side morphing (e.g. Livewire) stripped plugin attributes or replaced owned nodes.
+   * @private
+   */
+  _isStale() {
+    if (this._destroyed || !this.element.isConnected || this.element.getAttribute('data-cge-tabs-ready') !== 'true') return true;
+    if (this.tabs.some(tab => !this.element.contains(tab.trigger) || tab.trigger.getAttribute('role') !== 'tab' ||
+      (tab.panel && !this.element.contains(tab.panel)))) return true;
+    const owns = node => ownsNode(this.element, node, OWNED_TAB, CGETabs.instances);
+    const ids = new Set(Array.from(this.element.querySelectorAll('[data-cge-tab]')).filter(owns)
+      .map(trigger => trigger.getAttribute('data-cge-tab')).filter(Boolean));
+    return ids.size !== this.tabs.length || this.tabs.some(tab => !ids.has(tab.id));
+  }
+
+  /**
+   * Tears down listeners without restoring attributes the server has already replaced.
+   * @private
+   */
+  _discard() {
+    this._skipRestore = true;
+    this.destroy();
   }
 
   // =========================================================================
@@ -202,6 +276,7 @@ export class CGETabs {
     if (ds.cgeUrlSync !== undefined) {
       dataAttrOptions.urlSync = ds.cgeUrlSync === 'false' ? false : ds.cgeUrlSync;
     }
+    if (ds.cgeHashKey) dataAttrOptions.hashKey = ds.cgeHashKey;
     if (ds.cgeQueryParamKey) dataAttrOptions.queryParamKey = ds.cgeQueryParamKey;
     if (ds.cgeHistoryMode) dataAttrOptions.historyMode = ds.cgeHistoryMode;
     if (ds.cgeStorage !== undefined) {
@@ -251,7 +326,7 @@ export class CGETabs {
    * @private
    */
   _discoverDOM() {
-    const owns = node => ownsNode(this.element, node, '[data-cge-tabs]', CGETabs.instances);
+    const owns = node => ownsNode(this.element, node, OWNED_TAB, CGETabs.instances);
     // Locate or identify tablist
     this.tabList = Array.from(this.element.querySelectorAll('[role="tablist"], [data-cge-tablist]')).find(owns) ||
                    this.element.firstElementChild;
@@ -423,10 +498,12 @@ export class CGETabs {
    * @private
    */
   _handleKeydown(e) {
-    if (this._destroyed) return;
+    if (this._destroyed || hasCommandModifier(e)) return;
     const isVertical = this.options.orientation === 'vertical';
-    const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight';
-    const prevKey = isVertical ? 'ArrowUp' : 'ArrowLeft';
+    // Right-to-left layouts mirror the horizontal arrow keys.
+    const rtl = !isVertical && isRtl(this.tabList || this.element);
+    const nextKey = isVertical ? 'ArrowDown' : (rtl ? 'ArrowLeft' : 'ArrowRight');
+    const prevKey = isVertical ? 'ArrowUp' : (rtl ? 'ArrowRight' : 'ArrowLeft');
 
     const activeEl = document.activeElement;
     const isTriggerFocused = this.tabs.some(tab => tab.trigger === activeEl);
@@ -500,9 +577,76 @@ export class CGETabs {
    * @private
    */
   _handleLocationChange() {
-    const urlTabId = this._readUrlState();
-    if (urlTabId && urlTabId !== this.activeTabId && this.getTab(urlTabId)) {
-      this.show(urlTabId, { focus: false, updateHistory: false });
+    if (this._destroyed) return;
+    const urlTabId = this._urlTab();
+    if (urlTabId) {
+      if (urlTabId !== this.activeTabId) this.show(urlTabId, { focus: false, updateHistory: false });
+      this._revealInParents();
+      return;
+    }
+    const nestedTabId = this._nestedUrlTab();
+    if (nestedTabId) {
+      if (nestedTabId !== this.activeTabId) this.show(nestedTabId, { focus: false, updateHistory: false });
+      return;
+    }
+    // Back/Forward to an entry without this group's state returns to the initial tab.
+    if (this.options.historyMode === 'push') {
+      const fallback = this._initialTabId && !this._isTabDisabled(this._initialTabId)
+        ? this._initialTabId
+        : this.tabs.find(tab => !this._isTabDisabled(tab.id))?.id;
+      if (fallback && fallback !== this.activeTabId) this.show(fallback, { focus: false, updateHistory: false });
+    }
+  }
+
+  /**
+   * Valid, enabled tab requested by the current URL for this group.
+   * @private
+   * @returns {string | null}
+   */
+  _urlTab() {
+    const urlTab = this._readUrlState();
+    return urlTab && this.getTab(urlTab) && !this._isTabDisabled(urlTab) ? urlTab : null;
+  }
+
+  /**
+   * Own tab whose panel contains a nested tab group (or tab) deep-linked by the hash.
+   * Lets the outer group open the right panel even when it initializes first.
+   * @private
+   * @returns {string | null}
+   */
+  _nestedUrlTab() {
+    if (this.options.urlSync !== 'hash' || typeof window === 'undefined') return null;
+    const { entries, plain } = parseHashState(window.location.hash);
+    const targets = [];
+    const registered = [...new Set(CGETabs.instances.values())];
+    for (const key of entries.keys()) {
+      if (key === this._hashKey) continue;
+      const owner = registered.find(instance => instance !== this && instance._hashKey === key);
+      const target = owner?.element || document.getElementById(key) ||
+        Array.from(document.querySelectorAll('[data-cge-hash-key]')).find(node => node.getAttribute('data-cge-hash-key') === key);
+      if (target) targets.push(target);
+    }
+    if (plain) {
+      targets.push(...Array.from(this.element.querySelectorAll('[data-cge-tab]')).filter(node => node.getAttribute('data-cge-tab') === plain));
+    }
+    if (!targets.length) return null;
+    const tab = this.tabs.find(item => item.panel && !this._isTabDisabled(item.id) &&
+      targets.some(target => target !== item.panel && item.panel.contains(target)));
+    return tab ? tab.id : null;
+  }
+
+  /**
+   * Activates the parent tab panels that contain this group (deep link into nested tabs).
+   * Parents with their own URL state keep it.
+   * @private
+   */
+  _revealInParents() {
+    const owners = [...new Set(CGETabs.instances.values())];
+    for (let panel = this.element.parentElement?.closest('[data-cge-panel]'); panel; panel = panel.parentElement?.closest('[data-cge-panel]')) {
+      const owner = owners.find(instance => instance !== this && !instance._destroyed && instance.tabs.some(tab => tab.panel === panel));
+      if (!owner || owner._urlTab()) continue;
+      const tab = owner.tabs.find(item => item.panel === panel);
+      if (tab && owner.activeTabId !== tab.id) owner.show(tab.id, { focus: false, updateHistory: false });
     }
   }
 
@@ -515,10 +659,10 @@ export class CGETabs {
    * @private
    * @returns {string | null}
    */
-  _resolveInitialTab() {
+  _resolveInitialTab({ url = true } = {}) {
     // 1. URL state (hash or query)
-    const urlTab = this._readUrlState();
-    if (urlTab && this.getTab(urlTab) && !this._isTabDisabled(urlTab)) {
+    const urlTab = url ? this._urlTab() : null;
+    if (urlTab) {
       return urlTab;
     }
 
@@ -564,8 +708,10 @@ export class CGETabs {
     if (typeof window === 'undefined') return null;
 
     if (this.options.urlSync === 'hash') {
-      const hash = readHash();
-      return hash || null;
+      // Namespaced "#group=tab&other=tab" wins; a legacy plain "#tab" still matches own tabs.
+      const { entries, plain } = parseHashState(window.location.hash);
+      if (entries.has(this._hashKey)) return entries.get(this._hashKey) || null;
+      return plain && this.getTab(plain) ? plain : null;
     }
 
     if (this.options.urlSync === 'query') {
@@ -587,7 +733,8 @@ export class CGETabs {
 
     // Synchronize to URL
     if (this.options.urlSync === 'hash') {
-      const targetHash = `#${encodeURIComponent(tabId)}`;
+      // Only this group's entry changes, so sibling and nested groups keep their state.
+      const targetHash = updateHashState(window.location.hash, this._hashKey, tabId);
       if (window.location.hash !== targetHash) {
         const method = this.options.historyMode === 'push' ? 'pushState' : 'replaceState';
         try {
@@ -695,10 +842,7 @@ export class CGETabs {
         this._applyClasses(t.trigger, this.options.ui.inactiveTab, this.options.ui.activeTab);
       }
 
-      if (isDisabled && this.options.ui.disabledTab) {
-        const disabledClasses = this.options.ui.disabledTab.split(/\s+/).filter(Boolean);
-        t.trigger.classList.add(...disabledClasses);
-      }
+      this._syncDisabledClasses(t.trigger, isDisabled);
     });
 
     // 2. Update panels
@@ -711,7 +855,7 @@ export class CGETabs {
         this._applyClasses(t.panel, this.options.ui.activePanel, this.options.ui.panel);
 
         // Apply transition animation if enabled
-        if (this.options.transition && this.options.animationIn) {
+        if (this.options.transition && this.options.animationIn && !prefersReducedMotion()) {
           const animClasses = this.options.animationIn.split(/\s+/).filter(Boolean);
           t.panel.classList.remove(...animClasses);
           // Reflow to restart CSS animation
@@ -759,6 +903,24 @@ export class CGETabs {
     }
 
     return true;
+  }
+
+  /**
+   * Adds disabled classes to disabled triggers and removes only the classes the plugin added
+   * once a trigger is enabled again.
+   * @private
+   */
+  _syncDisabledClasses(trigger, isDisabled) {
+    if (isDisabled && !this._disabledStyled.has(trigger)) {
+      const classes = (this.options.ui.disabledTab || '').split(/\s+/).filter(Boolean);
+      const added = classes.filter(name => !trigger.classList.contains(name));
+      if (added.length) trigger.classList.add(...added);
+      this._disabledStyled.set(trigger, added);
+    } else if (!isDisabled && this._disabledStyled.has(trigger)) {
+      const added = this._disabledStyled.get(trigger);
+      if (added.length) trigger.classList.remove(...added);
+      this._disabledStyled.delete(trigger);
+    }
   }
 
   /**
@@ -949,45 +1111,14 @@ export class CGETabs {
     if (this._destroyed || controller.signal.aborted) return;
 
     try {
-      let html = '';
-      const headers = {
-        'Accept': 'text/html, application/json, */*',
-        'X-Requested-With': 'XMLHttpRequest',
-        ...this.options.ajaxHeaders
-      };
-
-      if (driver === 'axios' || (driver === 'auto' && typeof window !== 'undefined' && window.axios)) {
-        if (!window.axios?.request) {
-          throw new Error('[CGETabs] Axios driver requested but window.axios.request is not available');
-        }
-        const res = await window.axios.request({
-          url,
-          method,
-          headers,
-          signal: controller.signal
-        });
-        html = typeof res.data === 'string' ? res.data : (res.data?.html || JSON.stringify(res.data));
-      } else {
-        const res = await fetch(url, {
-          method,
-          headers,
-          signal: controller.signal
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
-        }
-        const text = await res.text();
-        try {
-          const json = JSON.parse(text);
-          html = json.html || text;
-        } catch {
-          html = text;
-        }
-      }
-
+      const html = await this._requestPanel(url, method, driver, controller.signal);
       if (this._destroyed || controller.signal.aborted || this._abortControllers.get(tabId) !== controller) return;
 
-      panelEl.innerHTML = html;
+      // Optional sanitizer (e.g. DOMPurify) runs on every response before it reaches the DOM.
+      const content = typeof this.options.sanitize === 'function' ? this.options.sanitize(html, tabId) : html;
+      if (this._destroyed || controller.signal.aborted || this._abortControllers.get(tabId) !== controller) return;
+      setContent(panelEl, content ?? '', true);
+      const response = typeof content === 'string' ? content : panelEl.innerHTML;
       panelEl.setAttribute('data-cge-ajax-loaded', 'true');
       this._ajaxLoaded.add(tabId);
       panelEl.removeAttribute('aria-busy');
@@ -997,9 +1128,9 @@ export class CGETabs {
       if (this._destroyed || controller.signal.aborted || this._abortControllers.get(tabId) !== controller) return;
       this._abortControllers.delete(tabId);
 
-      this._emit('cge:tabs:ajax-loaded', { tabId, panel: panelEl, response: html, instance: this });
+      this._emit('cge:tabs:ajax-loaded', { tabId, panel: panelEl, response, instance: this });
       if (typeof this.options.onAjaxLoaded === 'function') {
-        this.options.onAjaxLoaded(tabId, panelEl, html);
+        this.options.onAjaxLoaded(tabId, panelEl, response);
       }
     } catch (error) {
       if (controller.signal.aborted || this._destroyed || this._abortControllers.get(tabId) !== controller) return;
@@ -1029,16 +1160,67 @@ export class CGETabs {
   }
 
   /**
-   * Rebinds child plugins within freshly injected Ajax panel markup.
+   * Requests panel markup with Laravel headers (CSRF for unsafe methods) and returns HTML only.
+   * JSON is accepted solely as `{ html: string }`; anything else becomes an error state.
+   * @private
+   * @returns {Promise<string>}
+   */
+  async _requestPanel(url, method, driver, signal) {
+    const headers = laravelHeaders(this.options.ajaxHeaders, {
+      accept: 'text/html, application/json;q=0.9, */*;q=0.8',
+      csrf: !isSafeMethod(method)
+    });
+    const axios = resolveAxios(this.options.axiosInstance);
+    if (driver === 'axios' && !axios) {
+      throw new Error('[CGETabs] Axios driver requested but no axiosInstance option or window.axios is available');
+    }
+
+    if (axios && (driver === 'axios' || driver === 'auto')) {
+      let res;
+      try {
+        // Keep the raw body so the content type decides how it is rendered.
+        res = await axios.request({ url, method, headers, signal, responseType: 'text', transformResponse: [data => data] });
+      } catch (error) {
+        const failed = error?.response;
+        if (!failed) throw error;
+        const type = this._headerValue(failed.headers, 'content-type');
+        throw new HttpError(failed.status, failed.statusText || '', typeof failed.data === 'string' ? parseBody(failed.data, type) : failed.data ?? null);
+      }
+      return panelHtmlFromResponse(res?.data, this._headerValue(res?.headers, 'content-type'));
+    }
+
+    const res = await fetch(url, { method, headers, signal, credentials: 'same-origin' });
+    const type = res.headers?.get?.('content-type') || '';
+    const text = await res.text();
+    if (!res.ok) throw new HttpError(res.status, res.statusText, parseBody(text, type));
+    return panelHtmlFromResponse(text, type);
+  }
+
+  /** @private */
+  _headerValue(headers, name) {
+    if (!headers) return '';
+    if (typeof headers.get === 'function') return headers.get(name) || '';
+    const key = Object.keys(headers).find(header => header.toLowerCase() === name);
+    return key ? String(headers[key] ?? '') : '';
+  }
+
+  /**
+   * Plugin classes discoverable without a registered initializer: this class plus globals
+   * exposed by `tailtools/auto` or a CDN build.
    * @private
    */
   _pluginClasses() {
-    return [...new Set(['CGETabs', 'CGEAccordion', 'CGECollapse', 'CGEForm', 'CGESelect',
+    const globals = typeof window === 'undefined' ? [] : ['CGETabs', 'CGEAccordion', 'CGECollapse', 'CGEForm', 'CGESelect',
       'CGEModal', 'CGEDrawer', 'CGEDropzone', 'CGEDataTable', 'CGEDataGrid'].map(name =>
-      window.TailTools?.[name] || window[name]).filter(Boolean))];
+      window.TailTools?.[name] || window[name]);
+    return [...new Set([CGETabs, ...globals].filter(Boolean))];
   }
 
   _destroyPanelPlugins(panel) {
+    const destroyer = typeof this.options.destroyPanel === 'function' ? this.options.destroyPanel : CGETabs._panelDestroyer;
+    if (destroyer) {
+      try { destroyer(panel, this); } catch (error) { console.error('[CGETabs] destroyPanel failed:', error); }
+    }
     // Discover by DOM node: works for Map and WeakMap registries, including selects.
     const instances = new Set();
     const nodes = [panel, ...panel.querySelectorAll('*')].reverse();
@@ -1051,11 +1233,16 @@ export class CGETabs {
 
   _bridgeLifecycle(panelEl, tabId) {
     if (this._destroyed) return;
-    if (window.TailTools?.init) {
+    // Priority: instance option, registered initializer (tailtools/auto), global library, global classes.
+    const initializer = typeof this.options.initPanel === 'function' ? this.options.initPanel : CGETabs._panelInitializer;
+    if (initializer) {
+      initializer(panelEl, tabId, this);
+    } else if (window.TailTools?.init) {
       window.TailTools.init(panelEl);
     } else {
+      const select = window.TailTools?.CGESelect || window.CGESelect;
       for (const Plugin of this._pluginClasses()) {
-        if (Plugin === window.CGESelect) Plugin.init?.('select[data-cge-select]', {}, panelEl);
+        if (Plugin === select) Plugin.init?.('select[data-cge-select]', {}, panelEl);
         else Plugin.init?.(panelEl);
       }
       // These plugins use one document-level delegate, not a root argument.
@@ -1181,13 +1368,14 @@ export class CGETabs {
       this.indicatorEl.parentNode.removeChild(this.indicatorEl);
     }
 
-    // Clean up instances registry
+    // Clean up instances registry; morphed markup is server-owned and is not restored.
     for (const [panel, children] of this._originalContent) {
       this._destroyPanelPlugins(panel);
-      panel.replaceChildren(...children);
+      if (!this._skipRestore) panel.replaceChildren(...children);
     }
     this._originalContent.clear();
-    for (const restore of this._restorers.reverse()) restore();
+    this._disabledStyled.clear();
+    if (!this._skipRestore) for (const restore of this._restorers.reverse()) restore();
     CGETabs.instances.delete(this.element);
     CGETabs.instances.delete(this.id);
 

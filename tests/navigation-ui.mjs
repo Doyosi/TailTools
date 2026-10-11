@@ -13,6 +13,11 @@ export async function verifyNavigationUI(page) {
     const first = page.locator('#demo-hash-tabs-instance [data-cge-tab]').first();
     await first.click(); await first.press('ArrowRight');
     assert.equal(await page.evaluate(() => window.demoHashTabs.activeTabId), 'tab-security');
+    // Hash state is namespaced per group (#<group id>=<tab id>).
+    assert.equal(await page.evaluate(() => new URLSearchParams(location.hash.slice(1)).get('demo-hash-tabs-instance')), 'tab-security');
+    // Browser/application shortcuts with modifiers must not switch tabs.
+    await first.press('Control+ArrowRight');
+    assert.equal(await page.evaluate(() => window.demoHashTabs.activeTabId), 'tab-security');
     await first.press('End');
     assert.equal(await page.evaluate(() => window.demoHashTabs.activeTabId), 'tab-integrations');
     assert(await page.evaluate(() => {

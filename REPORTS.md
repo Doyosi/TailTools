@@ -1,5 +1,27 @@
 # TailTools inceleme ve bakım raporu
 
+## Stabilite ve Laravel uyumluluk düzeltmeleri — tamamlandı
+
+**Tarih:** 11 Ekim 2026. Tüm plugin'ler, ortak yardımcılar ve paketleme incelendi; bulunan hatalar 8 fazda düzeltildi. Plan: [TailTools-stability-plan.md](ai-todos/plans/TailTools-stability-plan.md), kontrol listesi: [TailTools-stability-checklist.md](ai-todos/todo-cheks/TailTools-stability-checklist.md).
+
+- **Güvenlik:** Metin alanları artık her yerde metin olarak basılır (DataTable hücreleri, Dropzone dosya adları, Alert/Toast başlık-mesajları, Lightbox caption, Select ikonları, Tabs JSON yanıtları). HTML yalnızca açık opt-in ile (`html: true`, `captionHtml`, formatter/renderer, Tabs `sanitize`).
+- **Davranış:** Alert'te Enter yalnızca input/onay butonunda onaylar; Alert ve ActionButton onayı capture fazında yakalar, inline `onclick` tek kez çalışır; onaylı form gönderimi `requestSubmit` ile CGEForm AJAX akışından geçer; Dropzone instant modu dosyaları tekrar göndermez; DOM'dan silinen overlay'ler scroll kilidini bırakır.
+- **Laravel:** Ortak `plugins/shared/http.js` — CSRF (meta → `_token` → `X-XSRF-TOKEN` cookie), 419/422 mesajları, redirect takibi, `axiosInstance` önceliği. Paginator: düz, API Resource `meta`, `simplePaginate`, cursor; "All" için `allValue` (-1).
+- **Veri:** Türkçe büyük/küçük harf duyarsız arama, sütun bazlı tip tespiti, `DD.MM.YYYY` tarihleri, null'lar sonda; Table/Grid Filter/Sort/Pagination tek çekirdekte.
+- **Paketleme:** `tailtools` yan etkisiz; `tailtools/auto` globals + otomatik init + Livewire/Turbo hook'ları; `destroyTailTools(root)` ve her plugin'de `destroyAll(root)`; runtime bağımlılığı yok (axios/tippy.js kaldırıldı); kütüphane CSS'i demo class'larını içermez.
+- **Temizlik:** Eski kopya plan/checklist/skill/doc yönlendirme dosyaları kaldırıldı; sözleşme testi tek kaynak kuralını denetler.
+
+### Doğrulama
+
+- `npm test`: **92/92 Node** + strict NodeNext/Bundler tip kontrolleri.
+- `npm run build` ve `npm run test:package` başarılı (paket kontrolü root entry'nin yan etkisiz olduğunu ve runtime bağımlılığı olmadığını da doğrular).
+- Tarayıcı regresyonları (`tests/regressions.html`): **168/168**. ESM `dist/auto.js` ve UMD bundle Chrome'da globals + otomatik init ile doğrulandı. Demo sayfasında gerçek klavye olayıyla Alert Enter/İptal ve XSS kaçışı, Livewire benzeri overlay silme senaryosu kontrol edildi.
+- Canlı Laravel/Livewire sunucusu, diğer tarayıcı motorları ve ekran okuyucu bu turda test edilmedi. `tests/run-browser.mjs` Playwright gerektirir ve bu ortamda çalıştırılmadı; yerine uygulama içi tarayıcı kullanıldı.
+
+### Davranış değişiklikleri (yayın öncesi)
+
+Toast/Lightbox metinleri varsayılan olarak metin; root import otomatik init yapmaz (`tailtools/auto` kullanın); `<a data-cge-confirm>` onaydan sonra navigasyon yapar (AJAX için `data-cge-ajax`); JSON `url` anahtarı yönlendirmez (`redirect`/`redirect_url`); takip edilen redirect'ler sayfayı değiştirir; Tabs hash formatı `#grup=sekme` (eski `#sekme` okunur); "All" `-1` gönderir; Grid `fetch()` hata durumunda reject eder; Modal/Drawer eksik hedefte hata fırlatır.
+
 **Tarih:** 5 Ekim 2026
 
 ## CGEToast / CGEModal kompakt görsel bakım — tamamlandı
