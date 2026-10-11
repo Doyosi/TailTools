@@ -4,7 +4,11 @@
 
 export interface CGEResponsiveOptions {
   mode?: 'collapse' | 'scroll';
-  breakpoint?: number;
+  /**
+   * Collapse tiers. A number is the landscape tier and scales the defaults (640 => 480 / 640 / 768);
+   * an array sets [phone, landscape, tablet] widths explicitly.
+   */
+  breakpoint?: number | [number, number, number];
   table?: HTMLTableElement | string | null;
   container?: HTMLElement | string | null;
   collapseDetailsText?: string;

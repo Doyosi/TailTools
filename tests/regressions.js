@@ -10,6 +10,8 @@ import { CGEAlert } from '../plugins/CGEAlert/CGEAlert.js';
 import { maintenanceRegressions } from './maintenance-regressions.js';
 import { collectionRegressions } from './collection-regressions.js';
 import { navigationRegressions } from './navigation-regressions.js';
+import { stabilityOverlayRegressions } from './stability-overlay-regressions.js';
+import { stabilityFormsRegressions } from './stability-forms-regressions.js';
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -314,6 +316,8 @@ export async function runRegressionTests({ maintenance = true } = {}) {
     if (maintenance) await maintenanceRegressions({ check, mount, fixture, track, assert, wait, deferred });
     if (maintenance) await collectionRegressions({ check, mount, fixture, track, assert, wait, deferred });
     if (maintenance) await navigationRegressions({ check, mount, fixture, track, assert, wait, deferred });
+    if (maintenance) await stabilityOverlayRegressions({ check, mount, fixture, track, assert, wait, deferred });
+    if (maintenance) await stabilityFormsRegressions({ check, mount, fixture, track, assert, wait, deferred });
     await check('Core: subtree init scopes selects and nested toast delegation handles one click', async () => {
       const { initTailTools } = await import('../src/index.ts');
       mount('<div id="audit-panel"><select data-cge-select><option>A</option></select><button data-cge-toast="Once" data-cge-toast-duration="0">Show</button></div>');

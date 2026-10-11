@@ -167,3 +167,12 @@ Repeated execute calls while confirmation is pending are ignored, preventing dup
 Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEActionButton.d.ts](../../../../plugins/CGEActionButton/CGEActionButton.d.ts).
+
+## Stability fixes (October 2026)
+
+- The delegated listener is capture-phase: inline `onclick`, Alpine `@click` and `wire:click` run once, after confirmation (the click is replayed with a bypass flag).
+- Confirmed submits use `requestSubmit()` (submit event, CGEForm AJAX/422, submitter value). Anchors never submit their enclosing form; `type="button"` only with `data-cge-ajax`.
+- Plain `<a href data-cge-confirm>` navigates (target/download kept); AJAX requires `data-cge-ajax`, `data-cge-method` or `data-cge-url`.
+- `redirectTimeout` (5000 ms) recovers the busy state when navigation never unloads; `followRedirects` navigates after followed server redirects.
+- CSRF via the shared helper (cookie only as `X-XSRF-TOKEN`); optional `axiosInstance`; only string `message` toasts; only `redirect`/`redirect_url` redirect.
+- `init(selector | root)` is safe; use `CGEActionButton.destroyAll(root)` for teardown. Base transition is in `@layer components`, so Tailwind `transition-*` utilities win.

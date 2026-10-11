@@ -83,7 +83,9 @@ In `src/index.ts`:
   ```ts
   export { CGE<X> } from '../plugins/CGE<X>'
   ```
-- Add auto-initialization handling to `initTailTools()`.
+- Add auto-initialization handling to `initTailTools()` (keep `src/index.ts` side-effect free; globals and auto-init live in `src/auto.ts`).
+- Implement `static destroyAll(root = document)` and prune detached instances at the start of `static init(root)` (see `plugins/shared/dom.js`).
+- Render text options with `textContent`/`escapeHTML`; accept HTML only through an explicit option. Use `plugins/shared/http.js` for CSRF headers and Laravel errors.
 
 ---
 

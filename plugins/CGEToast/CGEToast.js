@@ -1,3 +1,5 @@
+import { escapeHTML, prefersReducedMotion } from '../shared/dom.js';
+
 /**
  * CGEToast - TailTools Plugin
  * Lightweight, high-performance notification and toast alert system engineered for Tailwind CSS v4.3+ and Laravel Blade.
@@ -25,6 +27,12 @@ export class CGEToast {
   static _handledTriggerEvents = new WeakSet();
 
   /**
+   * Delegated trigger listeners by root.
+   * @type {Map<Document | HTMLElement, (e: MouseEvent) => void>}
+   */
+  static _delegations = new Map();
+
+  /**
    * Default translations dictionary.
    */
   static translations = {
@@ -44,6 +52,7 @@ export class CGEToast {
     theme: 'light', // 'light' | 'dark' | 'auto'
     title: null,
     message: '',
+    html: false, // true renders title, message and action labels as trusted HTML (text by default)
     variant: 'neutral', // 'success' | 'error' | 'warning' | 'info' | 'neutral'
     position: 'top-right', // 'top-right' | 'top-left' | 'top-center' | 'bottom-right' | 'bottom-left' | 'bottom-center' | 'center' | 'top-full' | 'bottom-full'
     duration: 5000, // ms, or false / 0 for persistent
@@ -200,6 +209,8 @@ export class CGEToast {
     const isDark = activeTheme === 'dark';
     const variantStyle = (isDark ? CGEToast.DARK_VARIANTS : CGEToast.LIGHT_VARIANTS)[this.options.variant] || (isDark ? CGEToast.DARK_VARIANTS.neutral : CGEToast.LIGHT_VARIANTS.neutral);
     const title = this.options.title || this._getDefaultTitle(this.options.variant);
+    // Title, message and action labels are text unless the caller opts into trusted HTML.
+    const content = value => (this.options.html === true ? String(value ?? '') : escapeHTML(value));
 
     const toastEl = document.createElement('div');
     toastEl.id = this.id;
@@ -225,7 +236,7 @@ export class CGEToast {
     if (this.options.image && this.options.image.src) {
       const borderClass = isDark ? 'border-slate-700' : 'border-slate-200';
       const imgClass = this.options.image.class || `w-8 h-8 rounded-sm object-cover shrink-0 border ${borderClass}`;
-      visualSlot = `<img src="${this.options.image.src}" alt="${this.options.image.alt || 'Avatar'}" class="${imgClass}" />`;
+      visualSlot = `<img src="${escapeHTML(this.options.image.src)}" alt="${escapeHTML(this.options.image.alt || 'Avatar')}" class="${escapeHTML(imgClass)}" />`;
     } else if (this.options.icon) {
       const iconSet = isDark ? CGEToast.DARK_ICONS : CGEToast.LIGHT_ICONS;
       visualSlot = typeof this.options.icon === 'string' && this.options.icon !== 'true'
@@ -242,8 +253,8 @@ export class CGEToast {
 
       actionsHTML = `<div class="${containerClass}">
         ${this.options.actions.map((act, idx) => `
-          <button type="button" data-cge-action="${idx}" class="${baseBtnClass} ${act.class || defaultBtnClass}">
-            ${act.label}
+          <button type="button" data-cge-action="${idx}" class="${baseBtnClass} ${escapeHTML(act.class || defaultBtnClass)}">
+            ${content(act.label)}
           </button>
         `).join('')}
       </div>`;
@@ -254,7 +265,7 @@ export class CGEToast {
       ? 'text-slate-400 hover:text-white hover:bg-slate-800/80'
       : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100';
     const closeBtnHTML = this.options.dismissible ? `
-      <button type="button" data-cge-toast-close class="shrink-0 -mr-1 -mt-1 w-8 h-8 rounded-sm flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="${this.translations.close}">
+      <button type="button" data-cge-toast-close class="shrink-0 -mr-1 -mt-1 w-8 h-8 rounded-sm flex items-center justify-center ${closeBtnClass} transition cursor-pointer" aria-label="${escapeHTML(this.translations.close)}">
         <svg class="w-4 h-4" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -271,8 +282,8 @@ export class CGEToast {
           ${visualSlot}
           <div class="cge-toast-banner-main flex-1 min-w-0">
             <div class="cge-toast-copy min-w-0">
-              ${title ? `<h4 class="cge-toast-title ${titleColor}">${title}</h4>` : ''}
-              <div class="cge-toast-message ${msgColor}">${this.options.message}</div>
+              ${title ? `<h4 class="cge-toast-title ${titleColor}">${content(title)}</h4>` : ''}
+              <div class="cge-toast-message ${msgColor}">${content(this.options.message)}</div>
             </div>
             ${actionsHTML}
           </div>
@@ -284,8 +295,8 @@ export class CGEToast {
         <div class="flex items-start gap-2.5">
           ${visualSlot}
           <div class="flex-1 min-w-0">
-            ${title ? `<h4 class="cge-toast-title ${titleColor}">${title}</h4>` : ''}
-            <div class="cge-toast-message ${msgColor}">${this.options.message}</div>
+            ${title ? `<h4 class="cge-toast-title ${titleColor}">${content(title)}</h4>` : ''}
+            <div class="cge-toast-message ${msgColor}">${content(this.options.message)}</div>
             ${actionsHTML}
           </div>
           ${closeBtnHTML}
@@ -542,9 +553,12 @@ export class CGEToast {
       this.el.classList.add(isTop ? '-translate-y-full' : 'translate-y-full');
     }
 
-    // Next frame: transition to natural state
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    // Next frame: transition to natural state. A toast dismissed before these frames run
+    // (maxToasts loops, immediate dismiss) must not flash back into view.
+    this._entryFrame = requestAnimationFrame(() => {
+      this._entryFrame = requestAnimationFrame(() => {
+        this._entryFrame = null;
+        if (!this.isOpen) return;
         this.el.classList.remove('opacity-0', '-translate-y-4', 'translate-y-4', '-translate-y-full', 'translate-y-full', 'scale-95');
         this.el.classList.add('opacity-100', 'translate-y-0', 'scale-100');
       });
@@ -561,6 +575,10 @@ export class CGEToast {
 
     if (this._timer) {
       cancelAnimationFrame(this._timer);
+    }
+    if (this._entryFrame) {
+      cancelAnimationFrame(this._entryFrame);
+      this._entryFrame = null;
     }
 
     return new Promise((resolve) => {
@@ -587,7 +605,7 @@ export class CGEToast {
         }
         this._dispatch('close');
         resolve(true);
-      }, 250);
+      }, prefersReducedMotion() || this.options.animationDriver === 'none' ? 0 : 250);
     });
   }
 
@@ -752,11 +770,15 @@ export class CGEToast {
    * @param {Document | HTMLElement} [root=document]
    */
   static init(root = document) {
+    CGEToast._pruneDetached();
+
     // 1. Process Laravel Session Flash Toasts: <div data-cge-toast-flash data-cge-variant="success" data-cge-message="...">
     const flashElements = root.querySelectorAll('[data-cge-toast-flash]');
     flashElements.forEach((el) => {
       if (CGEToast._processedFlashes.has(el)) return;
-      const message = el.getAttribute('data-cge-message') || el.innerHTML.trim();
+      // data-cge-html opts into trusted HTML; otherwise attributes and element content are plain text.
+      const html = CGEToast._readHtmlFlag(el, ['data-cge-html', 'data-cge-toast-html']);
+      const message = el.getAttribute('data-cge-message') || (html ? el.innerHTML : el.textContent).trim();
       const variant = el.getAttribute('data-cge-variant') || 'success';
       const theme = el.getAttribute('data-cge-toast-theme') || el.getAttribute('data-cge-theme') || CGEToast.defaults.theme;
       const title = el.getAttribute('data-cge-title') || null;
@@ -766,7 +788,7 @@ export class CGEToast {
       const duration = rawDuration === 'false' ? false : (Number.isNaN(parsedDuration) ? 5000 : parsedDuration);
 
       if (message) {
-        CGEToast.show({ message, variant, theme, title, position, duration });
+        CGEToast.show({ message, variant, theme, title, position, duration, html });
         CGEToast._processedFlashes.add(el);
         el.style.display = 'none'; // hide placeholder
       }
@@ -775,7 +797,7 @@ export class CGEToast {
     // 2. Delegated click triggers: <button data-cge-toast="Order Placed!" data-cge-toast-variant="success">
     const onTriggerClick = (e) => {
       if (CGEToast._handledTriggerEvents.has(e)) return;
-      const trigger = e.target.closest('[data-cge-toast]');
+      const trigger = e.target instanceof Element ? e.target.closest('[data-cge-toast]') : null;
       if (!trigger) return;
 
       const message = trigger.getAttribute('data-cge-toast');
@@ -790,14 +812,70 @@ export class CGEToast {
       const rawDuration = trigger.getAttribute('data-cge-toast-duration');
       const parsedDuration = Number.parseInt(rawDuration, 10);
       const duration = rawDuration === 'false' ? false : (Number.isNaN(parsedDuration) ? 5000 : parsedDuration);
+      const html = CGEToast._readHtmlFlag(trigger, ['data-cge-toast-html', 'data-cge-html']);
 
-      CGEToast.show({ message, variant, theme, title, position, duration });
+      CGEToast.show({ message, variant, theme, title, position, duration, html });
     };
 
-    if (!root._cgeToastBound) {
+    if (!CGEToast._delegations.has(root)) {
       root.addEventListener('click', onTriggerClick);
+      CGEToast._delegations.set(root, onTriggerClick);
       root._cgeToastBound = true;
     }
+  }
+
+  /**
+   * Reads a boolean HTML opt-in attribute (present and not "false").
+   * @private
+   */
+  static _readHtmlFlag(el, names) {
+    const name = names.find(attribute => el.hasAttribute(attribute));
+    return Boolean(name) && el.getAttribute(name) !== 'false';
+  }
+
+  /**
+   * Forgets toasts whose nodes were removed by Turbo/Livewire body swaps and drops
+   * delegation bound to detached roots.
+   * @private
+   */
+  static _pruneDetached() {
+    for (const toast of Array.from(CGEToast.activeToasts)) {
+      if (toast.el?.isConnected) continue;
+      toast.isOpen = false;
+      if (toast._timer) cancelAnimationFrame(toast._timer);
+      if (toast._entryFrame) cancelAnimationFrame(toast._entryFrame);
+      CGEToast.activeToasts.delete(toast);
+    }
+    for (const [position, container] of Array.from(CGEToast.containers.entries())) {
+      if (!container.isConnected) CGEToast.containers.delete(position);
+    }
+    for (const bound of Array.from(CGEToast._delegations.keys())) {
+      if (bound !== document && !bound.isConnected) CGEToast._unbind(bound);
+    }
+  }
+
+  /** @private */
+  static _unbind(root) {
+    const listener = CGEToast._delegations.get(root);
+    if (!listener) return;
+    root.removeEventListener('click', listener);
+    CGEToast._delegations.delete(root);
+    delete root._cgeToastBound;
+  }
+
+  /**
+   * Teardown for Livewire/Turbo. Removes trigger delegation bound to `root` (or inside it);
+   * passing `document` also dismisses every active toast.
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {Promise<void>} resolves when dismissed toasts are removed
+   */
+  static destroyAll(root = document) {
+    CGEToast._pruneDetached();
+    for (const bound of Array.from(CGEToast._delegations.keys())) {
+      if (root === document || bound === root || (bound !== document && root.contains(bound))) CGEToast._unbind(bound);
+    }
+    if (root !== document) return Promise.resolve();
+    return Promise.all(Array.from(CGEToast.activeToasts, toast => toast.dismiss())).then(() => {});
   }
 }
 

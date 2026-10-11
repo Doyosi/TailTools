@@ -136,7 +136,7 @@ Because `CGESelect` updates the original `<select>` directly in the DOM, `CGEFor
 </form>
 ```
 
-When Laravel returns a `422 Unprocessable Entity` JSON response with `{"errors": {"team_id": ["The team field is required."]}}`, `CGEForm` highlights the field and renders the error feedback seamlessly.
+When Laravel returns a `422 Unprocessable Entity` JSON response with `{"errors": {"team_id": ["The team field is required."]}}`, `CGEForm` highlights the visible trigger (not only the hidden native select) and renders the error feedback right after the select wrapper. Server-rendered errors work too: put `aria-invalid="true"` on the `<select>` (e.g. `@error('team_id') aria-invalid="true" @enderror`) and the trigger mirrors it.
 
 ---
 
@@ -157,3 +157,9 @@ To bind with Livewire, simply add `wire:model.live="selectedUser"` or `wire:chan
 ```
 
 Whenever an option is clicked in `CGESelect`, a native bubbling `input` and `change` event is dispatched onto the `<select>`, prompting Livewire to update its component state immediately.
+
+## Stability fixes (October 2026)
+
+- `data-cge-async-method="POST"` endpoints receive `X-CSRF-TOKEN` from `<meta name="csrf-token">` (or the form `@csrf` field), so `VerifyCsrfToken` no longer answers 419.
+- Remote JSON `icon` values are treated as class names or text; return HTML icons only from trusted endpoints and enable `asyncSource: { iconHtml: true }`.
+- After Livewire morphs/Turbo visits call `CGESelect.destroyAll(root)` (or `destroyTailTools(root)`) before re-initializing.

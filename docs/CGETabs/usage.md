@@ -10,7 +10,8 @@ Options can be supplied via the constructor, passed to `CGETabs.init()`, or prov
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `urlSync` | `'hash' \| 'query' \| false` | `'hash'` | Deep linking strategy: updates URL hash (`#tab`), URL query param (`?tab=...`), or disabled. |
+| `urlSync` | `'hash' \| 'query' \| false` | `'hash'` | Deep linking strategy: namespaced URL hash (`#<hashKey>=<tab>`), URL query param (`?tab=...`), or disabled. |
+| `hashKey` | `string \| null` | `null` | Key of this group in the namespaced hash. Defaults to the element `id`. Also `data-cge-hash-key`. |
 | `queryParamKey` | `string` | `'tab'` | Query parameter key when `urlSync` is set to `'query'` (e.g., `?tab=billing`). |
 | `historyMode` | `'replace' \| 'push'` | `'replace'` | Browser history manipulation method. `'replace'` avoids polluting history; `'push'` creates history steps. |
 | `storage` | `'localStorage' \| 'sessionStorage' \| false` | `false` | Client-side storage driver to persist last active tab across page reloads. |
@@ -20,8 +21,12 @@ Options can be supplied via the constructor, passed to `CGETabs.init()`, or prov
 | `indicator` | `boolean \| 'line' \| 'pill'` | `true` | Dynamic sliding active indicator mode: underline bar (`'line'`), pill badge (`'pill'`), or disabled. |
 | `cacheAjax` | `boolean` | `true` | When true, loaded Ajax panels are cached in memory and not re-fetched on subsequent switches. |
 | `ajaxDriver` | `'auto' \| 'axios' \| 'fetch'` | `'auto'` | HTTP client for remote partials. `'auto'` uses Axios if available, falling back to native Fetch. |
-| `ajaxHeaders` | `Record<string, string>` | `{}` | Additional HTTP headers sent with Ajax requests (e.g. CSRF tokens, bearer tokens). |
+| `ajaxHeaders` | `Record<string, string>` | `{}` | Additional HTTP headers merged over the Laravel defaults (`Accept`, `X-Requested-With`, and `X-CSRF-TOKEN`/`X-XSRF-TOKEN` for non-GET methods). |
 | `ajaxTabs` | `Record<string, string \| AjaxConfig>` | `{}` | Programmatic remote endpoints for tabs without inline `data-cge-ajax` attributes. |
+| `axiosInstance` | `AxiosLike \| null` | `null` | Configured axios instance; wins over `window.axios` for the `'auto'` and `'axios'` drivers. |
+| `sanitize` | `(html, tabId) => string \| Node` | `null` | Applied to every AJAX response before it is injected (e.g. `DOMPurify.sanitize`). |
+| `initPanel` | `(panel, tabId, instance) => void` | `null` | Initializes nested plugins in a loaded panel; overrides `CGETabs.setPanelInitializer()`. |
+| `destroyPanel` | `(panel, instance) => void` | `null` | Tears nested plugins down before panel content is replaced or restored. |
 | `manual` | `boolean` | `false` | When true, arrow keys only move focus, requiring Enter or Space to activate the tab. |
 | `transition` | `boolean` | `true` | Enables animated transitions when switching panels. |
 | `animationIn` | `string` | `'animate-fade-in'` | CSS animation or Tailwind utility class applied when a panel becomes visible. |
@@ -63,8 +68,10 @@ const tabs = new CGETabs('#my-tabs', {
 
 ### Static Methods
 
-- `CGETabs.init(selectorOrRoot, options, root)`: Initializes all matching tabs within the given root element (defaults to `document`).
-- `CGETabs.get(elementOrId)`: Retrieves an existing `CGETabs` instance by DOM element or ID string.
+- `CGETabs.init(selectorOrRoot, options, root)`: Initializes all matching tabs within the given root element (defaults to `document`) and returns **every** instance under root (new and existing). Instances whose element left the DOM are destroyed first; instances whose plugin attributes were stripped by a Livewire morph are rebuilt.
+- `CGETabs.get(elementOrId)`: Retrieves an existing `CGETabs` instance by DOM element or ID string, or `null`.
+- `CGETabs.destroyAll(root = document)`: Destroys instances inside `root` or no longer connected (Livewire/Turbo teardown). Returns the destroyed instances.
+- `CGETabs.setPanelInitializer(init, destroy?)`: Registers how nested plugins inside loaded AJAX panels are initialized (and optionally destroyed). `tailtools/auto` registers `initTailTools` automatically.
 
 ### Instance Methods
 
@@ -118,9 +125,12 @@ document.addEventListener('cge:tabs:shown', (e) => {
 `CGETabs` synchronizes navigation state seamlessly:
 
 ### Hash Mode (`urlSync: 'hash'`)
-- When the user selects the "Billing" tab, the browser URL becomes `https://example.com/account#billing`.
-- Page reloading automatically restores the `#billing` tab.
-- With `historyMode: 'push'`, Back and Forward switch tabs without reloads. The default replace mode does not create new history entries.
+- Every tab group writes only its own entry: selecting "Billing" in `<div id="account" data-cge-tabs>` produces `https://example.com/page#account=billing`. A second group adds its entry instead of overwriting: `#account=billing&help=faq`.
+- Keys and values are URI-encoded. The key is the element `id` unless `hashKey` / `data-cge-hash-key` is set.
+- Legacy links such as `#billing` still work: the group that owns a `billing` tab activates it.
+- Nested groups: `#inner=invoices` (or the legacy `#invoices`) activates the inner tab **and** the outer tab whose panel contains the inner group, regardless of initialization order. An explicit outer entry (`#outer=profile&inner=invoices`) wins over the nested one.
+- Page reloading automatically restores every group.
+- With `historyMode: 'push'`, Back and Forward switch tabs without reloads; going Back to an entry without the group's state restores the initial tab (storage → `defaultTab` → pre-selected → first). The default replace mode does not create new history entries and ignores unrelated hash changes.
 
 ### Query Param Mode (`urlSync: 'query'`)
 - Useful when deep linking within dashboard sub-sections: `https://example.com/admin/settings?tab=security`.
@@ -134,15 +144,33 @@ When an Ajax tab is selected:
 1. An animated loading spinner is displayed inside the panel.
 2. In-flight requests are tracked per tab with `AbortController`; a new request for the same tab cancels its predecessor.
 3. On completion, the HTML partial is injected into the panel.
-4. **CGE Auto-Lifecycle Bridge:**
-   `CGETabs` automatically detects and initializes nested TailTools plugins (`CGEActionButton`, `CGEForm`, `CGESelect`, `CGEModal`, `CGEDrawer`, `CGEDropzone`, `CGEDataTable`, `CGEDataGrid`) inside the freshly loaded panel, and dispatches the global `cge:tabs:loaded` event.
+4. **Response contract:** `text/html` (or `text/plain`) bodies are injected; JSON is accepted only as `{ "html": "..." }`. Any other JSON, unsupported content types and HTTP errors render the error/Retry state and pass a `TypeError` or `HttpError` (`status`, `data`, Laravel `errors`) to `onAjaxError` / `cge:tabs:ajax-error`. The optional `sanitize(html, tabId)` hook runs before injection.
+5. **CGE Auto-Lifecycle Bridge:**
+   Nested plugins inside the freshly loaded panel are initialized by the first available of: the `initPanel` option, `CGETabs.setPanelInitializer(fn)` (registered by `tailtools/auto`), `window.TailTools.init`, or global `CGE*` classes. With plain ESM imports and no registration only nested `CGETabs` are initialized, so register one:
+
+   ```javascript
+   import { CGETabs, initTailTools } from 'tailtools';
+   CGETabs.setPanelInitializer(panel => initTailTools(panel));
+   ```
+
+   The global `cge:tabs:loaded` event is dispatched afterwards.
 
 
 ## Precise configuration and loading behavior
 Options resolve as defaults → `data-cge-tabs` JSON → individual attributes → explicit JavaScript options. `ui.tabList`, `ui.tab` and `ui.panelContainer` apply when explicitly configured; their default layout stays in consumer markup. The panel-container slot applies to the shared immediate parent of all owned panels. Other state/indicator/loading slots retain their existing defaults. `animationIn` can contain multiple whitespace-separated classes.
 
-AJAX controllers are tracked per tab. Reloading a tab cancels its previous request, and late responses from canceled requests cannot replace current content. Switching to a different panel allows the first panel's independent request to finish and cache; `destroy()` aborts all requests. `cacheAjax: false` reloads on reactivation. A failed forced reload invalidates the previous loaded marker/cache so later activation can recover. The panel uses `aria-busy` and the loader uses `role="status"`; HTTP errors display `role="alert"` and a delegated Retry button. Translation strings are rendered as text. Endpoint HTML is trusted application/Blade markup.
+AJAX controllers are tracked per tab. Reloading a tab cancels its previous request, and late responses from canceled requests cannot replace current content. Switching to a different panel allows the first panel's independent request to finish and cache; `destroy()` aborts all requests. `cacheAjax: false` reloads on reactivation. A failed forced reload invalidates the previous loaded marker/cache so later activation can recover. The panel uses `aria-busy` and the loader uses `role="status"`; HTTP errors display `role="alert"` and a delegated Retry button. Translation strings are rendered as text. Endpoint HTML is trusted application/Blade markup; pass `sanitize` when a partial can contain user-generated HTML.
 
-Use `TailTools.init(panel)` once for the lifecycle bridge when available. Otherwise the bridge calls standalone scoped init APIs, with document delegates for ActionButton/Lightbox. Both paths include Tabs, Accordion and Collapse. Registry-backed child instances (including Select WeakMap entries) are destroyed before AJAX replacement and on Tabs destroy. Original panel nodes are restored; call init again if restored markup requires child-plugin initialization.
+The lifecycle bridge calls one initializer per load (see the priority above). The global fallback calls standalone scoped init APIs, with document delegates for ActionButton/Lightbox, and includes Tabs, Accordion and Collapse. Registry-backed child instances (including Select WeakMap entries) are destroyed before AJAX replacement and on Tabs destroy. Original panel nodes are restored; call init again if restored markup requires child-plugin initialization.
 
 Horizontal tablists with default visible overflow use `overflow-x: auto`. Existing explicit overflow styles are preserved, and destroy restores the original style. Keyboard focus scrolls off-screen tabs into view; the indicator is remeasured after focus. Failed child initialization destroys partial instances, clears loaded/cache state and exposes the normal error/retry flow.
+
+## Keyboard
+
+Arrow keys move between tabs (Left/Right for horizontal lists, Up/Down for vertical lists), Home/End jump to the first/last enabled tab and Enter/Space activate in manual mode. In right-to-left layouts (`dir="rtl"`) Left/Right are mirrored. Key presses with Alt, Ctrl or Meta are ignored so browser and application shortcuts keep working. Disabled classes from `ui.disabledTab` are removed again when a tab is re-enabled and activated (only classes the plugin added are removed).
+
+## Livewire, Turbo and dynamic DOM
+
+- Call `CGETabs.init(root)` again after DOM updates; it prunes detached instances and rebuilds morphed ones. `tailtools/auto` does this on `livewire:navigated`, after Livewire commits and on `turbo:load`.
+- Call `CGETabs.destroyAll(root)` before removing a region yourself.
+- Wrap tab groups whose markup Livewire should never touch in `wire:ignore` to keep the client state (active tab, loaded panels) across component updates.

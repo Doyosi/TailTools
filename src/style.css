@@ -1,6 +1,6 @@
-@import "tailwindcss";
+/* Library stylesheet: only plugin sources are scanned so demo/docs classes stay out of dist/tailtools.css. */
+@import "tailwindcss" source(none);
 @source "../plugins/**/*.{js,ts,html}";
-@source "../index.html";
 @import "tailwind-animations";
 @import "../plugins/CGEModal/style.css";
 @import "../plugins/CGEToast/style.css";

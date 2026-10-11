@@ -19,3 +19,13 @@
 - [x] Run browser regressions, strict types, build and package checks; update REPORTS.md.
 
 Completed 2026-10-05: 27/27 Node, 116/116 Chrome, native demo at 390/1024 px, strict NodeNext/Bundler, library/demo build, ESM/UMD and real npm archive verified. Findings recorded in REPORTS.md.
+
+## Stability fixes (October 2026)
+- [x] XSS: JSON without string `html` renders the error state; `sanitize` hook; `laravelHeaders`/`resolveAxios`/`HttpError`.
+- [x] Namespaced hash state, legacy `#tab` support and parent activation for nested deep links.
+- [x] `historyMode: 'push'` Back without state restores the initial tab.
+- [x] `destroyAll(root)`, prune + morph rebuild in `init`, `get()` returns null, `init` returns all instances.
+- [x] Disabled classes removed on re-enable; modifiers ignored; RTL arrows.
+- [x] `initPanel` / `destroyPanel` options and `setPanelInitializer()`; global fallback kept.
+- [x] Declarations, api.md, usage/README/examples/laravel-blade and skill updated.
+- [x] Node tests (`tests/navigation-fixes.test.mjs`) and browser scenarios (`tests/navigation-regressions.js`).

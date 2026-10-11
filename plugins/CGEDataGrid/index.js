@@ -3,7 +3,7 @@
  * TailTools Plugin Library
  */
 
-import { CGEDataGrid } from './CGEDataGrid.js';
+import { CGEDataGrid, escapeHTML } from './CGEDataGrid.js';
 
-export { CGEDataGrid };
+export { CGEDataGrid, escapeHTML };
 export default CGEDataGrid;

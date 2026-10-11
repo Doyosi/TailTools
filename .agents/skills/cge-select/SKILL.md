@@ -188,3 +188,10 @@ Remote selections become native options and serialize through FormData. Native m
 The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with separate tag/clear buttons in its layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGESelect.d.ts](../../../../plugins/CGESelect/CGESelect.d.ts).
+
+## Stability fixes (October 2026)
+
+- POST `asyncSource` requests send Laravel CSRF headers; `asyncSource.headers` and `asyncSource.axiosInstance` are supported; failures are `HttpError`.
+- Remote `icon` values are class names/text unless `asyncSource.iconHtml: true`; `<option data-icon>` author markup stays HTML; custom `render*` output is trusted HTML, so escape remote values in it.
+- Reset refresh runs in `setTimeout(0)`; the trigger mirrors the native select's `aria-invalid` with `ui.triggerInvalid`. Badge padding uses `py-0.5`.
+- Use `CGESelect.destroyAll(root)`; `init()` prunes removed selects.

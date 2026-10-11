@@ -279,3 +279,16 @@ korunacak ve timer/RAF'lar destroy veya yeni loading aşamasında iptal edilecek
 Demo, docs, tipler ve skill eşitlenip mobil/desktop görsel kontrol yapılacak.
 
 Tamamlandı: 27/27 Node, 86/86 Chrome, 5 viewport görsel kontrolü, demo AJAX/All, strict tipler, build, npm pack ve ESM/UMD doğrulaması geçti. [REPORTS.md](../../REPORTS.md) güncellendi.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases S1, H1, H7 and 4. The package is unpublished, so unsafe defaults change with documentation.
+
+1. **XSS (S1):** raw values render as text (fallback card is text); renderer / html_card output stays trusted HTML; `escapeHTML` exported from both barrels.
+2. **Laravel paginators:** shared `readCollectionResponse` reads paginate, API Resource `meta`, simplePaginate (`hasMore`) and cursorPaginate (cursors); `responseAdapter` option; `setMetrics({ lastPage })` honored.
+3. **All:** `allValue` (default `-1`) is sent; All stays selected when the server answers per_page = total. Docs show clamped `per_page` and whitelisted sort columns.
+4. **Shared core:** `plugins/shared/collection-{core,filter,sort,pagination}.js` replace the diverged Table/Grid modules; module paths re-export it with both API names (Grid pagination keeps its defaults).
+5. **Filter:** per-element debounce timers, `locale` folding (Turkish İ/ı, accents), `'all'` clears, initial select values, Grid search only primitive public fields or `searchKeys`.
+6. **Sort:** one type per column, `DD.MM.YYYY`/`DD/MM/YYYY`, `1.234,50`, codes as text, empty last, stable, `Intl.Collator`.
+7. **HTTP (H1/H7):** CSRF on non-GET, nested JSON, `key[]` arrays, `axiosInstance`, `HttpError`.
+8. **Lifecycle/events:** `destroyAll(root)`, pruning `init(root)`, page-scoped fallback IDs, both event names, `paramNames`, Grid `fetch()` rejects like Table.

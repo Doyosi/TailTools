@@ -12,7 +12,7 @@ When creating a new instance (`new CGEDrawer(target, options)`), you can customi
 | :--- | :--- | :--- | :--- |
 | `placement` | `'left' \| 'right' \| 'top' \| 'bottom'` | `'left'` | Edge of the viewport where the drawer originates. |
 | `size` | `string` | `'md'` | Sizing preset (`sm`, `md`, `lg`, `xl`, `full`, `auto`) or custom Tailwind class (e.g. `w-96`, `max-w-md`). |
-| `backdrop` | `boolean \| 'static'` | `true` | Display modal backdrop overlay. Set to `false` for persistent non-modal docking. |
+| `backdrop` | `boolean \| 'static'` | `true` | Display modal backdrop overlay. Set to `false` for persistent non-modal docking (not part of the modal overlay stack: no focus trap, no scroll lock, never receives restored focus; Escape closes it only while no modal overlay is open). |
 | `backdropClose` | `boolean` | `true` | Close drawer when clicking backdrop. If `false`, outside clicks trigger tactile directional bounce feedback. |
 | `escapeClose` | `boolean` | `true` | Close drawer when pressing the `Escape` key. |
 | `animationDriver` | `'auto' \| 'tailwind-animations' \| 'css' \| 'none'` | `'auto'` | Preferred animation engine. In `'auto'`, auto-detects `tailwind-animations`. |
@@ -46,9 +46,9 @@ All configuration options can be specified directly in HTML or Laravel Blade mar
 | `data-cge-push-content` | `#selector`, `.selector` | Element to push on open. |
 | `data-cge-mini` | `true`, `false` | Mini dock rail mode. |
 | `data-cge-mini-width` | `w-16`, `w-20` | Collapsed width class. |
-| `data-cge-drawer-target` | `#drawer-id`, `drawer-id` | Click trigger to open target drawer. |
+| `data-cge-drawer-target` | `#drawer-id`, `drawer-id`, `.selector` | Click trigger to open target drawer. A bare name resolves as an ID first; any CSS selector is used as-is. |
 | `data-cge-drawer-close` | None | Click trigger to close active drawer. |
-| `data-cge-drawer-toggle` | `#drawer-id`, `drawer-id` | Click trigger to toggle target drawer. |
+| `data-cge-drawer-toggle` | `#drawer-id`, `drawer-id`, `.selector` | Click trigger to toggle target drawer. |
 
 ---
 
@@ -134,9 +134,9 @@ You can listen for events via the instance `.on()` API or native DOM CustomEvent
 
 | Event Name | DOM CustomEvent | Detail Payload | Description |
 | :--- | :--- | :--- | :--- |
-| `open` | `cge:drawer:open` | `{ drawer }` | Emitted immediately when open sequence starts. |
+| `open` | `cge:drawer:open` | `{ drawer }` | Emitted immediately when open sequence starts. **Cancelable:** `preventDefault()` keeps the drawer closed. |
 | `opened` | `cge:drawer:opened` | `{ drawer }` | Emitted after entry transition completes. |
-| `close` | `cge:drawer:close` | `{ drawer }` | Emitted immediately when close sequence starts. |
+| `close` | `cge:drawer:close` | `{ drawer }` | Emitted immediately when close sequence starts. **Cancelable:** `preventDefault()` keeps the drawer open. |
 | `closed` | `cge:drawer:closed` | `{ drawer }` | Emitted after exit transition completes. |
 | `backdropClick` | `cge:drawer:backdrop-click` | `{ drawer, event }` | Emitted whenever the backdrop or outer container is clicked. |
 | `swipe` | `cge:drawer:swipe` | `{ direction, distance, progress, event }` | Emitted during active touch swipe drag. |
@@ -185,3 +185,20 @@ When configured with `backdropClose: false` or `data-cge-backdrop="static"`:
 Destroy removes click, key and touch listeners, cancels animation work and restores layout-push inline styles. Recreating on the same DOM is supported. Partial translations preserve defaults and data-cge-duration="0" is valid. Static toggle accepts an optional third trigger argument. Overlay ownership is shared with Modal, Alert and Lightbox.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+- **Missing targets:** `new CGEDrawer(target)` throws `[CGEDrawer] Target element "..." not found.` instead of returning a half-built instance. Declarative triggers with a missing target only log a warning. Targets accept elements, any CSS selector (`.foo` is no longer rewritten to `#.foo`) or a bare ID.
+- **Cancelable events:** `cge:drawer:open` / `cge:drawer:close` honor `preventDefault()` (same contract as CGEModal).
+- **Non-modal drawers** (`backdrop: false`) stay out of the shared overlay stack, so they never steal focus after another overlay closes and do not advertise `aria-modal`.
+- **Mini mode:** the collapsed rail keeps its open transform after closing with the `tailwind-animations` driver and is not `aria-hidden`/`aria-modal` while collapsed.
+- **Focus trap:** Tab pulls focus back inside when it escaped the drawer or there is nothing focusable.
+- **Reduced motion:** transitions, layout push and the static bounce use a 0 ms duration.
+- **Lifecycle:** `CGEDrawer.destroyAll(root = document)` destroys drawers inside `root` (or detached); with `document` it also removes the document-level trigger delegation. `init(root)` destroys detached instances first so Livewire-morphed drawers are re-initialized.
+
+```javascript
+document.querySelector('#filters').addEventListener('cge:drawer:close', (event) => {
+  if (hasUnsavedFilters()) event.preventDefault();
+});
+document.addEventListener('livewire:navigating', () => CGEDrawer.destroyAll());
+```

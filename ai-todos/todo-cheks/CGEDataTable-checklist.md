@@ -81,3 +81,16 @@
 - [x] Tipler, dokümanlar ve skill eşitlemesi
 - [x] Node, tarayıcı, strict tip ve paket/build doğrulaması
 - [x] REPORTS.md sonuçları
+
+## Stability fixes (October 2026)
+
+- [x] XSS: raw values as text, trusted formatter HTML, `escapeHTML` exported and documented
+- [x] Laravel paginate / Resource meta / simplePaginate / cursorPaginate, `responseAdapter`, `setMetrics({ lastPage })`
+- [x] `allValue` for All, per-page select sync, server docs with clamp + sort whitelist
+- [x] Shared Filter/Sort/Pagination core with Table and Grid aliases; module paths and `.d.ts` re-export it
+- [x] Per-element debounce, Turkish/accent search, `'all'` clear, initial select values
+- [x] Column-typed stable sort (DD.MM.YYYY, EU numbers, empty last, codes as text)
+- [x] CSRF, nested JSON, `key[]` query, `axiosInstance`, `HttpError`
+- [x] `destroyAll`, pruning `init`, page-scoped fallback IDs, event aliases, `paramNames`, responsive `breakpoint`
+- [x] Types, api.md (exact declaration), usage/examples/README, SKILL.md
+- [x] Node tests (`tests/collection-fixes.test.mjs`) and browser scenarios (`tests/collection-regressions.js`) added; browser run pending

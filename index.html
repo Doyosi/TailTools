@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TailTools - Modern UI Plugins Showcase</title>
-    <link href="/src/style.css" rel="stylesheet">
+    <link href="/src/demo.css" rel="stylesheet">
 </head>
 
 <body class="min-h-full flex flex-col antialiased bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white">
@@ -4436,7 +4436,7 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="/src/index.ts"></script>
+    <script type="module" src="/src/auto.ts"></script>
     <script>
         // Plugin Registry & Grouping
         const allPlugins = [
@@ -6537,7 +6537,7 @@
                 records = [...records].sort((a, b) => direction * String(a[key] ?? '').localeCompare(String(b[key] ?? ''), undefined, { numeric: true }));
             }
             const requested = url.searchParams.get('per_page');
-            const perPage = requested === 'All' ? 0 : Math.max(1, parseInt(requested, 10) || 6);
+            const perPage = requested === 'All' || requested === '-1' ? 0 : Math.max(1, parseInt(requested, 10) || 6);
             const total = records.length;
             const lastPage = perPage ? Math.max(1, Math.ceil(total / perPage)) : 1;
             const page = Math.max(1, Math.min(parseInt(url.searchParams.get('page'), 10) || 1, lastPage));

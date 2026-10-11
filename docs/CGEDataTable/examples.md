@@ -41,8 +41,10 @@ Enhance a standard HTML table with search, sorting, sliding window pagination, a
 
 ## 2. In-Memory JSON with Custom Column Formatters
 
+Values without a formatter are rendered as text. Formatter strings are trusted HTML, so escape every interpolated value with `escapeHTML`:
+
 ```javascript
-import { CGEDataTable } from 'tailtools';
+import { CGEDataTable, escapeHTML } from 'tailtools/CGEDataTable';
 
 const table = new CGEDataTable('#orders-table', {
   source: 'json',
@@ -67,7 +69,7 @@ const table = new CGEDataTable('#orders-table', {
           pending: 'bg-amber-50 text-amber-700 border-amber-200',
           canceled: 'bg-rose-50 text-rose-700 border-rose-200',
         };
-        return `<span class="px-2 py-0.5 rounded text-[11px] font-semibold border ${colors[val] || 'bg-slate-100'}">${val.toUpperCase()}</span>`;
+        return `<span class="px-2 py-0.5 rounded text-[11px] font-semibold border ${colors[val] || 'bg-slate-100'}">${escapeHTML(String(val).toUpperCase())}</span>`;
       }
     }
   ],
@@ -92,17 +94,35 @@ public function index(Request $request)
     $query = User::query();
 
     if ($search = $request->query('search')) {
-        $query->where(function($q) use ($search) {
+        $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
               ->orWhere('email', 'like', "%{$search}%");
         });
     }
 
-    if ($sortBy = $request->query('sort_by')) {
-        $query->orderBy($sortBy, $request->query('sort_dir', 'asc'));
+    // filters[role]=admin or filters[roles][]=admin&filters[roles][]=editor
+    $filters = (array) $request->query('filters', []);
+    if (! empty($filters['role'])) {
+        $query->whereIn('role', (array) $filters['role']);
     }
 
-    return response()->json($query->paginate($request->query('per_page', 15)));
+    // Never pass a raw request column to orderBy(): whitelist columns and directions.
+    $sortable = ['id', 'name', 'email', 'created_at'];
+    $sortBy = $request->query('sort_by');
+    $sortDir = strtolower($request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+    if (in_array($sortBy, $sortable, true)) {
+        $query->orderBy($sortBy, $sortDir);
+    } else {
+        $query->latest('id');
+    }
+
+    // "All" is sent as per_page=-1 (allValue); clamp everything else.
+    $perPage = (int) $request->input('per_page', 15);
+    $perPage = $perPage === -1 ? max($query->count(), 1) : min(max($perPage, 1), 100);
+
+    return response()->json($query->paginate($perPage)->withQueryString());
+    // Also supported: UserResource::collection($query->paginate($perPage)) ({ data, meta, links }),
+    // $query->simplePaginate($perPage) and $query->cursorPaginate($perPage).
 }
 ```
 
@@ -116,6 +136,8 @@ const table = new CGEDataTable('#ajax-table', {
   url: '/api/users',
   serverSide: true,
   perPage: 15,
+  perPageOptions: [15, 50, 100, 'All'], // All => per_page=-1 (allValue)
+  locale: 'tr', // or <html lang="tr">
   responsiveMode: 'collapse',
   columns: [
     { key: 'id', label: 'ID', priority: 1 },
@@ -163,12 +185,17 @@ const table = new CGEDataTable('#blade-rows-table', {
 ```javascript
 import { CGESort } from 'tailtools/plugins/CGEDataTable/modules/CGESort.js';
 
-const sort = new CGESort({ defaultDirection: 'asc' });
+const sort = new CGESort({
+  defaultDirection: 'asc',
+  locale: 'tr',
+  onChange: (detail) => console.log('Active sort rule:', detail.rules),
+});
 sort.attachHeaders('#custom-table th');
 
-sort.on('sort', (detail) => {
-  console.log('Active sort rule:', detail.rules);
-});
+// One type per column, Turkish numbers and DD.MM.YYYY dates, empty values last:
+sort.sortBy('date');
+sort.sortRows([{ date: '02.01.2026' }, { date: '' }, { date: '15.12.2025' }]);
+// => 15.12.2025, 02.01.2026, ''
 ```
 
 ### Standalone CGEFilter with debounce:
@@ -176,12 +203,13 @@ sort.on('sort', (detail) => {
 ```javascript
 import { CGEFilter } from 'tailtools/plugins/CGEDataTable/modules/CGEFilter.js';
 
-const filter = new CGEFilter({ debounce: 250 });
-filter.attachSearchInput('#custom-search-input');
-
-filter.on('filter', ({ global, serialized }) => {
-  console.log('Searching for:', global);
+const filter = new CGEFilter({
+  debounce: 250,
+  locale: 'tr', // 'istanbul' matches 'İstanbul', 'igdir' matches 'IĞDIR'
+  onChange: ({ global, serialized }) => console.log('Searching for:', global, serialized),
 });
+filter.attachSearchInput('#custom-search-input');
+filter.attachColumnFilter('role', '#role-filter'); // own debounce timer, initial value applied
 ```
 
 ### Standalone CGEPagination sliding window:
@@ -189,9 +217,15 @@ filter.on('filter', ({ global, serialized }) => {
 ```javascript
 import { CGEPagination } from 'tailtools/plugins/CGEDataTable/modules/CGEPagination.js';
 
-const pager = new CGEPagination({ page: 5, perPage: 10, total: 500 });
+const pager = new CGEPagination({ page: 10, perPage: 10, total: 500 });
 console.log(pager.computeWindow());
-// Output: [1, '...', 3, 4, 5, 6, 7, '...', 50]
+// Output: [1, '...', 8, 9, 10, 11, 12, '...', 50]
+pager.goTo(5);
+console.log(pager.computeWindow());
+// Output: [1, 2, 3, 4, 5, 6, 7, '...', 50] (a single hidden page is never an ellipsis)
+
+pager.setPerPage('All');
+pager.serialize(); // { page: 1, per_page: -1 }
 ```
 
 ## Handling remote failures and teardown
@@ -200,11 +234,19 @@ console.log(pager.computeWindow());
 import { CGEDataTable } from 'tailtools';
 const collection = new CGEDataTable('#users-table', {
   source: 'ajax', url: '/api/users', driver: 'fetch', serverSide: true,
-  // Authenticated POST endpoints: method: 'POST', headers: { 'X-CSRF-TOKEN': token }
+  // POST endpoints send nested JSON and the CSRF token from <meta name="csrf-token"> automatically.
 });
-collection.on('error', ({ error }) => console.error(error));
-// Before replacing the containing Blade partial:
-collection.destroy();
+collection.on('error', ({ error }) => console.error(error.status, error.errors)); // HttpError
+// Before replacing the containing Blade partial (Livewire/Turbo):
+CGEDataTable.destroyAll(document.querySelector('#users-panel'));
+
+// Custom APIs:
+new CGEDataTable('#orders', {
+  source: 'ajax', url: '/api/orders', serverSide: true,
+  responseAdapter: (res) => ({ rows: res.items, total: res.pagination.count,
+    page: res.pagination.page, perPage: res.pagination.size }),
+  paramNames: { perPage: 'limit', search: 'q' },
+});
 ```
 
 Supply a stable `id` in each API record. Persist deletion in your endpoint before removing an item from this local view; bulk removal has no built-in backend DELETE request.

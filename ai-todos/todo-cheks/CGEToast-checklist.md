@@ -78,3 +78,13 @@ Track the execution and verification phases for the `CGEToast` plugin.
 - [x] Demo, dört belge ve skill eşitlemesi
 - [x] Açık/koyu tema, mobil ve etkileşim kontrolü
 - [x] Regresyon, type, build, paket kontrolü ve REPORTS.md
+
+## Stability fixes (October 2026)
+
+- [x] S6: `title`/`message`/action labels are text by default; `html: true` / `data-cge-html` opt-in; flash fallback uses `textContent`.
+- [x] Entry rAF is canceled/guarded so a toast dismissed early never re-appears (maxToasts loops).
+- [x] Reduced motion / `animationDriver: none` remove dismissed toasts immediately.
+- [x] `destroyAll(root)` unbinds delegation (dismisses all for `document`); `init(root)` prunes detached toasts and roots.
+- [x] `.d.ts`, `docs/CGEToast/` (README, usage, examples, api) and skill updated
+- [x] Node tests (`tests/overlay-fixes.test.mjs`) and browser scenarios (`tests/stability-overlay-regressions.js`) added
+- [ ] Full browser regression run (`tests/run-browser.mjs`) by the release owner

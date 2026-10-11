@@ -1,6 +1,9 @@
 /**
  * TailTools Core Library Entry Point
  * Designed for Tailwind CSS v4.3+ and Laravel (Blade & Vite)
+ *
+ * This entry has no side effects: it neither touches window nor initializes plugins.
+ * Import 'tailtools/auto' for globals, automatic initialization and Livewire/Turbo hooks.
  */
 
 import './style.css';
@@ -17,6 +20,7 @@ import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from '
 import { CGEDataGrid } from '../plugins/CGEDataGrid';
 import { CGETabs } from '../plugins/CGETabs';
 import { CGEAccordion, CGECollapse } from '../plugins/CGEAccordion';
+import { escapeHTML } from '../plugins/shared/dom.js';
 
 export {
   CGEModal,
@@ -37,112 +41,12 @@ export {
   CGESort,
   CGEPagination,
   CGEResponsive,
+  escapeHTML,
 };
 
-/**
- * Automatically initializes all TailTools plugins on the page
- * based on declarative data-cge-* attributes.
- */
-export function initTailTools(root: Document | HTMLElement = document): void {
-  // Initialize CGEModal declarative triggers and containers
-  CGEModal.init(root);
+type Lifecycle = { destroyAll?: (root?: Document | HTMLElement) => unknown };
 
-  // Initialize CGEToast declarative triggers and session flashes
-  CGEToast.init(root);
-
-  // Initialize CGEAlert declarative event delegation
-  CGEAlert.init(root);
-
-  // Initialize CGEForm declarative forms
-  CGEForm.init(root);
-
-  // Initialize CGEDrawer declarative triggers and containers
-  CGEDrawer.init(root);
-
-  // Initialize CGELightbox declarative triggers
-  CGELightbox.init();
-
-  // Initialize CGEActionButton declarative triggers
-  CGEActionButton.init();
-
-  // Initialize CGESelect declarative select elements
-  CGESelect.init('select[data-cge-select]', {}, root);
-
-  // Initialize CGEDropzone declarative dropzones
-  CGEDropzone.init(root);
-
-  // Initialize CGEDataTable declarative data tables
-  CGEDataTable.init(root);
-
-  // Initialize CGEDataGrid declarative data grids
-  CGEDataGrid.init(root);
-
-  // Initialize CGETabs declarative tabs
-  CGETabs.init(root);
-
-  // Initialize CGEAccordion declarative accordions
-  CGEAccordion.init(root);
-
-  // Initialize CGECollapse declarative collapse toggles
-  CGECollapse.init(root);
-
-  console.log('[TailTools] Initialized plugins successfully');
-}
-
-export const init = initTailTools;
-
-// Auto-initialize when loaded in browser environments if DOM is ready
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  // Expose plugins globally on window for inline scripts or Alpine.js
-  (window as any).TailTools = {
-    init: initTailTools,
-    CGEModal,
-    CGEToast,
-    CGEAlert,
-    CGEForm,
-    CGEDrawer,
-    CGELightbox,
-    CGEActionButton,
-    CGESelect,
-    CGEDropzone,
-    CGEDataTable,
-    CGEDataGrid,
-    CGETabs,
-    CGEAccordion,
-    CGECollapse,
-    CGEFilter,
-    CGESort,
-    CGEPagination,
-    CGEResponsive,
-  };
-  (window as any).CGEModal = CGEModal;
-  (window as any).CGEToast = CGEToast;
-  (window as any).CGEAlert = CGEAlert;
-  (window as any).CGEForm = CGEForm;
-  (window as any).CGEDrawer = CGEDrawer;
-  (window as any).CGELightbox = CGELightbox;
-  (window as any).CGEActionButton = CGEActionButton;
-  (window as any).CGESelect = CGESelect;
-  (window as any).CGEDropzone = CGEDropzone;
-  (window as any).CGEDataTable = CGEDataTable;
-  (window as any).CGEDataGrid = CGEDataGrid;
-  (window as any).CGETabs = CGETabs;
-  (window as any).CGEAccordion = CGEAccordion;
-  (window as any).CGECollapse = CGECollapse;
-  (window as any).CGEFilter = CGEFilter;
-  (window as any).CGESort = CGESort;
-  (window as any).CGEPagination = CGEPagination;
-  (window as any).CGEResponsive = CGEResponsive;
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initTailTools());
-  } else {
-    initTailTools();
-  }
-}
-
-export default {
-  init: initTailTools,
+const plugins = {
   CGEModal,
   CGEToast,
   CGEAlert,
@@ -157,10 +61,47 @@ export default {
   CGETabs,
   CGEAccordion,
   CGECollapse,
+};
+
+/**
+ * Initializes all TailTools plugins inside root based on declarative data-cge-* attributes.
+ * Safe to call repeatedly (after AJAX, Livewire or Turbo updates): existing instances are
+ * reused and instances whose elements were removed from the DOM are destroyed first.
+ */
+export function initTailTools(root: Document | HTMLElement = document): void {
+  CGEModal.init(root);
+  CGEToast.init(root);
+  CGEAlert.init(root);
+  CGEForm.init(root);
+  CGEDrawer.init(root);
+  CGELightbox.init();
+  CGEActionButton.init();
+  CGESelect.init('select[data-cge-select]', {}, root);
+  CGEDropzone.init(root);
+  CGEDataTable.init(root);
+  CGEDataGrid.init(root);
+  CGETabs.init(root);
+  CGEAccordion.init(root);
+  CGECollapse.init(root);
+}
+
+/**
+ * Destroys every TailTools instance whose element is inside root (or already detached).
+ * Call before replacing a subtree, e.g. on livewire:navigating or turbo:before-render.
+ */
+export function destroyTailTools(root: Document | HTMLElement = document): void {
+  for (const plugin of Object.values(plugins) as Lifecycle[]) plugin.destroyAll?.(root);
+}
+
+export const init = initTailTools;
+export const destroy = destroyTailTools;
+
+export default {
+  init: initTailTools,
+  destroy: destroyTailTools,
+  ...plugins,
   CGEFilter,
   CGESort,
   CGEPagination,
   CGEResponsive,
 };
-
-

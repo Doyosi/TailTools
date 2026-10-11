@@ -77,3 +77,17 @@ REPORTS.md içindeki tüm bakım adaylarını mevcut API ve tasarımı koruyarak
 Preserve static/promise APIs, themes, size presets, focus handling and validation. Replace the tall stacked icon/title layout with a compact inline header, tighten card/input/footer spacing and action sizes, use restrained shadows and semantic icon badges, improve long-content/mobile wrapping and keep custom button classes. Update four docs, canonical skill and REPORTS.md. Verify the existing interactive demo plus light/dark, iconless, prompt/type-to-confirm, three actions, loading and narrow screens visually; run existing behavior checks and distribution build/package checks.
 
 Completed 2026-10-05: compact inline header/actions, semantic light/dark badges, readable helpers, mobile wrapping and reduced motion delivered. 27 Node / 116 Chrome, 11 visual variants, strict types, build/package and ESM/UMD CSS verification passed; measured desktop confirmation height 259.75→149 px. See REPORTS.md.
+
+## Stability fixes (October 2026)
+
+Source: [stability plan](TailTools-stability-plan.md) phases 1, 2 and 6.
+
+- S3: escape title, message, requireInput (helper + placeholder), input value/placeholder, select options and button texts; only `html`/`icon` stay HTML; declarative attributes are text.
+- B1: Enter confirms only from the input/dialog, ignores `e.repeat`, lets focused buttons activate natively.
+- B3: capture-phase delegation with `stopImmediatePropagation`; replay the confirmed click once (links/submitters native, other form triggers `submitConfirmedForm`, else `cge:confirmed`).
+- Loading `preConfirm`/`inputValidator` blocks Escape, backdrop and close button.
+- Portal is the stacking layer for the shared overlay z-index bump (renders above Lightbox).
+- Per-instance translations for archetype buttons; `role="alertdialog"` with valid labelledby/describedby; full focus trap; reduced motion.
+- `destroyAll(root)`, `optionsFromTrigger(el)`, `.d.ts` events `cge:alert:deny` and `cge:confirmed`.
+- Shared: `plugins/shared/overlay.js` prunes disconnected overlays, supports a separate stacking layer and exports `trapTab`/`claimFreeKey`.
+- Tests: `tests/overlay-fixes.test.mjs` (Node) and `tests/stability-overlay-regressions.js` (browser).

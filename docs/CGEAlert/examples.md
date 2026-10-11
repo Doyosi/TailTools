@@ -190,3 +190,39 @@ const result = await CGEAlert.confirm('Publish article?', 'Visible to everyone i
 ```
 
 Set icon:false for a text-only dialog, or showDenyButton:true for three actions. Long labels wrap automatically. Use the same API for the compact default; no migration is needed.
+
+## Stability fixes (October 2026)
+
+### Livewire action gated by a confirmation
+
+```blade
+{{-- The capture-phase gate stops wire:click until the user confirms, then replays the click once. --}}
+<button type="button"
+        wire:click="delete({{ $post->id }})"
+        data-cge-alert="delete"
+        data-cge-title="Delete {{ $post->title }}?"
+        data-cge-message="This cannot be undone.">
+  Delete
+</button>
+```
+
+`$post->title` is rendered as text even if it contains markup.
+
+### Trusted HTML only through `html`
+
+```javascript
+CGEAlert.confirm(userSuppliedName, 'Remove this member?');                         // escaped
+CGEAlert.fire({ title: 'Release notes', html: '<ul><li>Faster tables</li></ul>' }); // trusted markup
+```
+
+### Per-instance translations
+
+```javascript
+CGEAlert.delete('Kaydı sil?', '', { translations: { 'delete-button': 'Sil', 'cancel-button': 'Vazgeç' } });
+```
+
+### Teardown
+
+```javascript
+document.addEventListener('livewire:navigating', () => CGEAlert.destroyAll());
+```

@@ -32,13 +32,13 @@ for (const [name, Class, action, parentMethod] of [
   module.destroy();
 });
 
-test('Table pagination clamps after shrinking totals and explicitly serializes All', () => {
+test('Table pagination clamps after shrinking totals and serializes All as allValue', () => {
   const pager = new CGEPagination({ total: 100, perPage: 10, page: 10 });
   pager.setMetrics({ total: 12 });
   assert.equal(pager.page, 2);
   assert.equal(pager.from, 11);
   pager.setPerPage('All');
-  assert.deepEqual(pager.serialize(), { page: 1, per_page: 'All' });
+  assert.deepEqual(pager.serialize(), { page: 1, per_page: -1 });
 });
 
 test('Table currency sort handles both decimal and thousands separators', () => {

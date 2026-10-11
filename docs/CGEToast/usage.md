@@ -84,7 +84,8 @@ All options can be passed to `CGEToast.show(options)` or `new CGEToast(options)`
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'light'` | Color theme mode: `'light'` (clean white card), `'dark'` (slate-900 card), or `'auto'` (system/`html.dark`). |
-| `message` | `string` | `''` | **Required.** Notification text (supports trusted HTML markup). |
+| `message` | `string` | `''` | **Required.** Notification text. Rendered as plain text unless `html: true`. |
+| `html` | `boolean` | `false` | Renders `title`, `message` and action labels as trusted HTML. Never enable it for server or user supplied text. |
 | `title` | `string \| null` | `null` | Optional bold header title. If omitted, uses localized default title for variant. |
 | `variant` | `'success' \| 'error' \| 'warning' \| 'info' \| 'neutral'` | `'neutral'` | Visual theme and semantic coloring. |
 | `position` | `CGEToastPosition` | `'top-right'` | Placement quadrant or banner mode (see positions below). |
@@ -208,7 +209,7 @@ Nested document/subtree delegation handles a single click only once.
 
 ## Extended maintenance contract (2026-10-04)
 
-Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast title/message are text by default; rich markup requires `html: true` (see Stability fixes below). Use `CGEToast.destroyAll(root)` for Livewire/Turbo teardown.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
 
@@ -217,3 +218,16 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 Floating cards keep `rounded-sm` and use 12 px padding, 32 px semantic icon/image slots, 13 px text and quieter light/dark shadows. Floating portals are capped at 384 px with 16 px viewport gutters. Banners retain edge-to-edge square corners; at small widths their actions sit below the copy and wrap. Progress bars are 2 px high.
 
 Actions use `rounded-sm`, compact horizontal padding, a minimum height of 28 px on desktop and 32 px below 640 px, with visible keyboard focus and wrapping labels. Close targets are 32 px. Custom `image.class`, custom icon HTML and action color classes remain supported. No option, method, event or declaration changes are required.
+
+## Stability fixes (October 2026)
+
+- **Text by default (breaking, pre-release):** `title`, `message` and action labels are escaped. Pass `html: true` (or `data-cge-html` / `data-cge-toast-html` on declarative triggers and flash elements) for trusted markup. Server messages forwarded by CGEForm and CGEActionButton therefore always render as text; their call signatures are unchanged.
+- **Flash elements:** without `data-cge-message`, the element's `textContent` is used (its `innerHTML` only with `data-cge-html`), so Blade `{{ }}` escaping is never undone.
+- **Early dismiss:** a toast dismissed before its entry animation frames run (for example by `maxToasts`) no longer flashes back into view. Reduced motion and `animationDriver: 'none'` remove it immediately.
+- **Lifecycle:** `CGEToast.destroyAll(root = document)` removes trigger delegation bound to `root` (or inside it); with `document` it also dismisses every active toast and resolves when they are removed. `init(root)` forgets toasts and roots detached by Livewire/Turbo first.
+
+```javascript
+CGEToast.success(serverMessage);                                  // always text
+CGEToast.show({ message: '<strong>Saved</strong>', html: true }); // trusted markup only
+document.addEventListener('livewire:navigating', () => CGEToast.destroyAll());
+```

@@ -158,3 +158,25 @@ Use `cge-modal-surface` on the dialog and `cge-modal-header`, `cge-modal-body`, 
 Header/body spacing is 16 px on mobile and 20 px on desktop; titles are 16 px and body text 13 px. Footer spacing is 12 px vertically. Actions are at least 32 px high, or 36 px below 640 px; close targets are 32 px. Long labels wrap. The body scrolls within a viewport-bounded surface while header/footer remain visible. A form wrapping all slots must use `cge-modal-layout`; a submit button must not carry `data-cge-modal-close` (close after successful submission).
 
 Use `cge-modal-action` for sizing and add your Tailwind color classes; `cge-modal-action-secondary` provides a theme-aware neutral action. `cge-modal-close`, `cge-modal-input` and `cge-modal-description` are optional. Existing consumer markup without these surface/slot classes keeps its own styling. Public options, sizing presets, events and declarations are unchanged. Import the plugin stylesheet or `tailtools/style.css`.
+
+## Stability fixes (October 2026)
+
+### Livewire / Turbo lifecycle
+
+```javascript
+document.addEventListener('livewire:navigating', () => CGEModal.destroyAll());
+document.addEventListener('livewire:navigated', () => CGEModal.init());
+
+// Re-initialize only a morphed component subtree
+Livewire.hook('morph.updated', ({ el }) => CGEModal.init(el));
+```
+
+### Fail fast on a wrong selector
+
+```javascript
+try {
+  new CGEModal('#missing-modal');
+} catch (error) {
+  console.error(error.message); // [CGEModal] Target element "#missing-modal" not found.
+}
+```

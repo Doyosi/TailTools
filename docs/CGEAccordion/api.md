@@ -80,7 +80,14 @@ export declare class CGEAccordion {
   off(eventName: string, callback: CGEAccordionEventCallback): this;
   destroy(): void;
 
+  /**
+   * Returns every instance under root (new and existing). Destroys detached instances first and
+   * rebuilds instances whose plugin attributes were removed by Livewire morphing.
+   */
   static init(root?: HTMLElement | Document | string, options?: CGEAccordionOptions): CGEAccordion[];
+  /** Destroys instances whose element is inside root or no longer connected. */
+  static destroyAll(root?: HTMLElement | Document): CGEAccordion[];
+  /** Returns the registered instance or null. */
   static get(elementOrId: HTMLElement | string): CGEAccordion | null;
 }
 
@@ -139,7 +146,14 @@ export declare class CGECollapse {
   off(eventName: string, callback: CGECollapseEventCallback): this;
   destroy(): void;
 
+  /**
+   * Returns every collapse under root. Accordion item triggers are skipped; collapses inside
+   * accordion bodies are initialized.
+   */
   static init(root?: HTMLElement | Document | string, options?: CGECollapseOptions): CGECollapse[];
+  /** Destroys collapses whose panel is inside root or no longer connected. */
+  static destroyAll(root?: HTMLElement | Document): CGECollapse[];
+  /** Returns the registered instance or null. */
   static get(elementOrId: HTMLElement | string): CGECollapse | null;
 }
 
@@ -148,4 +162,4 @@ export default CGEAccordion;
 
 
 ## Runtime contracts
-`CGEAccordion.get` and `CGECollapse.get` return null on unknown IDs or invalid selectors. `CGECollapse.triggers` contains all controls sharing its wrapper. Accordion discovery returns newly created instances; repeated Accordion init returns no new instances. Collapse discovery deduplicates panel instances within a call. Instance events use short names (`open`, `close`, `toggle`); DOM events use the `cge:accordion:*` / `cge:collapse:*` prefixes.
+`CGEAccordion.get` and `CGECollapse.get` return null on unknown IDs or invalid selectors. `CGECollapse.triggers` contains all controls sharing its wrapper. `CGEAccordion.init(root)` and `CGECollapse.init(root)` return every instance under root (new and existing; Accordion returned only new instances before October 2026), destroy instances whose element left the DOM and rebuild instances whose plugin attributes (`data-cge-accordion-ready`, `aria-expanded`, `role="region"`) were removed by Livewire morphing. `destroyAll(root)` destroys instances inside root or detached. Collapse discovery deduplicates panel instances within a call, skips only triggers owned by an accordion item and initializes collapses placed inside accordion bodies. Instance events use short names (`open`, `close`, `toggle`); DOM events use the `cge:accordion:*` / `cge:collapse:*` prefixes and `cge:collapse:*` is dispatched once on the panel (it bubbles). Clicks on buttons, links, form controls or `[data-cge-no-toggle]` nested inside a trigger do not toggle the item; key presses with Alt/Ctrl/Meta are ignored. The optional `animation` class and smooth `scrollIntoView` are skipped when `prefers-reduced-motion: reduce` is set.

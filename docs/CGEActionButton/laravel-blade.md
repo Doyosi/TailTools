@@ -188,3 +188,10 @@ Disables sibling actions in the same row while an action is executing:
 - When Livewire morphs the DOM after a component update, all newly rendered `[data-cge-action]` buttons work immediately.
 - Zero `wire:ignore` or manual component re-binding is necessary.
 - Sibling lock groups automatically bind to the freshly morphed elements.
+
+## Stability fixes (October 2026)
+
+- Keep `<meta name="csrf-token" content="{{ csrf_token() }}">` in the layout. Without it the plugin falls back to the form `_token`, `window.csrfToken`, then the `XSRF-TOKEN` cookie as `X-XSRF-TOKEN` (Laravel decrypts it), so a stale encrypted cookie no longer causes 419 through `X-CSRF-TOKEN`.
+- A controller that answers an AJAX request with `return redirect()->route(...)` now navigates to the final page (`followRedirects`, default `true`). Returning `response()->json(['redirect' => $url])` keeps flash data for the next page; a followed redirect has already rendered (and consumed) it.
+- `wire:click` / `@click` on a `data-cge-confirm` element runs once after confirmation. After Livewire morphs or Turbo visits call `CGEActionButton.destroyAll(root)` (or `destroyTailTools(root)`).
+- `<button type="button">` inside a form no longer submits it implicitly; use a submit button, `data-cge-form`, or `data-cge-ajax`.

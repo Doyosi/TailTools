@@ -4,6 +4,8 @@ This reference mirrors the shipped [declaration](../../plugins/CGEActionButton/C
 
 Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
 
+**Stability fixes (October 2026):** the delegated listener runs in the capture phase, so inline `onclick`, Alpine `@click` and `wire:click` wait for confirmation and the click is replayed exactly once afterwards; confirmed native submits use `requestSubmit()` (submit event, CGEForm AJAX/422, submitter name/value); plain `<a href>` triggers navigate after confirmation (AJAX only with `data-cge-ajax` or an explicit method/`data-cge-url`) and keep `target`/`download`; the busy state recovers after `redirectTimeout` when no navigation happens; CSRF via the shared helper (cookie only as `X-XSRF-TOKEN`); `followRedirects` navigates after followed server redirects; only string `message` values are toasted and only `redirect`/`redirect_url` keys redirect; `init()` accepts a selector or a root; `static destroyAll(root)`.
+
 ```typescript
 /**
  * CGEActionButton - TypeScript Definitions
@@ -50,11 +52,18 @@ export interface CGEActionButtonOptions {
   cancelText?: string | null;
   /** Require exact keyword typing to confirm (e.g. 'DELETE') */
   requireInput?: string | null;
-  /** Target API URL for direct async execution */
+  /**
+   * Target API URL for direct async execution. Plain `<a href>` triggers navigate after
+   * confirmation; their href is only used as the AJAX URL with `ajax` or an explicit `method`.
+   */
   url?: string | null;
   /** HTTP method for direct async execution */
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | string;
-  /** Form selector to submit upon confirmation */
+  /**
+   * Form selector to submit upon confirmation. Without it, submit buttons use their own form;
+   * anchors never do and `type="button"` controls only with `ajax`. Native submits use
+   * `requestSubmit()`, so `submit` listeners (CGEForm, Livewire) run and the submitter is kept.
+   */
   form?: string | null;
   /** Submit form asynchronously via AJAX */
   ajax?: boolean;
@@ -66,14 +75,20 @@ export interface CGEActionButtonOptions {
   successToast?: string | null;
   /** Error toast message override */
   errorToast?: string | null;
-  /** Automated redirect destination URL */
+  /** Automated redirect destination URL (otherwise JSON `redirect` / `redirect_url` keys) */
   redirect?: string | null;
+  /** Navigate to the final URL when fetch/axios transparently followed a server redirect (default true) */
+  followRedirects?: boolean;
+  /** Milliseconds after which a pending navigation that never unloaded the page re-enables the button (default 5000; 0 disables) */
+  redirectTimeout?: number;
   /** Bypass confirmation dialog and execute immediately */
   instant?: boolean;
   /** Simulated async duration in milliseconds (useful for prototyping, demos, or minimum spin time) */
   simulate?: number;
-  /** Additional HTTP headers */
+  /** Additional HTTP headers (merged over Accept, X-Requested-With and CSRF headers) */
   headers?: Record<string, string>;
+  /** Axios instance used before `window.axios`; fetch is used when neither exists */
+  axiosInstance?: any;
   /** Localization dictionary */
   translations?: Partial<CGEActionButtonTranslations>;
   /** Custom execution callback handler */
@@ -108,7 +123,13 @@ export class CGEActionButton {
   static get(target: string | HTMLElement): CGEActionButton | null;
   static getOrCreate(target: string | HTMLElement, options?: CGEActionButtonOptions): CGEActionButton;
   static execute(target: string | HTMLElement, options?: CGEActionButtonOptions): Promise<any>;
-  static init(selector?: string): void;
+  /**
+   * Binds the capture-phase delegated click listener once. Pass a trigger selector to customize it,
+   * or a root (Document/Element) — instances whose elements were removed are pruned either way.
+   */
+  static init(target?: string | Document | Element): void;
+  /** Destroys instances whose element is inside root or disconnected. */
+  static destroyAll(root?: Document | Element): CGEActionButton[];
 
   // Instance Properties
   readonly element: HTMLElement;

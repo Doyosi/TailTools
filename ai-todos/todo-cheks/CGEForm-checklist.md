@@ -50,3 +50,16 @@ Tracking the end-to-end design, implementation, testing, and documentation of `C
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## Stability fixes (October 2026)
+
+- [x] Shared Laravel CSRF/axios helpers
+- [x] Followed redirect navigation (`followRedirects`)
+- [x] 419 `csrf-expired` feedback
+- [x] Per-key feedback for shared parents; independent clearing
+- [x] Nested/array error keys
+- [x] Invalid proxy (CGESelect trigger / `data-cge-error-target`)
+- [x] `aria-describedby` restored
+- [x] Spinner on `event.submitter`; frozen during `redirectDelay`
+- [x] `destroyAll(root)` + init pruning
+- [x] Docs, api.md, skill, Node + browser regressions

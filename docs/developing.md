@@ -44,8 +44,10 @@ TailTools/
 │       ├── style.css          # Plugin CSS (Tailwind v4 compatible)
 │       └── index.js           # Plugin barrel export
 ├── src/
-│   ├── style.css              # Main development Tailwind v4 CSS
-│   └── index.ts               # Core library entry point
+│   ├── style.css              # Library Tailwind v4 CSS (scans plugins/ only)
+│   ├── demo.css               # Demo/regression CSS (library + showcase markup)
+│   ├── index.ts               # Side-effect-free library entry (initTailTools/destroyTailTools)
+│   └── auto.ts                # Opt-in entry: globals, auto-init, Livewire/Turbo hooks
 ├── index.html                 # Interactive testbed & demo sandbox
 ├── package.json
 ├── vite.config.ts
@@ -146,14 +148,16 @@ export class CGE<X> {
 
 ## Maintenance regression checks (2026-10-04)
 
-Run npm test for Node regressions and strict TypeScript checks. The existing demo links to /tests/regressions.html for programmatic/declarative, ARIA, serialization, stacking and teardown regressions. See [tests/README.md](../tests/README.md). TypeScript is a development dependency; runtime dependencies are unchanged.
+Run npm test for Node regressions and strict TypeScript checks. The existing demo links to /tests/regressions.html for programmatic/declarative, ARIA, serialization, stacking and teardown regressions. See [tests/README.md](../tests/README.md). TypeScript is a development dependency.
 
 ## Library and demo artifacts
 
-- npm run build:lib uses vite.lib.config.ts: dist/tailtools.js, dist/tailtools.umd.cjs and dist/tailtools.css.
+- npm run build:lib cleans dist/, then vite.lib.config.ts builds the ESM entries dist/tailtools.js (side-effect free) and dist/auto.js, and vite.umd.config.ts builds dist/tailtools.umd.cjs from the auto entry. Both emit dist/tailtools.css.
+- The package has no runtime dependencies; tailwindcss and tailwind-animations are optional peers.
+- Shared internals: plugins/shared/dom.js (escaping, text-first rendering, instance teardown) and plugins/shared/http.js (Laravel CSRF, headers, errors, redirects). Every plugin exposes static destroyAll(root) and prunes detached instances in init().
 - npm run build:demo uses vite.config.ts: the existing showcase and regression page in dist/demo/.
 - npm run build runs both; npm run preview serves dist/demo/.
 - npm run test:package packs/imports every plugin and checks declarations in isolation.
 - node_modules/dist are ignored local generated directories. Recreate with npm ci and npm run build; package-lock.json remains tracked.
 
-Canonical sources: .agents/skills/cge-*/SKILL.md, ai-todos/plans/CGE*-plan.md, ai-todos/todo-cheks/CGE*-checklist.md, docs/installing.md and this guide. Legacy paths remain compatibility links. Shared plugins/shared helpers coordinate ownership while retaining public classes and CSS designs.
+Canonical sources: .agents/skills/cge-*/SKILL.md, ai-todos/plans/CGE*-plan.md, ai-todos/todo-cheks/CGE*-checklist.md, docs/installing.md and this guide. Shared plugins/shared helpers coordinate ownership while retaining public classes and CSS designs.

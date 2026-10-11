@@ -92,3 +92,7 @@ Delete confirmation uses `CGEAlert.confirm(title, message, options)`. Failed ind
 clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+File names and errors are rendered as text, instant mode submits server IDs (`serverIdName`, default `${paramName}_ids[]`) instead of re-uploading files with the form, Laravel 422/419 messages appear on the card, client validation errors are not retryable and retries respect the queue, `clickable` accepts a selector, avatar failures revert the image and show an error, form reset clears new previews, and `destroy()` / `CGEDropzone.destroyAll(root)` fully restore the element. See [usage](usage.md#stability-fixes-october-2026).

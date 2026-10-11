@@ -17,7 +17,7 @@
 - **Semantic Variants Palette:** Out-of-the-box styling and inline SVG icons for `success`, `error`, `warning`, `info`, and `neutral`.
 - **60fps Countdown Progress Bar & Hover-Pause:** Animated RAF progress bar matching the variant accent. Hovering over a toast freezes the timer; moving away resumes the countdown.
 - **Touch Swipe Gestures:** Native touch support allowing mobile users to flick away toasts horizontally with natural spring transitions.
-- **Rich Content & Actions:** Full HTML interpolation, custom avatar/image slots, and customizable action buttons (e.g. Gmail-style "Undo").
+- **Safe Content & Actions:** Text by default with an explicit `html: true` opt-in for trusted markup, custom avatar/image slots, and customizable action buttons (e.g. Gmail-style "Undo").
 - **Localization (i18n) Engine:** Built-in translation dictionary with runtime overrides for custom titles, close button aria labels, and action labels.
 - **Laravel Blade & Flash Integration:** Automatic processing of Laravel session flash messages via `<x-cge-toast />` or declarative `data-cge-toast-flash` attributes.
 - **Dual Event System:** Both instance callback functions (`onOpen`, `onClose`, `onClick`) and standard DOM CustomEvents dispatched on `document`.
@@ -118,7 +118,7 @@ Nested document/subtree delegation handles a single click only once.
 
 ## Extended maintenance contract (2026-10-04)
 
-Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast rich messages and custom render content accept trusted HTML; keep untrusted user text escaped. Use dismiss/clear and the declared Toast API rather than adding a universal destroy method.
+Repeated init consumes each session flash once; duration=0/false remains persistent. Nested root listeners process a click once. Toast title/message are text by default; rich markup requires `html: true`. Use `CGEToast.destroyAll(root)` for Livewire/Turbo teardown.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
 
@@ -127,3 +127,7 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 Floating cards keep `rounded-sm` and use 12 px padding, 32 px semantic icon/image slots, 13 px text and quieter light/dark shadows. Floating portals are capped at 384 px with 16 px viewport gutters. Banners retain edge-to-edge square corners; at small widths their actions sit below the copy and wrap. Progress bars are 2 px high.
 
 Actions use `rounded-sm`, compact horizontal padding, a minimum height of 28 px on desktop and 32 px below 640 px, with visible keyboard focus and wrapping labels. Close targets are 32 px. Custom `image.class`, custom icon HTML and action color classes remain supported. No option, method, event or declaration changes are required.
+
+## Stability fixes (October 2026)
+
+`title` and `message` are rendered as **text by default** (programmatic and `data-cge-*`). Opt into trusted HTML with `html: true` or `data-cge-html`. Toasts dismissed before their entry frame no longer reappear, and `CGEToast.destroyAll(root)` tears down delegation (and, for `document`, active toasts). See [usage](usage.md#stability-fixes-october-2026).

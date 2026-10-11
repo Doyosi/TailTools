@@ -12,7 +12,9 @@ export * from '../plugins/CGEDataGrid/index.js';
 export * from '../plugins/CGETabs/index.js';
 export * from '../plugins/CGEAccordion/index.js';
 export declare function initTailTools(root?: Document | HTMLElement): void;
+export declare function destroyTailTools(root?: Document | HTMLElement): void;
 export declare const init: typeof initTailTools;
+export declare const destroy: typeof destroyTailTools;
 
 import { CGEActionButton } from '../plugins/CGEActionButton/index.js';
 import { CGEAlert } from '../plugins/CGEAlert/index.js';
@@ -30,6 +32,7 @@ import { CGETabs } from '../plugins/CGETabs/index.js';
 import { CGEAccordion, CGECollapse } from '../plugins/CGEAccordion/index.js';
 declare const TailTools: {
   init: typeof initTailTools;
+  destroy: typeof destroyTailTools;
   CGEActionButton: typeof CGEActionButton;
   CGEAlert: typeof CGEAlert;
   CGEDrawer: typeof CGEDrawer;

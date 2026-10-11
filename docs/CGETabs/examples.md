@@ -134,6 +134,29 @@ Load heavy blade partials on-demand when the user clicks a tab:
 
 ---
 
+### Hardened JSON + sanitizer variant
+
+```javascript
+import DOMPurify from 'dompurify';
+import { CGETabs, initTailTools } from 'tailtools';
+
+// Plain ESM: tell Tabs how to initialize plugins inside loaded panels.
+CGETabs.setPanelInitializer(panel => initTailTools(panel));
+
+new CGETabs('#server-stats-tabs', {
+  axiosInstance: window.axios,              // configured instance wins over window.axios
+  sanitize: html => DOMPurify.sanitize(html),
+  ajaxTabs: { logs: { url: '/admin/servers/42/logs', method: 'POST' } } // CSRF header added for POST
+});
+```
+
+```php
+// Controller: return HTML, or JSON with an "html" string. Other JSON renders the error state.
+return response()->json(['html' => view('servers.partials.logs', compact('server'))->render()]);
+```
+
+---
+
 ## 5. Nested CGE Plugins (Form & ActionButton Bridge)
 
 Demonstrating automated lifecycle re-binding when child components live inside tab panels:
@@ -208,3 +231,46 @@ tabs.destroy();
 Instance `.on()` callbacks receive detail objects. Cancel activation through the DOM event, which exposes `preventDefault()`. Preserve unique tab IDs within each group and scope initialization to the inserted subtree.
 
 For narrow screens, keep the tablist as a single horizontal row and allow its automatic scroll area to expose the last tab. Arrow/Home/End navigation brings the focused control into view without resizing the panels.
+
+## Independent and nested deep links
+
+```html
+<div id="account" data-cge-tabs data-cge-history-mode="push">
+  <div data-cge-tablist>
+    <button data-cge-tab="profile">Profile</button>
+    <button data-cge-tab="billing">Billing</button>
+  </div>
+  <div>
+    <section data-cge-panel="profile">...</section>
+    <section data-cge-panel="billing">
+      <div id="billing-tabs" data-cge-tabs data-cge-hash-key="bill">
+        <div data-cge-tablist>
+          <button data-cge-tab="invoices">Invoices</button>
+          <button data-cge-tab="methods">Payment methods</button>
+        </div>
+        <div>
+          <section data-cge-panel="invoices">...</section>
+          <section data-cge-panel="methods">...</section>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+```
+
+- `/settings#bill=methods` opens **Billing** and then **Payment methods**.
+- Clicking tabs produces `#account=billing&bill=methods`; each group only edits its own entry.
+- The legacy `/settings#methods` link also works.
+- With `data-cge-history-mode="push"`, Back to `/settings` restores **Profile**.
+
+## Livewire teardown and re-initialization
+
+```javascript
+import { CGETabs, CGEAccordion, CGECollapse } from 'tailtools';
+
+document.addEventListener('livewire:navigated', () => {
+  for (const Plugin of [CGETabs, CGEAccordion, CGECollapse]) Plugin.init(document);
+});
+// Before removing a region manually:
+CGETabs.destroyAll(document.querySelector('#settings-region'));
+```

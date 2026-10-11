@@ -186,4 +186,26 @@ When switching tabs inside Livewire or Alpine.js components, `CGETabs` works sea
 
 
 ## Dynamic panel cleanup
-Use unique tab/panel names per component. AJAX endpoints should return trusted rendered Blade HTML. Replacing an AJAX panel destroys its registered child plugins; Tabs destroy restores the original panel nodes and attributes. For explicit page/Livewire removal, call the instance's `destroy()` before removing its container, then initialize the inserted subtree. To cancel navigation, listen for the DOM `cge:tabs:show` event and call `preventDefault()`.
+Use unique tab/panel names per component. AJAX endpoints should return trusted rendered Blade HTML. Replacing an AJAX panel destroys its registered child plugins; Tabs destroy restores the original panel nodes and attributes. For explicit page removal, call `CGETabs.destroyAll(container)` (or the instance's `destroy()`) before removing its container, then initialize the inserted subtree. AJAX endpoints should return HTML or `response()->json(['html' => view(...)->render()])`; other JSON payloads render the error state. Non-GET endpoints receive `X-CSRF-TOKEN` from `<meta name="csrf-token">`. To cancel navigation, listen for the DOM `cge:tabs:show` event and call `preventDefault()`.
+
+## Livewire (v3) lifecycle
+
+- `tailtools/auto` re-runs `initTailTools()` on `livewire:navigated` and after every Livewire commit. `CGETabs.init()` destroys instances whose markup was removed and rebuilds instances whose attributes (`role`, `aria-*`, `data-cge-tabs-ready`) were reset by the morph, so listeners never leak.
+- A rebuilt group resolves its initial tab again (URL → storage → default). To keep the client-side active tab and loaded AJAX panels across component updates, wrap the group in `wire:ignore`:
+
+```blade
+<div wire:ignore>
+    <x-cge-tabs id="report-tabs">...</x-cge-tabs>
+</div>
+```
+
+- Without `tailtools/auto`, register the hooks yourself:
+
+```javascript
+import { CGETabs } from 'tailtools';
+
+document.addEventListener('livewire:navigated', () => CGETabs.init(document));
+document.addEventListener('livewire:init', () => {
+  Livewire.hook('commit', ({ succeed }) => succeed(() => queueMicrotask(() => CGETabs.init(document))));
+});
+```

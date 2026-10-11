@@ -141,3 +141,28 @@ nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
 form.reset(); // UI refreshes in a microtask after native defaults apply
 select.on('opened', ({ instance }) => console.log(instance.getValue()));
 ```
+
+## Stability fixes (October 2026)
+
+### POST search behind Laravel CSRF
+
+```javascript
+new CGESelect('#user-picker', {
+  asyncSource: {
+    url: '/users/search',
+    method: 'POST', // X-CSRF-TOKEN / X-XSRF-TOKEN are added automatically
+    headers: { 'X-Team': document.body.dataset.team },
+    transform: response => response.data.map(user => ({ value: user.id, label: user.name, icon: 'fa-solid fa-user' }))
+  }
+});
+```
+
+### Escaping inside a custom renderer
+
+```javascript
+const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+new CGESelect('#remote', {
+  asyncSource: { url: '/api/projects' },
+  renderOption: item => `<span class="font-medium">${escape(item.label)}</span>`
+});
+```

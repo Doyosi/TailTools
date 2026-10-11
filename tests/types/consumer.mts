@@ -83,3 +83,8 @@ void [filter, pager, sort, responsive, new GridFilter(), new GridSort(), new Gri
 grid.setViewMode('cards');
 // @ts-expect-error standalone filter notifications use onChange, not on()
 filter.on('filter', () => {});
+import AutoTailTools, { destroyTailTools } from 'tailtools/auto';
+destroyTailTools(document.body);
+TailTools.destroy(document);
+AutoTailTools.init(document);
+window.TailToolsConfig = { autoInit: false, livewire: true };

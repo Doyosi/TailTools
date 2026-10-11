@@ -241,6 +241,18 @@ export class CGEResponsive {
   }
 
   /**
+   * Resolves collapse tiers from options.breakpoint: a number scales the default
+   * 480/640/768 tiers (breakpoint = landscape tier); an array sets [phone, landscape, tablet].
+   * @private
+   */
+  _breakpoints() {
+    const value = this.options.breakpoint;
+    if (Array.isArray(value) && value.length >= 3 && value.every(Number.isFinite)) return value.slice(0, 3);
+    const breakpoint = Number(value) > 0 ? Number(value) : 640;
+    return [Math.round(breakpoint * 0.75), breakpoint, Math.round(breakpoint * 1.2)];
+  }
+
+  /**
    * Updates collapse mode column visibility based on priority and width.
    * @private
    */
@@ -258,17 +270,17 @@ export class CGEResponsive {
       return { th, index, key, priority };
     });
 
-    // Determine how many columns can fit:
-    // On desktop (width >= 768), priority 1, 2, 3 columns are NEVER hidden.
-    // width < 480: keep priority 1 (mobile portrait)
-    // width < 640: keep priority 1 & 2 (mobile landscape)
-    // width < 768: keep priority 1, 2 & 3 (tablets)
-    // width >= 768: all standard columns fit comfortably
+    // Determine how many columns can fit (default breakpoint 640 => tiers 480 / 640 / 768):
+    // width < phone: keep priority 1 (mobile portrait)
+    // width < landscape (= breakpoint): keep priority 1 & 2 (mobile landscape)
+    // width < tablet: keep priority 1, 2 & 3 (tablets)
+    // wider: all standard columns fit comfortably
+    const [phone, landscape, tablet] = this._breakpoints();
     const shouldHide = (priority) => {
       if (priority <= 1) return false; // Priority 1 is never hidden
-      if (width < 480 && priority >= 2) return true;
-      if (width < 640 && priority >= 3) return true;
-      if (width < 768 && priority >= 4) return true;
+      if (width < phone && priority >= 2) return true;
+      if (width < landscape && priority >= 3) return true;
+      if (width < tablet && priority >= 4) return true;
       return false;
     };
 

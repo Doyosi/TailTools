@@ -60,7 +60,7 @@ export async function verifyToastModalUI(browser, testUrl) {
     await toast({ theme: 'dark', variant: 'warning', title: 'production-resource-0123456789-with-a-very-long-identifier', message: 'A long message remains readable without pushing controls beyond the card.', actions: [{ label: 'Apply changes to every selected production resource' }, { label: 'Return to workspace configuration' }] });
     await capture('toast-long-dark-320', '.cge-toast');
     await clearToasts();
-    await toast({ theme: 'light', variant: 'neutral', icon: false, image: { src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#6366f1"/></svg>')}`, class: 'w-8 h-8 rounded-sm' }, title: 'Design team', message: '<strong>A new comment</strong> on your draft.' });
+    await toast({ theme: 'light', variant: 'neutral', icon: false, image: { src: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#6366f1"/></svg>')}`, class: 'w-8 h-8 rounded-sm' }, title: 'Design team', message: '<strong>A new comment</strong> on your draft.', html: true });
     assert.equal(await page.locator('.cge-toast img').count(), 1);
     await capture('toast-custom-image-320', '.cge-toast');
     await clearToasts();

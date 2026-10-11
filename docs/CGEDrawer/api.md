@@ -215,6 +215,10 @@ export class CGEDrawer {
    */
   options: CGEDrawerOptions;
 
+  /**
+   * @param target - Drawer element, CSS selector or bare element ID (`"nav"` resolves `#nav` first)
+   * @throws Error when the target element cannot be found
+   */
   constructor(target: string | HTMLElement, options?: CGEDrawerOptions);
 
   /**
@@ -223,12 +227,12 @@ export class CGEDrawer {
   init(): void;
 
   /**
-   * Opens the drawer.
+   * Opens the drawer. Calling `preventDefault()` on the cancelable `cge:drawer:open` event keeps it closed.
    */
   open(trigger?: HTMLElement | null): Promise<void>;
 
   /**
-   * Closes the drawer.
+   * Closes the drawer. Calling `preventDefault()` on the cancelable `cge:drawer:close` event keeps it open.
    */
   close(): Promise<void>;
 
@@ -266,6 +270,11 @@ export class CGEDrawer {
   static get(target: string | HTMLElement): CGEDrawer | null;
 
   /**
+   * Resolves an element, a CSS selector or a bare element ID.
+   */
+  static resolveTarget(target: string | HTMLElement | null | undefined): HTMLElement | null;
+
+  /**
    * Opens a drawer by selector or element.
    */
   static open(target: string | HTMLElement, options?: CGEDrawerOptions): Promise<void>;
@@ -282,9 +291,29 @@ export class CGEDrawer {
 
   /**
    * Binds declarative triggers and discovers drawers in DOM.
+   * Instances whose elements were removed (Livewire morph, Turbo) are destroyed first.
    */
   static init(root?: Document | HTMLElement): void;
+
+  /**
+   * Destroys instances inside `root` (or already detached). Passing `document` also removes
+   * the document-level trigger delegation.
+   */
+  static destroyAll(root?: Document | HTMLElement): CGEDrawer[];
 }
 
 export default CGEDrawer;
+
+declare global {
+  interface HTMLElementEventMap {
+    /** Cancelable: `preventDefault()` keeps the drawer closed. */
+    'cge:drawer:open': CustomEvent<CGEDrawerEventDetail>;
+    'cge:drawer:opened': CustomEvent<CGEDrawerEventDetail>;
+    /** Cancelable: `preventDefault()` keeps the drawer open. */
+    'cge:drawer:close': CustomEvent<CGEDrawerEventDetail>;
+    'cge:drawer:closed': CustomEvent<CGEDrawerEventDetail>;
+    'cge:drawer:backdrop-click': CustomEvent<CGEDrawerEventDetail & { event: MouseEvent }>;
+    'cge:drawer:swipe': CustomEvent<CGEDrawerEventDetail & CGEDrawerSwipeEventDetail>;
+  }
+}
 ```

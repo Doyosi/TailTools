@@ -123,7 +123,7 @@ In Blade template:
 ## Maintenance contracts
 
 - Keep the shipped API and existing theme. Use stable unique `id` values for remote records; zero is a valid ID. Set `serverSide: true` for a paginated Laravel endpoint, or false for a complete array processed locally.
-- Standalone module callbacks use constructor `onChange`, not `.on()`. Grid module names differ from Table (`setFilter`, `goToPage`, `getWindow` versus `setColumnFilter`, `goTo`, `computeWindow`); check the appropriate declaration before using a subpath.
+- Standalone module callbacks use constructor `onChange`, not `.on()`. Filter/Sort/Pagination are one shared implementation (`plugins/shared/collection-{filter,sort,pagination}.js`) re-exported by both plugin module paths, so Grid and Table names both work (`setFilter`/`setColumnFilter`, `goToPage`/`goTo`, `getWindow`/`computeWindow`, `filterData`/`filterRows`, `toggleSort`/`cycleSort`, `clear`/`reset`). Fix collection behavior once in the shared core.
 - New requests abort the previous request; stale responses cannot render or clear loading. Destroy cancels requests, timers, frames and listeners, restores original DOM, and permits recreation. Update all four plugin docs and verify browser regressions after maintenance.
 - Removal methods are local view operations; persist deletions with your own backend endpoint or CGEActionButton. A restore success must not remove the card/row. CGEActionButton.init() takes a selector string; global delegation covers future rows, so do not pass an HTMLElement.
 - CGEAlert methods take positional title/message/options and return an object with `isConfirmed`; dismissal is not confirmation. Grid deleteSelected returns a Promise<number>; Table deleteSelected returns the table and its toolbar asks first.
@@ -134,3 +134,14 @@ In Blade template:
 - Compact controls include previous/current/next and numeric page jump + Go; desktop shows numbered pages and jump when lastPage > 5. Buttons have type=button, navigation has an accessible label, numbered active pages use aria-current, and Enter prevents default form submission.
 - Loading preserves cards and uses a 200 ms fade/backdrop with role=status and aria-busy. Cancel prior fade timers/frames when loading changes; destroy releases them. A fading-out overlay must not block interaction. Reduced-motion CSS disables transition/spinner.
 - Use translations loading, prev, next, go-to-page, jump and pagination. Existing pagination/jump/loading UI slots remain configurable. The Cloud Clusters demo uses a scoped mock AJAX endpoint, serverSide:true and 500 ms delay. Verify 320/390/639/640/1024 px layouts, page jumps and repeated loading transitions.
+
+## Stability rules (October 2026)
+
+- XSS: raw values render as text. `cardRenderer*` / `html_card` output is trusted developer HTML; always escape interpolated values with `escapeHTML` (exported from `tailtools/CGEDataGrid`). Never pass user data to innerHTML.
+- Laravel: `paginate()`, API Resource `{ data, meta, links }`, `simplePaginate()` (hasMore, no total) and `cursorPaginate()` (prev/next only) are parsed by `readCollectionResponse`; use `responseAdapter` for other APIs and `paramNames` for different query names. `setMetrics({ lastPage })` is honored.
+- "All" sends `per_page=-1` (`allValue`). Server examples must cast/clamp `per_page`, whitelist `sort_by` and validate `sort_dir` (never `orderBy($request->sort_by)`).
+- Requests: non-GET sends CSRF (`laravelHeaders`) and nested JSON (`nestParams`); GET arrays use `key[]` (`appendQuery`); `axiosInstance` beats `window.axios`; failures are `HttpError`. `fetch()` emits `error` + `fetch-error` and rejects; internal callers must `.catch()`.
+- Search folds case/accents with `locale` (default `<html lang>`), so İstanbul/istanbul/ISTANBUL and IĞDIR/igdir match. Each text filter has its own debounce timer; selects apply immediately and their initial (Blade `old()`) value is applied; `''`/`'all'`/`[]` clear a filter.
+- Sorting resolves one type per column (number incl. `1.234,50`, date only for `YYYY-MM-DD`/`DD.MM.YYYY`/`DD/MM/YYYY`, otherwise `Intl.Collator` numeric text), keeps empty values last and is stable. Codes like `A-10` are text.
+- Both plugins emit both event names (`rendered`/`render`, `selection:change`/`selection-change`, `destroy`/`destroyed`, `error`/`fetch-error`). Use `destroyAll(root)` before Livewire/Turbo swaps; `init(root)` prunes detached instances. Server rows without IDs get page-scoped fallback IDs.
+- `docs/CGEDataGrid/api.md` must contain the exact `CGEDataGrid.d.ts`; regenerate it after changing declarations. Node regressions live in `tests/collection-fixes.test.mjs`.

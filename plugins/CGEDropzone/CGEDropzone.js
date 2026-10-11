@@ -7,6 +7,9 @@
  * @package TailTools
  */
 
+import { laravelHeaders, resolveAxios, HttpError, parseBody, errorMessage } from '../shared/http.js';
+import { destroyInstances, pruneInstances } from '../shared/dom.js';
+
 export class CGEDropzone {
   _deleteControllers = new Set();
   /**
@@ -36,10 +39,11 @@ export class CGEDropzone {
     removeUrl: null, // Endpoint for remote file deletion
     removeMethod: 'DELETE',
     confirmDelete: true, // Uses CGEAlert if available, otherwise native confirm
-    driver: 'axios', // 'axios' | 'xhr' | 'fetch'
+    driver: 'axios', // 'axios' | 'xhr' | 'fetch' (uploads without axios use XHR for progress events)
     axiosInstance: null,
+    serverIdName: null, // instant mode hidden input name for server IDs (default `${paramName}_ids[]`, false disables)
     existingFiles: [], // [{ id, name, size, url, mimeType }]
-    clickable: true, // Dropzone click triggers file picker
+    clickable: true, // true: dropzone opens the picker | false: no click | 'selector': matching elements open it
     previewContainer: null, // Custom container selector for previews (defaults to inside dropzone)
     renderPreview: null, // (fileItem, dropzone) => HTMLElement | string
     renderTrigger: null, // (dropzone) => HTMLElement | string
@@ -128,6 +132,7 @@ export class CGEDropzone {
    * @returns {CGEDropzone[]}
    */
   static init(root = document, options = {}) {
+    CGEDropzone._prune();
     const scope = typeof root === 'string' ? document.querySelector(root) || document : root;
     const elements = scope.querySelectorAll('[data-cge-dropzone]');
     const initialized = [];
@@ -147,6 +152,29 @@ export class CGEDropzone {
   }
 
   /**
+   * Element-keyed registry entries (ID aliases share the same instance).
+   * @private
+   */
+  static _entries() {
+    return new Map(Array.from(CGEDropzone.instances).filter(([key]) => typeof key !== 'string'));
+  }
+
+  /** @private */
+  static _prune() {
+    pruneInstances(CGEDropzone._entries());
+  }
+
+  /**
+   * Destroys instances whose element is inside root or no longer connected
+   * (Livewire morphing, Turbo visits, innerHTML swaps).
+   * @param {Document | Element} [root=document]
+   * @returns {CGEDropzone[]}
+   */
+  static destroyAll(root = document) {
+    return destroyInstances(CGEDropzone._entries(), root);
+  }
+
+  /**
    * @param {string | HTMLElement} target - Container element or selector string
    * @param {Object} [options={}] - Custom configuration options
    */
@@ -161,6 +189,11 @@ export class CGEDropzone {
     }
 
     this.element = element;
+    // Original attributes restored by destroy() so re-initialization starts clean.
+    this._originalAttributes = new Map(['class', 'role', 'tabindex', 'aria-label']
+      .map(name => [name, element.getAttribute(name)]));
+    this._createdNodes = [];
+    this._clickTargets = [];
     this.options = this._resolveOptions(options);
 
     // Avatar mode forces single file
@@ -231,6 +264,10 @@ export class CGEDropzone {
     if (ds.cgeRemoveMethod) dataAttrOptions.removeMethod = ds.cgeRemoveMethod.toUpperCase();
     if (ds.cgeConfirmDelete !== undefined) dataAttrOptions.confirmDelete = ds.cgeConfirmDelete !== 'false';
     if (ds.cgeDriver) dataAttrOptions.driver = ds.cgeDriver;
+    if (ds.cgeServerIdName !== undefined) dataAttrOptions.serverIdName = ds.cgeServerIdName === 'false' ? false : ds.cgeServerIdName;
+    if (ds.cgeClickable !== undefined) {
+      dataAttrOptions.clickable = ds.cgeClickable === '' || ds.cgeClickable === 'true' ? true : ds.cgeClickable === 'false' ? false : ds.cgeClickable;
+    }
     if (ds.cgeExtraData) {
       try {
         dataAttrOptions.extraData = JSON.parse(ds.cgeExtraData);
@@ -290,11 +327,14 @@ export class CGEDropzone {
     if (this.options.maxFiles !== 1 && !isAvatar) {
       this.hiddenInput.multiple = true;
     }
-    if (this.options.paramName) {
+    // Only form mode submits the files natively. In instant mode the files were already
+    // uploaded, so the picker stays unnamed and server IDs go into hidden inputs instead.
+    if (this.options.paramName && this.options.uploadMode === 'form') {
       this.hiddenInput.name = this.options.paramName + (this.hiddenInput.multiple ? '[]' : '');
     }
 
     this.element.appendChild(this.hiddenInput);
+    this._createdNodes.push(this.hiddenInput);
 
     if (isAvatar) {
       this._buildAvatarUI();
@@ -322,6 +362,7 @@ export class CGEDropzone {
       } else {
         this.triggerContainer = document.createElement('div');
         this.triggerContainer.className = this.options.ui.trigger;
+        this.triggerContainer.setAttribute('data-cge-dropzone-generated', '');
         this.triggerContainer.innerHTML = `
           <svg class="${this.options.ui.triggerIcon}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
@@ -334,6 +375,7 @@ export class CGEDropzone {
         `;
       }
       this.element.appendChild(this.triggerContainer);
+      this._createdNodes.push(this.triggerContainer);
     } else {
       this.triggerContainer = this.element.querySelector('.cge-dropzone-trigger') || this.element;
     }
@@ -349,6 +391,7 @@ export class CGEDropzone {
       this.previewsContainer = document.createElement('div');
       this.previewsContainer.className = this.options.ui.previewsContainer;
       this.element.appendChild(this.previewsContainer);
+      this._createdNodes.push(this.previewsContainer);
     }
   }
 
@@ -383,6 +426,24 @@ export class CGEDropzone {
     this.element.appendChild(this.avatarImage);
     this.element.appendChild(this.avatarPlaceholder);
     this.element.appendChild(this.avatarOverlay);
+
+    // Avatar errors render below the circular (overflow-hidden) container.
+    this.avatarError = document.createElement('div');
+    this.avatarError.className = `${this.options.ui.errorText} cge-dropzone-avatar-error text-center hidden`;
+    this.avatarError.setAttribute('role', 'alert');
+    this.element.insertAdjacentElement('afterend', this.avatarError);
+
+    this._createdNodes.push(this.avatarImage, this.avatarPlaceholder, this.avatarOverlay, this.avatarError);
+  }
+
+  /**
+   * Shows or hides the avatar-mode error message.
+   * @private
+   */
+  _showAvatarError(message) {
+    if (!this.avatarError) return;
+    this.avatarError.textContent = message || '';
+    this.avatarError.classList.toggle('hidden', !message);
   }
 
   /**
@@ -413,6 +474,7 @@ export class CGEDropzone {
 
         this.files.push(fileItem);
         this._renderFileCard(fileItem);
+        this._writeServerId(fileItem);
       });
 
       this._syncFormInput();
@@ -428,8 +490,16 @@ export class CGEDropzone {
    * @private
    */
   _bindEvents() {
-    // Click triggers file picker
-    if (this.options.clickable) {
+    // Click triggers file picker (true: the dropzone itself, string: matching elements)
+    if (typeof this.options.clickable === 'string' && this.options.clickable.trim()) {
+      this._onClickTarget = (e) => {
+        e.preventDefault();
+        if (this.isDisabled || this._destroyed) return;
+        this.hiddenInput.click();
+      };
+      this._clickTargets = Array.from(document.querySelectorAll(this.options.clickable));
+      this._clickTargets.forEach(target => target.addEventListener('click', this._onClickTarget));
+    } else if (this.options.clickable) {
       this._onClickListener = (e) => {
         if (this.isDisabled) return;
         // Don't trigger if user clicked directly on a button, remove icon, or existing preview card
@@ -446,7 +516,7 @@ export class CGEDropzone {
 
     // Keyboard support (Space / Enter)
     this._onKeyDownListener = (e) => {
-      if (this.isDisabled) return;
+      if (this.isDisabled || this.options.clickable === false) return;
       if (e.target === this.element && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault();
         this.hiddenInput.click();
@@ -511,6 +581,30 @@ export class CGEDropzone {
       };
       this.form.addEventListener('submit', this._onFormSubmit);
     }
+
+    // Native form reset (also CGEForm resetOnSuccess) clears new previews after controls reset.
+    if (this.form) {
+      this._onFormReset = (e) => {
+        clearTimeout(this._resetTimer);
+        this._resetTimer = setTimeout(() => {
+          if (!e.defaultPrevented && !this._destroyed) this._resetToInitial();
+        }, 0);
+      };
+      this.form.addEventListener('reset', this._onFormReset);
+    }
+  }
+
+  /**
+   * Restores the initial state after a form reset: newly added files are detached locally
+   * (server copies are not deleted); existing files stay. Avatar mode shows its initial image again.
+   * @private
+   */
+  _resetToInitial() {
+    this._avatarStash = null;
+    this.files.filter(item => !item.isExisting).forEach(item => this._detachFile(item, true));
+    this._showAvatarError(null);
+    if (this.options.mode === 'avatar' && this.files.length === 0) this._loadExistingFiles();
+    this._syncFormInput();
   }
 
   // =========================================================================
@@ -536,18 +630,20 @@ export class CGEDropzone {
 
     const validation = this._validateFile(file);
     if (this.options.mode === 'avatar' && !validation.valid) {
+      this._showAvatarError(validation.error);
       this._emit('error', null, validation.error);
       this.options.onError?.(null, validation.error);
       return null;
     }
+    this._showAvatarError(null);
 
     // Check Max Files constraint
     const activeFilesCount = this.files.filter(f => f.status !== 'error' && f.status !== 'canceled').length;
     if (this.options.maxFiles !== null && activeFilesCount >= this.options.maxFiles) {
       if (this.options.mode === 'avatar') {
-        // In avatar mode, replace existing file cleanly
-        // Replacing a preview must not delete the saved server asset.
-        this.files.slice().forEach(item => this._detachFile(item, true));
+        // In avatar mode, replace existing file cleanly. Replacing a preview must not delete the
+        // saved server asset, and the previous image is kept aside until the new upload succeeds.
+        this._stashAvatar();
       } else {
         const errorMsg = this._t('dict-max-files-exceeded', { maxFiles: this.options.maxFiles });
         this._emit('error', null, errorMsg);
@@ -574,6 +670,8 @@ export class CGEDropzone {
       xhr: null,
       abortController: null,
       errorMessage: validation.error || null,
+      // Client-side rejections (size/type) cannot be fixed by retrying the upload.
+      validationError: !validation.valid,
       response: null,
       domCard: null
     };
@@ -671,6 +769,7 @@ export class CGEDropzone {
     if (fileItem.previewUrl && fileItem.isImage && !fileItem.isExisting) {
       URL.revokeObjectURL(fileItem.previewUrl);
     }
+    this._removeServerId(fileItem);
 
     // Remove DOM Card
     if (fileItem.domCard && fileItem.domCard.parentNode) {
@@ -713,6 +812,7 @@ export class CGEDropzone {
     if (this._destroyed) return;
     if (this._clearPromise) return this._clearPromise;
     this._queuePaused = true;
+    this._avatarStash = null;
     const copy = [...this.files];
     const work = remote
       ? Promise.all(copy.map(item => this.removeFile(item.id, true)))
@@ -754,6 +854,7 @@ export class CGEDropzone {
     fileItem.progress = 0;
     fileItem.errorMessage = null;
     this._activeUploadsCount++;
+    this.isUploading = true;
     this._updateCardUI(fileItem);
 
     // Build payload
@@ -775,10 +876,11 @@ export class CGEDropzone {
       let response;
       const driver = (this.options.driver || 'axios').toLowerCase();
 
-      if (driver === 'axios' && (window.axios || this.options.axiosInstance)) {
-        response = await this._uploadWithAxios(uploadUrl, formData, headers, fileItem);
+      const axiosLib = driver === 'axios' ? resolveAxios(this.options.axiosInstance) : null;
+      if (axiosLib) {
+        response = await this._uploadWithAxios(uploadUrl, formData, headers, fileItem, axiosLib);
       } else {
-        // Fallback to XHR driver (ensures 100% reliable upload progress events)
+        // 'xhr', 'fetch' and axios-less setups use XHR (fetch has no upload progress events)
         response = await this._uploadWithXHR(uploadUrl, formData, headers, fileItem);
       }
 
@@ -787,6 +889,8 @@ export class CGEDropzone {
       fileItem.progress = 100;
       fileItem.response = response;
       this._updateCardUI(fileItem);
+      this._writeServerId(fileItem);
+      if (this.options.mode === 'avatar') this._dropAvatarStash();
 
       this._emit('progress', fileItem, 100);
       this._emit('success', fileItem, response);
@@ -799,16 +903,24 @@ export class CGEDropzone {
     } catch (err) {
       if (!this._destroyed && fileItem.status !== 'canceled') {
         fileItem.status = 'error';
-        fileItem.errorMessage = err.message || this._t('dict-response-error', { statusCode: err.status || '500' });
+        fileItem.errorMessage = this._uploadErrorMessage(err);
         this._updateCardUI(fileItem);
 
         this._emit('error', fileItem, fileItem.errorMessage);
         if (typeof this.options.onError === 'function') {
           this.options.onError(fileItem, fileItem.errorMessage);
         }
+
+        // Avatar: a rejected upload must not keep showing the new image.
+        if (this.options.mode === 'avatar') {
+          this._showAvatarError(fileItem.errorMessage);
+          this._detachFile(fileItem, true);
+          this._restoreAvatarStash();
+        }
       }
     } finally {
       this._activeUploadsCount = Math.max(0, this._activeUploadsCount - 1);
+      this.isUploading = this._activeUploadsCount > 0;
       fileItem.xhr = null;
       fileItem.abortController = null;
       this._processQueue();
@@ -832,21 +944,120 @@ export class CGEDropzone {
     }
 
     // The upload's finally block owns slot release, including canceled requests.
-    this.removeFile(fileId, true);
+    const pending = this.removeFile(fileId, true);
+    if (this.options.mode === 'avatar') pending.then(() => this._restoreAvatarStash());
   }
 
   /**
-   * Retries uploading a failed file.
+   * Retries uploading a failed file. Client validation errors are not retryable; retries
+   * go through the queue so maxConcurrent and form mode are respected.
    * @param {string} fileId
    */
   retryUpload(fileId) {
     const fileItem = this.files.find(f => f.id === fileId);
-    if (!fileItem) return;
+    if (!fileItem || fileItem.status !== 'error' || fileItem.validationError || !(fileItem.file instanceof File)) return;
     fileItem.status = 'queued';
     fileItem.errorMessage = null;
     fileItem.progress = 0;
     this._updateCardUI(fileItem);
-    this.uploadFile(fileId);
+    this._processQueue();
+  }
+
+  /**
+   * Avatar replacement: keeps the previous image aside until the new upload succeeds.
+   * @private
+   */
+  _stashAvatar() {
+    const previous = this.files.splice(0);
+    previous.forEach(item => {
+      if (item.status === 'uploading') {
+        item.status = 'canceled';
+        item.xhr?.abort();
+        item.abortController?.abort();
+      }
+      this._removeServerId(item);
+    });
+    const keep = previous.filter(item => item.status === 'success');
+    previous.filter(item => !keep.includes(item)).forEach(item => {
+      if (item.previewUrl && item.isImage && !item.isExisting) URL.revokeObjectURL(item.previewUrl);
+    });
+    this._dropAvatarStash();
+    this._avatarStash = keep;
+  }
+
+  /** @private */
+  _dropAvatarStash() {
+    (this._avatarStash || []).forEach(item => {
+      if (item.previewUrl && item.isImage && !item.isExisting) URL.revokeObjectURL(item.previewUrl);
+    });
+    this._avatarStash = null;
+  }
+
+  /** @private */
+  _restoreAvatarStash() {
+    const stash = this._avatarStash;
+    this._avatarStash = null;
+    if (!stash || this._destroyed || this.files.length > 0) return;
+    stash.forEach(item => {
+      this.files.push(item);
+      this._renderAvatarPreview(item);
+      this._writeServerId(item);
+    });
+    this._syncFormInput();
+  }
+
+  /**
+   * Readable upload failure: Laravel 422 field errors / message, 419 CSRF, then status text.
+   * @private
+   */
+  _uploadErrorMessage(err) {
+    const data = err?.data ?? err?.response?.data;
+    const status = err?.status ?? err?.response?.status;
+    if ((data && typeof data === 'object' && (data.errors || (typeof data.message === 'string' && data.message))) || status === 419) {
+      return errorMessage(err, this.options.paramName);
+    }
+    if (status > 0) return this._t('dict-response-error', { statusCode: status });
+    return err?.message || this._t('dict-response-error', { statusCode: 500 });
+  }
+
+  /**
+   * Hidden input name for server IDs in instant mode (null when disabled / form mode).
+   * @private
+   */
+  _serverIdInputName() {
+    if (this.options.uploadMode !== 'instant' || this.options.serverIdName === false) return null;
+    return this.options.serverIdName || `${this.options.paramName || 'file'}_ids[]`;
+  }
+
+  /**
+   * Server identifier from an upload response or existing file: id, path, data.id or data.path.
+   * @private
+   */
+  _extractServerId(response) {
+    if (!response || typeof response !== 'object') return null;
+    const pick = value => ((typeof value === 'string' && value) || typeof value === 'number' ? String(value) : null);
+    return pick(response.id) ?? pick(response.path) ?? pick(response.data?.id) ?? pick(response.data?.path);
+  }
+
+  /** @private */
+  _writeServerId(fileItem) {
+    const name = this._serverIdInputName();
+    this._removeServerId(fileItem);
+    const value = name ? this._extractServerId(fileItem.response) : null;
+    if (!value) return;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    input.setAttribute('data-cge-dropzone-id', fileItem.id);
+    this.element.appendChild(input);
+    fileItem.serverIdInput = input;
+  }
+
+  /** @private */
+  _removeServerId(fileItem) {
+    fileItem?.serverIdInput?.remove();
+    if (fileItem) fileItem.serverIdInput = null;
   }
 
   /**
@@ -875,6 +1086,7 @@ export class CGEDropzone {
     this._deleteControllers.clear();
     if (this._destroyed) return;
     this._destroyed = true;
+    clearTimeout(this._resetTimer);
     // Revoke all object URLs
     [...this.files].forEach(f => {
       if (f.previewUrl && f.isImage && !f.isExisting) {
@@ -883,7 +1095,12 @@ export class CGEDropzone {
       if (f.status === 'uploading') {
         this.cancelUpload(f.id);
       }
+      this._removeServerId(f);
+      f.domCard?.remove();
     });
+    this._dropAvatarStash();
+    this._clickTargets.forEach(target => target.removeEventListener('click', this._onClickTarget));
+    this._clickTargets = [];
 
     // Remove event listeners
     if (this._onClickListener) {
@@ -903,13 +1120,16 @@ export class CGEDropzone {
     if (this.form && this._onFormSubmit) {
       this.form.removeEventListener('submit', this._onFormSubmit);
     }
-
-    // Clean DOM
-    if (this.hiddenInput && this.hiddenInput.parentNode) {
-      this.hiddenInput.remove();
+    if (this.form && this._onFormReset) {
+      this.form.removeEventListener('reset', this._onFormReset);
     }
-    if (this.previewsContainer && this.previewsContainer !== this.element) {
-      this.previewsContainer.innerHTML = '';
+
+    // Clean DOM: generated trigger, previews, avatar nodes and the picker input; restore attributes
+    this._createdNodes.forEach(node => node.remove());
+    this._createdNodes = [];
+    for (const [name, value] of this._originalAttributes) {
+      if (value === null) this.element.removeAttribute(name);
+      else this.element.setAttribute(name, value);
     }
 
     CGEDropzone.instances.delete(this.element);
@@ -1027,8 +1247,10 @@ export class CGEDropzone {
           }
           resolve(jsonResponse);
         } else {
-          const err = new Error(this._t('dict-response-error', { statusCode: xhr.status }));
-          err.status = xhr.status;
+          // Keep Laravel's { message, errors } payload (422 validation, 419 CSRF) for the card.
+          const data = parseBody(xhr.responseText, xhr.getResponseHeader?.('content-type') || '');
+          const err = new HttpError(xhr.status, xhr.statusText, data);
+          if (!(data && typeof data === 'object' && data.message)) err.message = this._t('dict-response-error', { statusCode: xhr.status });
           err.responseText = xhr.responseText;
           reject(err);
         }
@@ -1054,12 +1276,11 @@ export class CGEDropzone {
    * Uploads file via Axios instance.
    * @private
    */
-  async _uploadWithAxios(url, formData, headers, fileItem) {
-    const axiosLib = window.axios || this.options.axiosInstance;
+  async _uploadWithAxios(url, formData, headers, fileItem, axiosLib = resolveAxios(this.options.axiosInstance)) {
     const abortController = new AbortController();
     fileItem.abortController = abortController;
 
-    const res = await axiosLib({
+    const res = await axiosLib.request({
       url: url,
       method: (this.options.method || 'POST').toLowerCase(),
       data: formData,
@@ -1094,9 +1315,9 @@ export class CGEDropzone {
     const controller = new AbortController();
     this._deleteControllers.add(controller);
     try {
-      if (window.axios || this.options.axiosInstance) {
-        const axiosLib = window.axios || this.options.axiosInstance;
-        return await axiosLib({
+      const axiosLib = resolveAxios(this.options.axiosInstance);
+      if (axiosLib) {
+        return await axiosLib.request({
           url, method: method.toLowerCase(), data: payload, headers,
           signal: controller.signal
         });
@@ -1106,7 +1327,12 @@ export class CGEDropzone {
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(this._t('dict-response-error', { statusCode: response.status }));
+      if (!response.ok) {
+        const data = parseBody(await response.text(), response.headers?.get?.('content-type') || '');
+        const error = new HttpError(response.status, response.statusText, data);
+        if (!(data && typeof data === 'object' && data.message)) error.message = this._t('dict-response-error', { statusCode: response.status });
+        throw error;
+      }
       return response;
     } finally { this._deleteControllers.delete(controller); }
   }
@@ -1132,7 +1358,8 @@ export class CGEDropzone {
    * @private
    */
   _syncFormInput() {
-    if (!this.hiddenInput) return;
+    // Instant mode never mirrors files into the native input (they would be uploaded twice).
+    if (!this.hiddenInput || this.options.uploadMode !== 'form') return;
 
     try {
       const dt = new DataTransfer();
@@ -1153,31 +1380,8 @@ export class CGEDropzone {
    * @private
    */
   _buildHeaders() {
-    const headers = {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Accept': 'application/json',
-      ...this.options.headers
-    };
-
-    // Extract CSRF
-    let csrfToken = null;
-    const metaCsrf = document.querySelector('meta[name="csrf-token"]');
-    if (metaCsrf) {
-      csrfToken = metaCsrf.getAttribute('content');
-    }
-
-    if (!csrfToken && this.form) {
-      const tokenInput = this.form.querySelector('input[name="_token"]');
-      if (tokenInput && tokenInput.value) {
-        csrfToken = tokenInput.value;
-      }
-    }
-
-    if (csrfToken) {
-      headers['X-CSRF-TOKEN'] = csrfToken;
-    }
-
-    return headers;
+    // meta / _token / window.csrfToken -> X-CSRF-TOKEN; XSRF-TOKEN cookie -> X-XSRF-TOKEN.
+    return laravelHeaders(this.options.headers, { form: this.form });
   }
 
   // =========================================================================
@@ -1350,29 +1554,31 @@ export class CGEDropzone {
     details.className = this.options.ui.previewDetails;
 
     const ext = fileItem.name.split('.').pop() || 'FILE';
+    const node = (tag, className, text) => {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text !== undefined) el.textContent = String(text);
+      return el;
+    };
 
-    details.innerHTML = `
-      <div>
-        <div class="${this.options.ui.previewFileName}" title="${fileItem.name}">${fileItem.name}</div>
-        <div class="${this.options.ui.previewMeta}">
-          <span>${fileItem.formattedSize}</span>
-          <span class="${this.options.ui.previewBadge}">${ext}</span>
-        </div>
-      </div>
-      <div class="cge-dropzone-error-container ${fileItem.status === 'error' ? '' : 'hidden'}">
-        <div class="${this.options.ui.errorText}">${fileItem.errorMessage || ''}</div>
-        <button type="button" class="${this.options.ui.retryBtn}">${this._t('dict-retry')}</button>
-      </div>
-    `;
+    // File names, extensions and server messages are untrusted: text nodes only.
+    const info = node('div');
+    const fileName = node('div', this.options.ui.previewFileName, fileItem.name);
+    fileName.title = fileItem.name;
+    const meta = node('div', this.options.ui.previewMeta);
+    meta.append(node('span', '', fileItem.formattedSize), node('span', this.options.ui.previewBadge, ext));
+    info.append(fileName, meta);
 
-    // Hook up retry button
-    const retryBtn = details.querySelector('.cge-dropzone-retry');
-    if (retryBtn) {
-      retryBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.retryUpload(fileItem.id);
-      });
-    }
+    const errorContainer = node('div', `cge-dropzone-error-container ${fileItem.status === 'error' ? '' : 'hidden'}`);
+    const errorText = node('div', this.options.ui.errorText, fileItem.errorMessage || '');
+    const retryBtn = node('button', `${this.options.ui.retryBtn}${fileItem.validationError ? ' hidden' : ''}`, this._t('dict-retry'));
+    retryBtn.type = 'button';
+    retryBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.retryUpload(fileItem.id);
+    });
+    errorContainer.append(errorText, retryBtn);
+    details.append(info, errorContainer);
 
     card.appendChild(details);
     this.previewsContainer.appendChild(card);
@@ -1429,6 +1635,7 @@ export class CGEDropzone {
       if (errorContainer) {
         errorContainer.classList.remove('hidden');
         if (errorText) errorText.textContent = fileItem.errorMessage || '';
+        card.querySelector('.cge-dropzone-retry')?.classList.toggle('hidden', Boolean(fileItem.validationError));
       }
     } else {
       if (cancelBtn) cancelBtn.classList.add('hidden');

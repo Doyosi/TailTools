@@ -1,16 +1,17 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 
+// ESM build: side-effect-free root entry plus the opt-in auto entry.
 export default defineConfig({
   plugins: [tailwindcss()],
   build: {
     outDir: 'dist',
-    rollupOptions: { output: { exports: 'named' } },
+    emptyOutDir: false,
+    rollupOptions: { output: { exports: 'named', chunkFileNames: 'tailtools-[name].js' } },
     lib: {
-      entry: 'src/index.ts',
-      name: 'TailTools',
-      formats: ['es', 'umd'],
-      fileName: format => format === 'es' ? 'tailtools.js' : 'tailtools.umd.cjs',
+      entry: { tailtools: 'src/index.ts', auto: 'src/auto.ts' },
+      formats: ['es'],
+      fileName: (_format, name) => `${name}.js`,
       cssFileName: 'tailtools',
     },
   },

@@ -16,18 +16,21 @@ When instantiating a button manually (`new CGEActionButton(element, options)`) o
 | `confirmText` | `string \| null` | `null` | Label for confirmation button in modal. |
 | `cancelText` | `string \| null` | `null` | Label for cancel button in modal. |
 | `requireInput` | `string \| null` | `null` | Exact keyword phrase required to unlock confirmation (e.g. `'DELETE'`). |
-| `url` | `string \| null` | `null` | Target HTTP URL endpoint for direct async execution. |
+| `url` | `string \| null` | `null` | Target HTTP URL endpoint for direct async execution. A plain `<a href>` navigates instead; its `href` is only used as the AJAX URL with `ajax: true` or an explicit `method`. |
 | `method` | `string` | `'POST'` | HTTP method (`'POST'`, `'DELETE'`, `'PUT'`, `'PATCH'`, `'GET'`). |
-| `form` | `string \| null` | `null` | Target form selector to submit upon confirmation (e.g. `'#user-form'`). |
+| `form` | `string \| null` | `null` | Target form selector to submit upon confirmation (e.g. `'#user-form'`). Without it, submit buttons use their own form; anchors never do and `type="button"` controls only with `ajax`. |
 | `ajax` | `boolean` | `false` | When submitting a form, whether to submit asynchronously via AJAX. |
 | `loadingText` | `string \| null` | `null` | Label text displayed alongside the animated SVG spinner. |
 | `lockGroup` | `string \| null` | `null` | Locks sibling action buttons in table rows (`'row'`) or matching container selector. |
 | `successToast` | `string \| null` | `null` | Success notification message displayed via `CGEToast.success()`. |
 | `errorToast` | `string \| null` | `null` | Custom error message override displayed on failure. |
-| `redirect` | `string \| null` | `null` | Destination URL to navigate to upon successful completion. |
+| `redirect` | `string \| null` | `null` | Destination URL to navigate to upon successful completion (otherwise the JSON `redirect` / `redirect_url` keys). |
+| `followRedirects` | `boolean` | `true` | When fetch/axios transparently followed a Laravel `redirect()`, navigate to the final URL. |
+| `redirectTimeout` | `number` | `5000` | Milliseconds after which a pending navigation that never unloaded the page (download, `target="_blank"`) re-enables the button. `0` disables the recovery. |
 | `instant` | `boolean` | `false` | Bypasses confirmation dialog and triggers execution immediately. |
 | `simulate` | `number` | `0` | Simulated async latency in milliseconds (useful for prototyping, UI demos, or minimum spin time). |
-| `headers` | `Object` | `{}` | Custom HTTP request headers sent with async requests. |
+| `headers` | `Object` | `{}` | Custom HTTP request headers sent with async requests (they win over the default Laravel headers). |
+| `axiosInstance` | `AxiosInstance \| null` | `null` | Axios instance used before `window.axios`; `fetch()` is used when neither exists. |
 | `translations` | `Object` | `{ ... }` | Localization dictionary overrides. |
 | `onExecute` | `Function` | `null` | Custom execution handler: `(instance: CGEActionButton) => Promise<any>`. |
 
@@ -93,8 +96,9 @@ Dispatches an asynchronous request directly without wrapping in a `<form>` eleme
     Clear Cache
 </button>
 ```
-- Automatically resolves and attaches `X-CSRF-TOKEN` from `<meta name="csrf-token">`.
-- Dispatches using `window.axios` if present, falling back to native `fetch()`.
+- Attaches `X-CSRF-TOKEN` from `<meta name="csrf-token">`, the form `_token` or `window.csrfToken`; without a plain token the encrypted `XSRF-TOKEN` cookie is sent as `X-XSRF-TOKEN` (never as `X-CSRF-TOKEN`).
+- Dispatches using `axiosInstance`, then `window.axios`, falling back to native `fetch()`.
+- A followed Laravel `redirect()` navigates to the final URL (`followRedirects`). Toasts use string `message` values only; JSON `redirect` / `redirect_url` keys redirect (a generic `url` field does not).
 
 ### 2. Form Submitter Target with Laravel Method Spoofing
 Submits a target form and automatically handles method spoofing for Laravel resource routes:
@@ -112,9 +116,10 @@ Submits a target form and automatically handles method spoofing for Laravel reso
 </form>
 ```
 - Injects `<input type="hidden" name="_method" value="DELETE">` if not present.
+- Submits with `form.requestSubmit(button)`: the `submit` event fires (CGEForm AJAX and 422 binding, Livewire `wire:submit`) and the clicked button's `name`/`value` is included. When a listener prevents the submit, the button is released immediately.
 
 ### 3. Browser Navigation Interceptor
-Confirms before navigating an anchor tag:
+Confirms before navigating an anchor tag. Every plain `<a href data-cge-confirm>` (or `data-cge-action="link"`) navigates after confirmation by replaying the click, so `target="_blank"`, `download` and `rel` keep working. Add `data-cge-ajax` or an explicit `data-cge-method` / `data-cge-url` to send an AJAX request instead:
 
 ```html
 <a href="/admin/switch-account/12"
@@ -139,14 +144,18 @@ In tables or lists where each row has multiple action buttons (e.g. Edit, Delete
 
 ## Static Methods
 
-### `CGEActionButton.init(selector)`
-Initializes global delegated click listening on `document`.
+### `CGEActionButton.init(target?)`
+Initializes global delegated click listening on `document` in the **capture phase**, so the confirmation runs before inline `onclick`, Alpine `@click` and Livewire `wire:click`. After confirmation the click is replayed exactly once. `target` may be a custom trigger selector or a root element/document (the default selector is kept); disconnected instances are pruned on every call.
 ```javascript
 import { CGEActionButton } from 'tailtools';
 
 // Works automatically for all current and dynamically injected DOM elements (Livewire, Datatables)
 CGEActionButton.init();
+CGEActionButton.init(container); // safe: a root, not a selector
 ```
+
+### `CGEActionButton.destroyAll(root = document)`
+Destroys instances inside `root` or whose element was removed (Livewire morphing, Turbo visits).
 
 ### `CGEActionButton.execute(target, options)`
 Programmatically executes an action button by selector or DOM element:
@@ -194,3 +203,14 @@ Repeated execute calls while confirmation is pending are ignored, preventing dup
 Confirmation is serialized. AJAX FormData is captured before freezing and includes the clicked button name/value exactly once. Multipart PUT/PATCH/DELETE uses POST + _method; GET uses query parameters, with no request body. Direct requests without FormData keep their requested method. Destroy cancels requests, delays and redirects and prevents late actions/results. Partial translations keep defaults.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+- **Capture-phase gating:** handlers on the trigger (inline `onclick`, Alpine, Livewire) never run before confirmation and run exactly once afterwards (the old code ran `onclick` before *and* after the dialog).
+- **Native submits** use `requestSubmit()` instead of `HTMLFormElement.prototype.submit`, so CGEForm intercepts them and the submitter's `name`/`value` is kept.
+- **Anchors navigate** (behavior change): `<a href data-cge-confirm>` no longer POSTs to its `href` unless `data-cge-ajax`, `data-cge-method` or `data-cge-url` is present.
+- **Busy recovery:** `redirectTimeout` (5000 ms) re-enables the button when a navigation never unloads the page; every new `execute()` resets the previous redirect state.
+- **CSRF / HTTP:** shared Laravel helper (cookie only as `X-XSRF-TOKEN`), configured `axiosInstance` first, failures become `HttpError` with `status`, `data.message` and `data.errors` (the first field error is toasted), followed redirects navigate.
+- **Responses:** `{ success: true }` no longer toasts `"true"`; only `redirect` / `redirect_url` keys redirect (behavior change: a generic `url` key is ignored).
+- **Styles:** the base transition lives in `@layer components` with zero specificity, so Tailwind `transition-*` utilities win.
+- **Lifecycle:** `init(root | selector)` and `static destroyAll(root)`.

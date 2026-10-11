@@ -55,14 +55,22 @@ export interface CGEToastOptions {
   theme?: CGEToastTheme;
 
   /**
-   * Primary notification message (supports HTML strings).
+   * Primary notification message. Rendered as plain text unless `html: true`.
    */
   message: string;
 
   /**
-   * Optional header title. If omitted, uses localized default variant title.
+   * Optional header title. If omitted, uses localized default variant title. Plain text unless `html: true`.
    */
   title?: string | null;
+
+  /**
+   * Render `title`, `message` and action labels as trusted HTML. Leave `false` for any
+   * server/user-provided text (CGEForm and CGEActionButton messages rely on this default).
+   * Declarative triggers opt in with `data-cge-html` / `data-cge-toast-html`.
+   * @default false
+   */
+  html?: boolean;
 
   /**
    * Semantic style variant.
@@ -248,8 +256,15 @@ export declare class CGEToast {
 
   /**
    * Scans document for declarative triggers and session flash templates.
+   * Toasts and delegation roots detached by Livewire/Turbo are forgotten first.
    */
   static init(root?: Document | HTMLElement): void;
+
+  /**
+   * Removes trigger delegation bound to `root` (or inside it). Passing `document` also
+   * dismisses every active toast; the promise resolves once they are removed.
+   */
+  static destroyAll(root?: Document | HTMLElement): Promise<void>;
 }
 
 export default CGEToast;

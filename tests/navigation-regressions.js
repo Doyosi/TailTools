@@ -2,7 +2,8 @@ import { CGEAccordion, CGECollapse } from '../plugins/CGEAccordion/CGEAccordion.
 import { CGETabs } from '../plugins/CGETabs/CGETabs.js';
 
 export async function navigationRegressions({ check, mount, fixture, track, assert, wait, deferred }) {
-  await import('../src/index.ts');
+  // The root entry is side-effect free; the auto entry exposes globals and registers the panel initializer.
+  await import('../src/auto.ts');
   const item = (id, attrs = '', trigger = '') => `<section data-cge-item="${id}" ${attrs}><h3><button data-cge-trigger ${trigger}>${id}<span data-cge-icon></span></button></h3><div data-cge-body><div data-cge-content><input value="${id}"></div></div></section>`;
   const accordion = (attrs = '', items = item('a') + item('b')) => `<div ${attrs}>${items}</div>`;
   const tabs = (attrs = '', buttons = '<button data-cge-tab="a">A</button><button data-cge-tab="b">B</button>') => `<div ${attrs}><div data-cge-tablist>${buttons}</div><div><section data-cge-panel="a"><input value="original"></section><section data-cge-panel="b">B panel</section></div></div>`;
@@ -29,7 +30,8 @@ export async function navigationRegressions({ check, mount, fixture, track, asse
     const root = mount(accordion('id="faq:one" data-cge-accordion'));
     const [acc] = CGEAccordion.init(root); track(acc);
     assert(acc && CGEAccordion.get('faq:one') === acc && CGEAccordion.get('[id="faq:one"]') === acc, 'Scoped root or get failed');
-    assert(CGEAccordion.get('[') === null && CGEAccordion.init(root).length === 0, 'Invalid lookup threw or repeated init duplicated');
+    const again = CGEAccordion.init(root);
+    assert(CGEAccordion.get('[') === null && again.length === 1 && again[0] === acc, 'Invalid lookup threw or repeated init duplicated');
   });
   await test('Accordion: nested items and icons belong only to their own group', () => {
     const root = mount(accordion('data-cge-accordion', item('outer')));
@@ -221,15 +223,15 @@ export async function navigationRegressions({ check, mount, fixture, track, asse
     assert(root.outerHTML === before && requests === 1, 'Destroy permitted late DOM/network work');
   });
   await test('Tabs: fallback lifecycle uses correct standalone init signatures once', async () => {
-    const library = window.TailTools, actions = window.CGEActionButton; let actionArgs;
+    const library = window.TailTools, actions = window.CGEActionButton, registered = CGETabs._panelInitializer; let actionArgs;
     try {
-      window.TailTools = undefined; window.CGEActionButton = { init: (...args) => { actionArgs = args; } };
+      window.TailTools = undefined; CGETabs._panelInitializer = null; window.CGEActionButton = { init: (...args) => { actionArgs = args; } };
       window.fetch = async () => new Response('<select data-cge-select><option>X</option></select>');
       const instance = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/partial' } }));
       await instance.loadAjaxTab('b');
       assert(actionArgs?.length === 0 && window.CGESelect.get(instance.getPanel('b').querySelector('select')), 'Fallback init used wrong signature');
       instance.destroy();
-    } finally { window.TailTools = library; window.CGEActionButton = actions; }
+    } finally { window.TailTools = library; window.CGEActionButton = actions; CGETabs._panelInitializer = registered; }
   });
   await test('Navigation: blocked storage does not break Accordion or Collapse initialization', () => {
     const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
@@ -275,20 +277,18 @@ export async function navigationRegressions({ check, mount, fixture, track, asse
     assert(panel.outerHTML === panelBefore && toggles === 0, 'Collapse continued after onOpen destroy');
   });
   await test('Tabs: lifecycle initialization failure cleans partial children and invalidates cache', async () => {
-    const library = window.TailTools; let child, childRoot;
-    try {
-      window.TailTools = { ...library, init: panel => {
-        childRoot = panel.querySelector('[data-cge-accordion]');
-        child = new CGEAccordion(childRoot, { urlSync: false });
-        throw new Error('Child init failed');
-      } };
-      window.fetch = async () => new Response(accordion('data-cge-accordion'));
-      const instance = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/partial' } }));
-      await instance.loadAjaxTab('b');
-      const panel = instance.getPanel('b');
-      assert(child._destroyed && !CGEAccordion.get(childRoot) && !panel.hasAttribute('data-cge-ajax-loaded') && !panel.hasAttribute('aria-busy') && panel.querySelector('[role="alert"]'), 'Initialization failure leaked child/cache state');
-      instance.destroy();
-    } finally { window.TailTools = library; }
+    let child, childRoot;
+    const initPanel = panel => {
+      childRoot = panel.querySelector('[data-cge-accordion]');
+      child = new CGEAccordion(childRoot, { urlSync: false });
+      throw new Error('Child init failed');
+    };
+    window.fetch = async () => new Response(accordion('data-cge-accordion'));
+    const instance = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/partial' }, initPanel }));
+    await instance.loadAjaxTab('b');
+    const panel = instance.getPanel('b');
+    assert(child._destroyed && !CGEAccordion.get(childRoot) && !panel.hasAttribute('data-cge-ajax-loaded') && !panel.hasAttribute('aria-busy') && panel.querySelector('[role="alert"]'), 'Initialization failure leaked child/cache state');
+    instance.destroy();
   });
   await test('Tabs: overflowing horizontal lists scroll focused tabs into view and restore styles', () => {
     const root = mount(tabs());
@@ -300,5 +300,170 @@ export async function navigationRegressions({ check, mount, fixture, track, asse
     const bounds = list.getBoundingClientRect(), tab = instance.getTab('b').getBoundingClientRect();
     assert(getComputedStyle(list).overflowX === 'auto' && list.scrollLeft > 0 && tab.right <= bounds.right + 1, 'Focused overflow tab remained clipped');
     instance.destroy(); assert(root.outerHTML === before, 'Horizontal scroll style was not restored');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Stability fixes (October 2026)
+  // ---------------------------------------------------------------------------
+  const nestedTabs = `<div id="outer-g" data-cge-tabs><div data-cge-tablist><button data-cge-tab="o1">O1</button><button data-cge-tab="o2">O2</button></div><div>
+    <section data-cge-panel="o1">Outer one</section>
+    <section data-cge-panel="o2"><div id="inner-g" data-cge-tabs><div data-cge-tablist><button data-cge-tab="i1">I1</button><button data-cge-tab="i2">I2</button></div><div><section data-cge-panel="i1">Inner one</section><section data-cge-panel="i2">Inner two</section></div></div></section>
+  </div></div>`;
+  const withReducedMotion = fn => {
+    const original = window.matchMedia;
+    window.matchMedia = query => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} });
+    try { return fn(); } finally { window.matchMedia = original; }
+  };
+
+  await test('Tabs fix: JSON without html renders the error state and sanitize runs before injection', async () => {
+    const errors = [];
+    window.fetch = async () => new Response('{"message":"<img src=x onerror=window.__cgeXss=1>"}', { headers: { 'Content-Type': 'application/json' } });
+    const instance = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/partial' }, onAjaxError: (id, error) => errors.push(error) }));
+    await instance.loadAjaxTab('b');
+    const panel = instance.getPanel('b');
+    assert(!panel.querySelector('img') && panel.querySelector('[role="alert"]') && errors[0] instanceof TypeError && !window.__cgeXss, 'Raw JSON was injected into the panel');
+    const calls = [];
+    window.fetch = async () => new Response('{"html":"<p>Safe</p><script>window.__cgeXss=1</script>"}', { headers: { 'Content-Type': 'application/json' } });
+    instance.options.sanitize = (html, tabId) => { calls.push(tabId); return html.replace(/<script[\s\S]*?<\/script>/g, ''); };
+    await instance.loadAjaxTab('b', true);
+    assert(calls[0] === 'b' && panel.textContent === 'Safe' && !panel.querySelector('script'), 'Sanitize hook was not applied');
+    window.fetch = async () => new Response('Server error', { status: 500 });
+    await instance.loadAjaxTab('b', true);
+    assert(errors.at(-1)?.name === 'HttpError' && errors.at(-1).status === 500, 'HTTP failures are not HttpError instances');
+  });
+  await test('Tabs fix: namespaced hash keeps sibling groups and deep-links nested tabs through inactive parents', async () => {
+    const root = mount(`<div>${tabs('id="group-a"')}${tabs('id="group-b"')}</div>`);
+    const [first, second] = [track(new CGETabs(root.children[0])), track(new CGETabs(root.children[1]))];
+    first.getTab('b').click(); second.getTab('b').click();
+    const state = new URLSearchParams(location.hash.slice(1));
+    assert(state.get('group-a') === 'b' && state.get('group-b') === 'b', `Groups overwrote each other: ${location.hash}`);
+    first.destroy(); second.destroy();
+
+    for (const hash of ['#inner-g=i2', '#i2']) {
+      history.replaceState(history.state, '', hash);
+      const host = mount(nestedTabs);
+      const [outer, inner] = CGETabs.init(host.parentElement); track(outer); track(inner);
+      assert(outer.activeTabId === 'o2' && inner.activeTabId === 'i2' && !outer.getPanel('o2').hidden, `${hash} did not open the parent panel`);
+      outer.destroy(); inner.destroy();
+    }
+    // Inner group initialized first (programmatic order) still reveals its parent.
+    history.replaceState(history.state, '', '#inner-g=i2');
+    const host = mount(nestedTabs);
+    const inner = track(new CGETabs(host.querySelector('#inner-g')));
+    const outer = track(new CGETabs(host));
+    assert(outer.activeTabId === 'o2' && inner.activeTabId === 'i2', 'Parent initialized after child ignored the deep link');
+    // An explicit parent entry wins over the child.
+    history.replaceState(history.state, '', '#outer-g=o1&inner-g=i2');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    assert(outer.activeTabId === 'o1' && inner.activeTabId === 'i2', 'Child deep link overrode explicit parent state');
+  });
+  await test('Tabs fix: push history Back to a URL without tab state restores the initial tab', () => {
+    const instance = track(new CGETabs(mount(tabs('id="push-g"')), { historyMode: 'push' }));
+    instance.getTab('b').click();
+    assert(location.hash === '#push-g=b', `Unexpected hash ${location.hash}`);
+    history.replaceState(history.state, '', location.pathname);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    assert(instance.activeTabId === 'a', 'Back without state left the pushed tab active');
+  });
+  await test('Tabs fix: disabled classes are removed after re-enable and consumer classes survive', () => {
+    const root = mount(tabs('', '<button data-cge-tab="a">A</button><button data-cge-tab="b" class="cursor-not-allowed" disabled>B</button>'));
+    const instance = track(new CGETabs(root, { urlSync: false }));
+    const b = instance.getTab('b');
+    assert(b.classList.contains('opacity-50') && b.classList.contains('pointer-events-none'), 'Disabled classes missing');
+    b.disabled = false; instance.show('b');
+    assert(!b.classList.contains('opacity-50') && !b.classList.contains('pointer-events-none') && b.classList.contains('cursor-not-allowed'), 'Re-enabled tab kept plugin classes or lost consumer classes');
+  });
+  await test('Tabs fix: modifier shortcuts are ignored and RTL mirrors horizontal arrows', () => {
+    const instance = track(new CGETabs(mount(`<div dir="rtl">${tabs()}</div>`).firstElementChild, { urlSync: false }));
+    const a = instance.getTab('a'); a.focus();
+    a.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', ctrlKey: true, bubbles: true, cancelable: true }));
+    assert(instance.activeTabId === 'a', 'Ctrl+Arrow changed tabs');
+    key(a, 'ArrowLeft'); assert(instance.activeTabId === 'b', 'RTL ArrowLeft did not move to the next tab');
+  });
+  await test('Tabs fix: destroyAll, init pruning and Livewire-style morph rebuilds', () => {
+    const root = mount(`<div>${tabs('id="keep-g" data-cge-tabs')}${tabs('id="drop-g" data-cge-tabs')}</div>`);
+    const [keep, drop] = CGETabs.init(root); track(keep); track(drop);
+    const destroyed = CGETabs.destroyAll(root.children[1]);
+    assert(destroyed.includes(drop) && !destroyed.includes(keep) && drop._destroyed && !keep._destroyed && CGETabs.get('keep-g') === keep, 'destroyAll ignored its root');
+    const detached = track(new CGETabs(root.children[1], { urlSync: 'hash' }));
+    root.children[1].remove();
+    CGETabs.init(document.createElement('div'));
+    assert(detached._destroyed && CGETabs.get('drop-g') === null, 'Detached instance kept window listeners');
+    // Simulate a morph that reset server attributes on a still-connected element.
+    keep.element.removeAttribute('data-cge-tabs-ready');
+    for (const tab of keep.tabs) tab.trigger.removeAttribute('role');
+    const [rebuilt] = CGETabs.init(root); track(rebuilt);
+    assert(rebuilt !== keep && keep._destroyed && rebuilt.getTab('a').getAttribute('role') === 'tab', 'Morphed instance was not rebuilt');
+    assert(CGETabs.init(root)[0] === rebuilt, 'Healthy instance was rebuilt');
+  });
+  await test('Tabs fix: initPanel option and setPanelInitializer initialize panels without globals', async () => {
+    const registered = CGETabs._panelInitializer, library = window.TailTools; const calls = [];
+    try {
+      window.TailTools = undefined;
+      window.fetch = async () => new Response('<p>Loaded</p>', { headers: { 'Content-Type': 'text/html' } });
+      CGETabs.setPanelInitializer((panel, tabId) => calls.push(['static', tabId]));
+      const plain = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/p' } }));
+      await plain.loadAjaxTab('b');
+      const own = track(new CGETabs(mount(tabs()), { urlSync: false, ajaxDriver: 'fetch', ajaxTabs: { b: '/p' }, initPanel: (panel, tabId, instance) => calls.push(['option', tabId, instance === own]) }));
+      await own.loadAjaxTab('b');
+      assert(JSON.stringify(calls) === '[["static","b"],["option","b",true]]', `Unexpected initializer calls ${JSON.stringify(calls)}`);
+    } finally { CGETabs._panelInitializer = registered; window.TailTools = library; }
+  });
+  await test('Accordion fix: Collapse inside an accordion body initializes and dispatches one event', () => {
+    const root = mount(accordion('data-cge-accordion', `<section data-cge-item="a"><button data-cge-trigger>A</button><div data-cge-body><div data-cge-content><button data-cge-collapse="#nested-collapse">More</button><div id="nested-collapse"><div>Hidden</div></div></div></div></section>`));
+    const [acc] = CGEAccordion.init(root); track(acc);
+    const collapses = CGECollapse.init(root); collapses.forEach(track);
+    assert(collapses.length === 1 && collapses[0].wrapper.id === 'nested-collapse', 'Collapse inside accordion body was skipped');
+    let events = 0; const count = () => events++;
+    document.addEventListener('cge:collapse:open', count);
+    try {
+      acc.open('a'); root.querySelector('[data-cge-collapse]').click();
+      assert(collapses[0].isOpen() && acc.isOpen('a') && events === 1, `Expected one open event, got ${events}`);
+    } finally { document.removeEventListener('cge:collapse:open', count); }
+  });
+  await test('Accordion fix: nested controls in triggers keep their behavior and modifiers are ignored', () => {
+    const root = mount(accordion('', `<section data-cge-item="a"><div data-cge-trigger tabindex="0">Title <button type="button" class="inner">Edit</button> <a href="#keep" class="link">Link</a> <span data-cge-no-toggle>Info</span></div><div data-cge-body><div>Body</div></div></section>` + item('b')));
+    const acc = track(new CGEAccordion(root, { urlSync: false }));
+    let prevented = null; const listener = e => { prevented = e.defaultPrevented; e.preventDefault(); };
+    document.addEventListener('click', listener);
+    try {
+      root.querySelector('.inner').click();
+      assert(!acc.isOpen('a') && prevented === false, 'Nested button toggled the item or lost its default action');
+      root.querySelector('.link').click(); root.querySelector('[data-cge-no-toggle]').click();
+      assert(!acc.isOpen('a'), 'Nested link or data-cge-no-toggle toggled the item');
+      acc.items[0].trigger.click(); assert(acc.isOpen('a'), 'Trigger itself no longer toggles');
+    } finally { document.removeEventListener('click', listener); }
+    const trigger = acc.items[0].trigger; trigger.focus();
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true, cancelable: true }));
+    assert(document.activeElement === trigger, 'Alt+ArrowDown moved focus');
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }));
+    assert(acc.isOpen('a'), 'Meta+Enter toggled the item');
+  });
+  await test('Accordion fix: init returns all instances, prunes detached ones and rebuilds morphed ones', () => {
+    const root = mount(`<div>${accordion('id="acc-one" data-cge-accordion')}${accordion('id="acc-two" data-cge-accordion')}</div>`);
+    const first = CGEAccordion.init(root); first.forEach(track);
+    const second = CGEAccordion.init(root);
+    assert(first.length === 2 && second.length === 2 && second.every((instance, index) => instance === first[index]), 'Repeated init did not return existing instances');
+    const removed = first[1]; root.children[1].remove(); CGEAccordion.init(root);
+    assert(removed._destroyed && CGEAccordion.get('acc-two') === null, 'Detached accordion was not pruned');
+    first[0].items[0].trigger.removeAttribute('aria-expanded');
+    const [rebuilt] = CGEAccordion.init(root); track(rebuilt);
+    assert(rebuilt !== first[0] && first[0]._destroyed && rebuilt.items[0].trigger.hasAttribute('aria-expanded'), 'Morphed accordion was not rebuilt');
+    assert(CGEAccordion.destroyAll(root).includes(rebuilt) && rebuilt._destroyed, 'destroyAll missed the accordion');
+    const collapseRoot = mount('<div><button data-cge-collapse="#morph-panel">T</button><div id="morph-panel"><div>C</div></div></div>');
+    const [collapse] = CGECollapse.init(collapseRoot); track(collapse);
+    collapse.wrapper.removeAttribute('role');
+    const [collapseRebuilt] = CGECollapse.init(collapseRoot); track(collapseRebuilt);
+    assert(collapseRebuilt !== collapse && collapse._destroyed && collapseRebuilt.wrapper.getAttribute('role') === 'region', 'Morphed collapse was not rebuilt');
+    assert(CGECollapse.destroyAll(collapseRoot).includes(collapseRebuilt), 'Collapse destroyAll missed the panel');
+  });
+  await test('Navigation fix: reduced motion skips JS animation classes', () => withReducedMotion(() => {
+    const acc = track(new CGEAccordion(mount(accordion()), { urlSync: false, animation: 'custom-acc-anim' }));
+    acc.open('a'); assert(!acc.items[0].content.classList.contains('custom-acc-anim'), 'Accordion animation ignored reduced motion');
+    const instance = track(new CGETabs(mount(tabs()), { urlSync: false, animationIn: 'custom-tab-anim' }));
+    instance.show('b'); assert(!instance.getPanel('b').classList.contains('custom-tab-anim'), 'Tabs animation ignored reduced motion');
+  }));
+  await test('Navigation fix: get() returns null for unknown Tabs, Accordion and Collapse', () => {
+    assert(CGETabs.get('missing-tabs') === null && CGEAccordion.get('missing-acc') === null && CGECollapse.get('missing-col') === null, 'get() did not return null');
   });
 }

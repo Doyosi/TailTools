@@ -99,25 +99,28 @@ class UserController extends Controller
                 });
             }
 
-            // CGEFilter column filters
-            if ($filters = $request->query('filters')) {
-                if (!empty($filters['role'])) {
-                    $query->where('role', $filters['role']);
-                }
+            // CGEFilter column filters (arrays arrive as filters[role][]=a&filters[role][]=b)
+            $filters = (array) $request->query('filters', []);
+            if (! empty($filters['role'])) {
+                $query->whereIn('role', (array) $filters['role']);
             }
 
-            // CGESort parameters
-            if ($sortBy = $request->query('sort_by')) {
-                $sortDir = $request->query('sort_dir', 'asc');
+            // CGESort parameters: whitelist columns, validate direction (raw orderBy() input => SQL error / 500)
+            $sortable = ['id', 'name', 'email', 'role', 'created_at'];
+            $sortBy = $request->query('sort_by');
+            $sortDir = strtolower($request->query('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            if (in_array($sortBy, $sortable, true)) {
                 $query->orderBy($sortBy, $sortDir);
             } else {
                 $query->latest('id');
             }
 
-            // CGEPagination per-page limit
-            $perPage = (int) $request->query('per_page', 15);
+            // CGEPagination per-page limit: "All" is sent as -1 (allValue option)
+            $perPage = (int) $request->input('per_page', 15);
+            $perPage = $perPage === -1 ? max($query->count(), 1) : min(max($perPage, 1), 100);
 
-            return response()->json($query->paginate($perPage));
+            return response()->json($query->paginate($perPage)->withQueryString());
+            // API Resources (UserResource::collection(...)), simplePaginate() and cursorPaginate() are also read.
         }
 
         return view('users.index');
@@ -146,4 +149,4 @@ return response()->json([
 
 ## Response and deletion ownership
 
-Use `serverSide: true` for Laravel paginator responses. JSON records and trusted Blade row responses are ingested with stable IDs; `full`/`html` responses should provide `total`, `current_page` and `per_page` when server pagination is active. Selection and bulk removal only affect the loaded view. Persist deletion in a Laravel endpoint, then update/reload the table.
+Use `serverSide: true` for Laravel paginator responses (`paginate`, API Resource `meta`, `simplePaginate`, `cursorPaginate`). Rows without an `id`/`data-cge-id` get page-scoped fallback IDs. Non-GET requests (`method: 'POST'`) send the `csrf-token` meta value automatically and a nested JSON body (`filters.role`). JSON records and trusted Blade row responses are ingested with stable IDs; `full`/`html` responses should provide `total`, `current_page` and `per_page` when server pagination is active. Selection and bulk removal only affect the loaded view. Persist deletion in a Laravel endpoint, then update/reload the table.

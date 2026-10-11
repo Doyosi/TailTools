@@ -120,3 +120,7 @@ See [API](api.md) for the exact declaration and [installation](../installing.md)
 
 ## Compact visual defaults
 Dialogs use an inline 40px semantic icon badge, a 16px title, 13px description, and tighter 16px mobile / 20px desktop body spacing. A softly tinted footer groups smaller actions; the card has a 12px radius and restrained shadow. Light/dark themes, size presets and custom button classes keep the same API.
+
+## Stability fixes (October 2026)
+
+All text options are escaped (only `html` and `icon` are HTML), Enter no longer confirms from a focused Cancel button, async `preConfirm` cannot be dismissed mid-flight, declarative `[data-cge-alert]` triggers block `wire:click`/`@click`/`onclick` until confirmed (capture phase) and the dialog is a labelled `alertdialog`. New: `CGEAlert.destroyAll(root)`, `CGEAlert.optionsFromTrigger(el)`, typed `cge:alert:deny` and `cge:confirmed` events. See [usage](usage.md#stability-fixes-october-2026).

@@ -4,6 +4,8 @@ This reference mirrors the shipped [declaration](../../plugins/CGESelect/CGESele
 
 The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
 
+**Stability fixes (October 2026):** POST/unsafe async searches send Laravel CSRF headers (`asyncSource.headers` win) and failures become `HttpError`; `asyncSource.axiosInstance` is preferred over `window.axios`; remote `icon` values render as class names or text unless `asyncSource.iconHtml: true` (author `data-icon` markup on `<option>` stays HTML; custom `render*` callbacks are trusted HTML); form reset refreshes in a task after the browser resets controls; the native select's `aria-invalid` is mirrored onto the trigger with `ui.triggerInvalid`; `static destroyAll(root)` and pruning in `init()`.
+
 ```typescript
 /**
  * CGESelect - TypeScript Definitions
@@ -26,6 +28,8 @@ export interface CGESelectUIConfig {
   trigger?: string;
   triggerActive?: string;
   triggerDisabled?: string;
+  /** Classes mirrored onto the trigger while the native select has aria-invalid="true" */
+  triggerInvalid?: string;
   selectionContainer?: string;
   placeholder?: string;
   controls?: string;
@@ -54,7 +58,10 @@ export interface CGESelectItem {
   selected: boolean;
   disabled: boolean;
   image?: string | null;
+  /** Icon markup (author `data-icon`), or a class name / text for remote items */
   icon?: string | null;
+  /** True when `icon` is rendered as HTML (DOM options, or `asyncSource.iconHtml`) */
+  iconHtml?: boolean;
   subtext?: string | null;
   badge?: string | null;
   optgroup?: string | null;
@@ -67,6 +74,15 @@ export interface CGESelectAsyncSource {
   method?: 'GET' | 'POST';
   param?: string;
   debounce?: number;
+  /** Extra request headers (win over Accept, X-Requested-With and Laravel CSRF headers) */
+  headers?: Record<string, string>;
+  /** Axios instance used before `window.axios` when driver is 'axios' */
+  axiosInstance?: any;
+  /**
+   * Render remote `icon` values as trusted HTML. Default false: icons are treated as
+   * class names (e.g. "fa-solid fa-user") or plain text.
+   */
+  iconHtml?: boolean;
   transform?: (response: any) => any[];
 }
 
@@ -93,7 +109,7 @@ export interface CGESelectOptions {
   placement?: 'auto' | 'bottom' | 'top';
   /** Configuration for remote async search endpoint */
   asyncSource?: CGESelectAsyncSource | null;
-  /** Custom render function for dropdown options */
+  /** Custom render function for dropdown options (returns trusted HTML; escape remote values yourself) */
   renderOption?: ((item: CGESelectItem) => string) | null;
   /** Custom render function for selected multi-tags */
   renderTag?: ((item: CGESelectItem) => string) | null;
@@ -131,6 +147,8 @@ export class CGESelect {
   static get(target: string | HTMLSelectElement): CGESelect | null;
   static getOrCreate(target: string | HTMLSelectElement, options?: CGESelectOptions): CGESelect;
   static init(selector?: string, options?: CGESelectOptions, root?: Document | HTMLElement): CGESelect[];
+  /** Destroys instances whose select is inside root or disconnected (Livewire/Turbo teardown). */
+  static destroyAll(root?: Document | Element): CGESelect[];
 
   // Instance Properties
   element: HTMLSelectElement;

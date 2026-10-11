@@ -19,6 +19,8 @@ export interface CGESelectUIConfig {
   trigger?: string;
   triggerActive?: string;
   triggerDisabled?: string;
+  /** Classes mirrored onto the trigger while the native select has aria-invalid="true" */
+  triggerInvalid?: string;
   selectionContainer?: string;
   placeholder?: string;
   controls?: string;
@@ -47,7 +49,10 @@ export interface CGESelectItem {
   selected: boolean;
   disabled: boolean;
   image?: string | null;
+  /** Icon markup (author `data-icon`), or a class name / text for remote items */
   icon?: string | null;
+  /** True when `icon` is rendered as HTML (DOM options, or `asyncSource.iconHtml`) */
+  iconHtml?: boolean;
   subtext?: string | null;
   badge?: string | null;
   optgroup?: string | null;
@@ -60,6 +65,15 @@ export interface CGESelectAsyncSource {
   method?: 'GET' | 'POST';
   param?: string;
   debounce?: number;
+  /** Extra request headers (win over Accept, X-Requested-With and Laravel CSRF headers) */
+  headers?: Record<string, string>;
+  /** Axios instance used before `window.axios` when driver is 'axios' */
+  axiosInstance?: any;
+  /**
+   * Render remote `icon` values as trusted HTML. Default false: icons are treated as
+   * class names (e.g. "fa-solid fa-user") or plain text.
+   */
+  iconHtml?: boolean;
   transform?: (response: any) => any[];
 }
 
@@ -86,7 +100,7 @@ export interface CGESelectOptions {
   placement?: 'auto' | 'bottom' | 'top';
   /** Configuration for remote async search endpoint */
   asyncSource?: CGESelectAsyncSource | null;
-  /** Custom render function for dropdown options */
+  /** Custom render function for dropdown options (returns trusted HTML; escape remote values yourself) */
   renderOption?: ((item: CGESelectItem) => string) | null;
   /** Custom render function for selected multi-tags */
   renderTag?: ((item: CGESelectItem) => string) | null;
@@ -124,6 +138,8 @@ export class CGESelect {
   static get(target: string | HTMLSelectElement): CGESelect | null;
   static getOrCreate(target: string | HTMLSelectElement, options?: CGESelectOptions): CGESelect;
   static init(selector?: string, options?: CGESelectOptions, root?: Document | HTMLElement): CGESelect[];
+  /** Destroys instances whose select is inside root or disconnected (Livewire/Turbo teardown). */
+  static destroyAll(root?: Document | Element): CGESelect[];
 
   // Instance Properties
   element: HTMLSelectElement;

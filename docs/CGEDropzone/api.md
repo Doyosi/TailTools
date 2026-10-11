@@ -4,6 +4,8 @@ This reference mirrors the shipped [declaration](../../plugins/CGEDropzone/CGEDr
 
 clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
 
+**Stability fixes (October 2026):** file names, extensions and error messages are rendered as text; instant mode never fills or names the native file input and writes server IDs (`id`/`path`/`data.id`/`data.path`) into hidden `serverIdName` inputs (default `${paramName}_ids[]`) that are removed with the file; Laravel 422/419 messages are shown on the card; the configured `axiosInstance` wins; client validation errors hide Retry and retries go through the queue; `clickable` accepts a selector; `driver: 'fetch'` uploads through XHR for progress; `isUploading` is maintained; avatar uploads that fail revert to the previous image and show the error below the avatar; form reset clears new previews; destroy removes generated nodes and restores attributes; `static destroyAll(root)` and pruning in `init()`.
+
 ```typescript
 /**
  * CGEDropzone TypeScript Definitions
@@ -13,6 +15,11 @@ clear({ remote: true }) returns Promise<void>; await clear() to wait for server 
 export type CGEDropzoneUploadMode = 'instant' | 'form';
 export type CGEDropzoneVisualMode = 'standard' | 'avatar';
 export type CGEDropzoneAspectRatio = '1:1' | '16:9' | '300x600' | '1200x630' | '50x50' | 'auto';
+/**
+ * Upload transport. 'axios' uses the configured axiosInstance or window.axios; 'xhr' and 'fetch'
+ * (and axios without an instance) upload through XMLHttpRequest because fetch has no upload
+ * progress events. Remote deletes use axios when available, otherwise fetch.
+ */
 export type CGEDropzoneDriver = 'axios' | 'xhr' | 'fetch';
 export type CGEDropzoneFileStatus = 'queued' | 'uploading' | 'success' | 'error' | 'canceled';
 
@@ -31,8 +38,12 @@ export interface DropzoneFile {
   xhr?: XMLHttpRequest | null;
   abortController?: AbortController | null;
   errorMessage?: string | null;
+  /** True for client-side rejections (size/type); these cannot be retried */
+  validationError?: boolean;
   response?: any;
   domCard?: HTMLElement | null;
+  /** Hidden server-ID input written in instant mode */
+  serverIdInput?: HTMLInputElement | null;
 }
 
 export interface ExistingDropzoneFile {
@@ -114,8 +125,16 @@ export interface CGEDropzoneOptions {
   removeMethod?: string;
   confirmDelete?: boolean;
   driver?: CGEDropzoneDriver;
+  /** Axios instance used before window.axios */
   axiosInstance?: any;
+  /**
+   * Instant mode only: name of the hidden inputs that receive each uploaded file's server ID
+   * (response `id`, `path`, `data.id` or `data.path`; existing files use their `id`/`path`).
+   * Default `${paramName}_ids[]`; `false` disables. The native file input is never filled in instant mode.
+   */
+  serverIdName?: string | false | null;
   existingFiles?: ExistingDropzoneFile[];
+  /** true: the dropzone opens the picker; false: no click/keyboard picker; string: elements matching the selector open it */
   clickable?: boolean | string;
   previewContainer?: string | HTMLElement | null;
   renderPreview?: ((fileItem: DropzoneFile, dropzone: CGEDropzone) => HTMLElement | string) | null;
@@ -137,11 +156,14 @@ export declare class CGEDropzone {
   static setTranslations(dict: Partial<CGEDropzoneTranslations>): void;
   static get(target: string | HTMLElement): CGEDropzone | null;
   static init(root?: string | HTMLElement | Document, options?: CGEDropzoneOptions): CGEDropzone[];
+  /** Destroys instances whose element is inside root or disconnected (Livewire/Turbo teardown). */
+  static destroyAll(root?: Document | Element): CGEDropzone[];
 
   element: HTMLElement;
   options: Required<CGEDropzoneOptions>;
   files: DropzoneFile[];
   isDisabled: boolean;
+  /** True while at least one upload request is in flight */
   isUploading: boolean;
   hiddenInput: HTMLInputElement;
   previewsContainer: HTMLElement | null;
@@ -158,9 +180,11 @@ export declare class CGEDropzone {
   uploadAll(): void;
   uploadFile(fileId: string): Promise<void>;
   cancelUpload(fileId: string): void;
+  /** Re-queues a failed upload (not client validation errors); respects maxConcurrent and form mode. */
   retryUpload(fileId: string): void;
   disable(): void;
   enable(): void;
+  /** Removes listeners and generated nodes and restores the element's original class/role/tabindex/aria-label. */
   destroy(): void;
 
   getFiles(): DropzoneFile[];

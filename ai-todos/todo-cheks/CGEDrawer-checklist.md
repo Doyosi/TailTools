@@ -66,3 +66,15 @@ Track the progress of designing, implementing, testing, and documenting the **CG
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## Stability fixes (October 2026)
+
+- [x] Missing target throws; selectors no longer rewritten to `#.foo`; declarative missing targets warn only.
+- [x] `cge:drawer:open`/`close` cancel honored; DOM events typed in `.d.ts`.
+- [x] Non-modal drawers stay off the overlay stack (no focus stealing, no aria-modal, Escape only without modal overlays).
+- [x] Mini rail: no aria-hidden/aria-modal when collapsed; closedClass not re-added after tailwind-animations close.
+- [x] Full focus trap; reduced motion (0 ms, no bounce).
+- [x] `destroyAll(root)`; `init(root)` prunes detached instances.
+- [x] `.d.ts`, `docs/CGEDrawer/` (README, usage, examples, api) and skill updated
+- [x] Node tests (`tests/overlay-fixes.test.mjs`) and browser scenarios (`tests/stability-overlay-regressions.js`) added
+- [ ] Full browser regression run (`tests/run-browser.mjs`) by the release owner

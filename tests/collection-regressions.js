@@ -1,5 +1,5 @@
 import { CGEDataGrid } from '../plugins/CGEDataGrid/index.js';
-import { CGEDataTable, CGEFilter, CGESort, CGEResponsive } from '../plugins/CGEDataTable/index.js';
+import { CGEDataTable, CGEFilter, CGESort, CGEResponsive, escapeHTML } from '../plugins/CGEDataTable/index.js';
 
 export async function collectionRegressions({ check, mount, track, assert, wait, deferred }) {
   const response = data => new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
@@ -64,10 +64,14 @@ export async function collectionRegressions({ check, mount, track, assert, wait,
     await check(`${kind}: HTTP failure preserves data and emits one error`, async () => {
       const instance = create(kind, { data: rows, url: '/collection', driver: 'fetch' });
       let errors = 0;
-      instance.on(kind === 'Grid' ? 'fetch-error' : 'error', () => errors++);
+      let aliases = 0;
+      instance.on('fetch-error', () => errors++);
+      instance.on('error', () => aliases++);
       window.fetch = async () => new Response('Failure', { status: 422 });
-      try { await instance.fetch(); } catch (error) { assert(kind === 'Table' && error.message.includes('422'), 'Unexpected fetch error'); }
-      assert(errors === 1 && !instance.loading && (kind === 'Grid' ? instance.data : instance.rawRows).length === 3, 'Failure damaged data/loading');
+      let rejected = null;
+      try { await instance.fetch(); } catch (error) { rejected = error; }
+      assert(rejected?.status === 422 && rejected.message.includes('422'), 'fetch() did not reject with the HttpError');
+      assert(errors === 1 && aliases === 1 && !instance.loading && (kind === 'Grid' ? instance.data : instance.rawRows).length === 3, 'Failure damaged data/loading');
     });
     await check(`${kind}: destroy aborts late responses and restores original DOM once`, async () => {
       const instance = create(kind, { data: rows, url: '/collection', driver: 'fetch' });
@@ -118,6 +122,98 @@ export async function collectionRegressions({ check, mount, track, assert, wait,
       assert((kind === 'Grid' ? instance.data : instance.rawRows).length === 1, 'Parallel removal skipped a row');
     });
   }
+  for (const kind of ['Grid', 'Table']) {
+    await check(`${kind}: emits both Table and Grid event names`, () => {
+      const instance = create(kind, { data: rows, selectable: true });
+      const seen = [];
+      for (const name of ['render', 'rendered', 'selection-change', 'selection:change', 'destroy', 'destroyed']) instance.on(name, () => seen.push(name));
+      instance.refresh();
+      kind === 'Grid' ? instance.toggleSelect('0', true) : instance.toggleSelectRow('0', true);
+      instance.destroy();
+      for (const name of ['render', 'rendered', 'selection-change', 'selection:change', 'destroy', 'destroyed']) assert(seen.includes(name), `Missing ${name}`);
+    });
+    await check(`${kind}: server rows without IDs do not share selection across pages`, async () => {
+      const instance = create(kind, { url: '/collection', driver: 'fetch', serverSide: true, selectable: true, perPage: 2 });
+      instance.options.source = 'ajax';
+      const warn = console.warn; let warnings = 0; console.warn = () => warnings++;
+      try {
+        window.fetch = async url => {
+          const page = Number(new URL(url).searchParams.get('page'));
+          return response({ data: [{ name: `P${page} first` }, { name: `P${page} second` }], total: 6, current_page: page, per_page: 2 });
+        };
+        await instance.fetch();
+        const firstId = (kind === 'Grid' ? instance.cardsContainer.querySelector('.cge-card') : instance.tbody.querySelector('tr')).dataset.cgeId;
+        kind === 'Grid' ? instance.toggleSelect(firstId, true) : instance.toggleSelectRow(firstId, true);
+        kind === 'Grid' ? instance.pagination.nextPage() : instance.pagination.next();
+        await wait(20);
+        const checkbox = (kind === 'Grid' ? instance.cardsContainer : instance.tbody).querySelector('input[type="checkbox"]');
+        assert(instance.pagination.page === 2 && checkbox && !checkbox.checked, 'Page 2 row inherited the page 1 selection');
+        assert(instance.getSelectedIds().length === 1 && /^p1/.test(instance.getSelectedIds()[0]), 'Fallback ID not page-scoped');
+        assert(warnings === 1, 'Missing one-time ID warning');
+      } finally { console.warn = warn; }
+    });
+    await check(`${kind}: destroyAll tears down instances inside a root and detached instances`, () => {
+      const host = mount(kind === 'Grid' ? '<section><div data-cge-datagrid></div></section>' : '<section><table data-cge-datatable><thead><tr><th>Name</th></tr></thead><tbody></tbody></table></section>');
+      const Class = kind === 'Grid' ? CGEDataGrid : CGEDataTable;
+      const instance = Class.init(host)[0];
+      assert(instance && !instance._destroyed, 'Instance not created');
+      const destroyed = Class.destroyAll(host);
+      assert(instance._destroyed && destroyed.includes(instance) && !Class.instances.has(kind === 'Grid' ? instance.root : instance.tableElement), 'destroyAll skipped instance');
+      const detached = track(Class.init(host)[0]);
+      host.remove();
+      Class.init(document.createElement('div'));
+      assert(detached._destroyed, 'init() did not prune a detached instance');
+    });
+  }
+  await check('Table: raw cell values render as text; formatter HTML stays trusted', () => {
+    const payload = '<img src=x onerror="window.__cgeXss=1">';
+    const instance = create('Table', { data: [{ id: 1, name: payload, role: payload }], columns: [
+      { key: 'name', label: 'Name' },
+      { key: 'role', label: 'Role', formatter: value => `<strong class="badge">${escapeHTML(value)}</strong>` },
+    ] });
+    const cells = instance.tbody.querySelectorAll('td');
+    assert(!instance.tbody.querySelector('img') && cells[0].textContent === payload, 'Raw value parsed as HTML');
+    assert(cells[1].querySelector('strong.badge')?.textContent === payload, 'Formatter HTML or escaping broken');
+    const node = document.createElement('em'); node.textContent = 'node';
+    instance.columns[1].formatter = () => node; instance.refresh();
+    assert(instance.tbody.querySelector('em') === node, 'Formatter Node not appended');
+    assert(window.__cgeXss === undefined, 'Payload executed');
+  });
+  await check('Grid: renderer output is trusted while default cards stay text', () => {
+    const payload = '<img src=x onerror="window.__cgeXss=1">';
+    const instance = create('Grid', { data: [{ id: 1, title: payload }],
+      cardRenderer: item => `<article><h3>${escapeHTML(item.title)}</h3></article>` });
+    assert(!instance.cardsContainer.querySelector('img') && instance.cardsContainer.querySelector('h3').textContent === payload, 'Renderer escaping failed');
+    const plain = create('Grid', { data: [{ id: 2, title: payload }] });
+    assert(!plain.cardsContainer.querySelector('img'), 'Fallback card parsed HTML');
+  });
+  await check('Table: API Resource meta, simplePaginate and All selection stay in sync', () => {
+    const instance = create('Table', { serverSide: true, perPageOptions: [10, 'All'] });
+    instance.options.source = 'ajax';
+    instance._handleServerResponse({ data: rows, meta: { current_page: 2, last_page: 4, per_page: 10, total: 33 }, links: { next: '?page=3' } });
+    assert(instance.pagination.total === 33 && instance.pagination.page === 2 && instance.pagination.lastPage === 4, 'Resource meta ignored');
+    instance._handleServerResponse({ data: rows, current_page: 3, per_page: 10, next_page_url: null, prev_page_url: '?page=2' });
+    assert(instance.pagination.mode === 'simple' && instance.pagination.lastPage === 3 && instance.paginationControls.querySelector('[data-cge-page-action="next"]').disabled, 'simplePaginate end not detected');
+    const select = instance.headerBar.querySelector('[data-cge-per-page-select]');
+    select.value = 'All';
+    instance.pagination.perPage = 0;
+    instance._handleServerResponse({ data: rows, total: 3, current_page: 1, per_page: 3 });
+    assert(select.value === 'All' && instance.pagination.serialize().per_page === -1, 'All selection desynced');
+  });
+  await check('Grid: field filter reads initial Blade value and fetch rejection is handled on init', async () => {
+    const root = mount('<div><select data-cge-filter="category"><option value="all">All</option><option value="JS" selected>JS</option></select></div>');
+    const instance = track(new CGEDataGrid(root, { source: 'json', autoBindActions: false,
+      data: [{ id: 1, title: 'A', category: 'JS' }, { id: 2, title: 'B', category: 'PHP' }] }));
+    assert(instance.processedData.length === 1 && instance.processedData[0].id === 1, 'Initial select value ignored');
+    const filterSelect = root.querySelector('select[data-cge-filter]'); filterSelect.value = 'all'; filterSelect.dispatchEvent(new Event('change'));
+    assert(instance.processedData.length === 2, "'all' did not clear the filter");
+    let unhandled = 0; const onUnhandled = () => unhandled++;
+    window.addEventListener('unhandledrejection', onUnhandled);
+    window.fetch = async () => new Response('Down', { status: 500 });
+    track(new CGEDataGrid(mount('<div></div>'), { source: 'ajax', url: '/collection', driver: 'fetch', autoBindActions: false }));
+    await wait(50); window.removeEventListener('unhandledrejection', onUnhandled);
+    assert(unhandled === 0, 'init() left an unhandled rejection');
+  });
   await check('Grid: idless selection stays stable through pagination, sorting and deletion', async () => {
     const instance = create('Grid', { data: rows.map(({ name }) => ({ name })), perPage: 1, selectable: true });
     instance.pagination.nextPage(); instance.toggleSelect('item-1', true);

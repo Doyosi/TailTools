@@ -140,3 +140,7 @@ export interface CGESelectOptions {
 9. Full Documentation Suite (`docs/CGESelect/`)
 10. AI Skill Files (`.agents/skills/cge-select/SKILL.md`)
 11. Build Validation (`npm run build`)
+
+## Stability fixes (October 2026)
+
+Scope: CSRF headers + `asyncSource.headers`/`axiosInstance` for POST search, `HttpError` failures, remote icons as text/class (`asyncSource.iconHtml` opt-in), reset refresh via `setTimeout(0)`, `aria-invalid` mirrored to the trigger (`ui.triggerInvalid`), `py-0.5` badge, `destroyAll(root)` + init pruning.

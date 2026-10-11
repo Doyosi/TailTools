@@ -75,7 +75,14 @@ export declare class CGEAccordion {
   off(eventName: string, callback: CGEAccordionEventCallback): this;
   destroy(): void;
 
+  /**
+   * Returns every instance under root (new and existing). Destroys detached instances first and
+   * rebuilds instances whose plugin attributes were removed by Livewire morphing.
+   */
   static init(root?: HTMLElement | Document | string, options?: CGEAccordionOptions): CGEAccordion[];
+  /** Destroys instances whose element is inside root or no longer connected. */
+  static destroyAll(root?: HTMLElement | Document): CGEAccordion[];
+  /** Returns the registered instance or null. */
   static get(elementOrId: HTMLElement | string): CGEAccordion | null;
 }
 
@@ -134,7 +141,14 @@ export declare class CGECollapse {
   off(eventName: string, callback: CGECollapseEventCallback): this;
   destroy(): void;
 
+  /**
+   * Returns every collapse under root. Accordion item triggers are skipped; collapses inside
+   * accordion bodies are initialized.
+   */
   static init(root?: HTMLElement | Document | string, options?: CGECollapseOptions): CGECollapse[];
+  /** Destroys collapses whose panel is inside root or no longer connected. */
+  static destroyAll(root?: HTMLElement | Document): CGECollapse[];
+  /** Returns the registered instance or null. */
   static get(elementOrId: HTMLElement | string): CGECollapse | null;
 }
 

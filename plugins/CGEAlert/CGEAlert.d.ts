@@ -63,19 +63,19 @@ export interface CGEAlertOptions {
   /** Color theme mode ('light', 'dark', or 'auto'). Defaults to 'light'. */
   theme?: CGEAlertTheme;
 
-  /** Alert title heading */
+  /** Alert title heading (plain text, HTML is escaped) */
   title?: string | null;
 
-  /** Alert plain text message */
+  /** Alert plain text message (HTML is escaped) */
   message?: string;
 
-  /** Alert rich HTML content (overrides message) */
+  /** Alert rich trusted HTML content (overrides message). Never pass user input here. */
   html?: string | null;
 
   /** Preset archetype styling and button configuration */
   archetype?: CGEAlertArchetype;
 
-  /** Render variant SVG icon, custom SVG string, or disable with false */
+  /** Render variant SVG icon, custom trusted SVG/HTML string, or disable with false */
   icon?: boolean | string;
 
   /** Modal sizing preset: 'sm' | 'md' | 'lg' | 'xl' | 'full' (default: 'md') */
@@ -159,8 +159,24 @@ export interface CGEAlertOptions {
   /** Lifecycle hook before dialog closes */
   willClose?: (dialogEl: HTMLElement) => void;
 
-  /** Async pre-confirm hook before closing; return false to abort dismissal */
+  /**
+   * Async pre-confirm hook before closing; return false to abort dismissal.
+   * While it (or `inputValidator`) runs, Escape, backdrop and the close button are ignored.
+   */
   preConfirm?: (value: any) => any | Promise<any>;
+}
+
+/** Options read from a declarative `[data-cge-alert]` trigger (all values are plain text). */
+export interface CGEAlertTriggerOptions {
+  archetype: CGEAlertArchetype;
+  theme: CGEAlertTheme;
+  title: string;
+  message: string;
+  html: null;
+  confirmButtonText: string | null;
+  cancelButtonText: string | null;
+  requireInput: string | null;
+  size: CGEAlertSize;
 }
 
 export interface CGEAlertEventDetail {
@@ -191,6 +207,7 @@ export declare class CGEAlert {
   confirmBtn: HTMLButtonElement | null;
   denyBtn: HTMLButtonElement | null;
   cancelBtn: HTMLButtonElement | null;
+  closeBtn: HTMLButtonElement | null;
   inputErrorEl: HTMLElement | null;
 
   constructor(options?: CGEAlertOptions);
@@ -286,9 +303,22 @@ export declare class CGEAlert {
   static setTranslations(dict: Partial<CGEAlertTranslations>): void;
 
   /**
-   * Scans document and sets up global click event delegation for `[data-cge-alert]`.
+   * Sets up capture-phase click delegation for `[data-cge-alert]` inside `root`. The click is
+   * stopped before element handlers (wire:click, @click, onclick), links and submits run, and
+   * replayed once after confirmation.
    */
   static init(root?: Document | HTMLElement): void;
+
+  /**
+   * Reads declarative `data-cge-*` options from a trigger as plain text.
+   */
+  static optionsFromTrigger(trigger: Element): CGEAlertTriggerOptions;
+
+  /**
+   * Closes the active alert and removes click delegation bound to `root`, to roots inside it,
+   * or to detached roots. Use before Livewire/Turbo swaps a subtree.
+   */
+  static destroyAll(root?: Document | HTMLElement): void;
 }
 
 export default CGEAlert;
@@ -297,7 +327,12 @@ declare global {
   interface DocumentEventMap {
     'cge:alert:open': CustomEvent<CGEAlertEventDetail>;
     'cge:alert:confirm': CustomEvent<CGEAlertEventDetail>;
+    'cge:alert:deny': CustomEvent<CGEAlertEventDetail>;
     'cge:alert:cancel': CustomEvent<CGEAlertEventDetail>;
     'cge:alert:close': CustomEvent<CGEAlertEventDetail>;
+  }
+  interface HTMLElementEventMap {
+    /** Dispatched on a `[data-cge-alert]` trigger that has no form or link to continue. */
+    'cge:confirmed': CustomEvent<CGEAlertResult>;
   }
 }

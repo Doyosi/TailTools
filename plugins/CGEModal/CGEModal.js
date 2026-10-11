@@ -1,5 +1,6 @@
 import { Lifecycle } from '../shared/lifecycle.js';
-import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey, trapTab } from '../shared/overlay.js';
+import { prefersReducedMotion, destroyInstances, pruneInstances } from '../shared/dom.js';
 /**
  * CGEModal - TailTools Plugin
  * High-performance, accessible native JavaScript modal plugin for Tailwind CSS v4.3+ and Laravel Blade.
@@ -58,11 +59,11 @@ export class CGEModal {
   _destroyed = false;
 
   constructor(target, options = {}) {
-    this.modal = typeof target === 'string' ? document.querySelector(target) : target;
+    this.modal = CGEModal.resolveTarget(target);
 
+    // A half-built instance would fail later with unrelated TypeErrors, so fail loudly here.
     if (!this.modal) {
-      console.warn(`[CGEModal] Target element "${target}" not found.`);
-      return;
+      throw new Error(`[CGEModal] Target element "${target}" not found.`);
     }
 
     // Return existing instance if already attached
@@ -229,31 +230,12 @@ export class CGEModal {
   }
 
   /**
-   * Focus trap management keeping Tab inside the active dialog.
+   * Focus trap management keeping Tab inside the active dialog, including focus that
+   * escaped the dialog (e.g. clicked backdrop or page content) and dialogs without focusables.
    * @private
    */
   _handleFocusTrap(e) {
-    const focusableElements = this._getFocusableElements();
-    if (focusableElements.length === 0) {
-      e.preventDefault();
-      this.dialog?.focus();
-      return;
-    }
-
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-
-    if (e.shiftKey) {
-      if (document.activeElement === firstElement || document.activeElement === this.dialog) {
-        e.preventDefault();
-        lastElement.focus();
-      }
-    } else {
-      if (document.activeElement === lastElement) {
-        e.preventDefault();
-        firstElement.focus();
-      }
-    }
+    trapTab(this.dialog || this.modal, e);
   }
 
   /**
@@ -303,6 +285,8 @@ export class CGEModal {
    * @private
    */
   _resolveDriver() {
+    // Users who prefer reduced motion get instant state changes.
+    if (prefersReducedMotion()) return 'none';
     if (this.options.animationDriver === 'tailwind-animations') return 'tailwind-animations';
     if (this.options.animationDriver === 'css') return 'css';
     if (this.options.animationDriver === 'none') return 'none';
@@ -428,6 +412,10 @@ export class CGEModal {
    */
   shake() {
     if (!this.dialog) return;
+    if (prefersReducedMotion()) {
+      this._dispatch('shake');
+      return;
+    }
 
     CGEModal._ensureShakeKeyframes();
 
@@ -710,8 +698,24 @@ export class CGEModal {
    * @returns {CGEModal | undefined}
    */
   static getInstance(target) {
-    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    const el = CGEModal.resolveTarget(target);
     return el ? CGEModal.instances.get(el) : undefined;
+  }
+
+  /**
+   * Resolves an element, a CSS selector (`#id`, `.class`, `[data-x]`) or a bare element ID.
+   * @param {string | HTMLElement | null} target
+   * @returns {HTMLElement | null}
+   */
+  static resolveTarget(target) {
+    if (!target) return null;
+    if (typeof target !== 'string') return target instanceof Element ? target : null;
+    const value = target.trim();
+    if (/^[A-Za-z][\w-]*$/.test(value)) {
+      const byId = document.getElementById(value);
+      if (byId) return byId;
+    }
+    try { return document.querySelector(value); } catch { return null; }
   }
 
   /**
@@ -741,7 +745,16 @@ export class CGEModal {
    */
   static _handledClicks = new WeakSet();
 
+  /**
+   * Delegated trigger listeners by root.
+   * @type {Map<Document | HTMLElement, (e: MouseEvent) => void>}
+   */
+  static _delegations = new Map();
+
   static init(root = document) {
+    // 0. Drop instances whose elements were removed (Livewire morph, Turbo) so they can be rebuilt.
+    pruneInstances(CGEModal.instances);
+
     // 1. Initialize all modals found with .cge-modal or [data-cge-modal]
     const modalElements = root.querySelectorAll('.cge-modal, [data-cge-modal]');
     modalElements.forEach((el) => {
@@ -757,7 +770,7 @@ export class CGEModal {
       const targetSelector = trigger.getAttribute('data-cge-modal-target') || trigger.getAttribute('data-cge-target');
       if (!targetSelector) return;
 
-      const modalEl = document.querySelector(targetSelector);
+      const modalEl = CGEModal.resolveTarget(targetSelector);
       if (modalEl && modalEl.matches('.cge-modal, [data-cge-modal]')) {
         CGEModal._handledClicks.add(e);
         e.preventDefault();
@@ -767,10 +780,29 @@ export class CGEModal {
     };
 
     // Attach to root if not already attached
-    if (!root._cgeModalGlobalBound) {
+    if (!CGEModal._delegations.has(root)) {
       root.addEventListener('click', onTriggerClick);
+      CGEModal._delegations.set(root, onTriggerClick);
       root._cgeModalGlobalBound = true;
     }
+  }
+
+  /**
+   * Destroys modal instances inside `root` (or already detached) and removes trigger
+   * delegation bound to `root` or to roots inside it. Use before Livewire/Turbo swaps.
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {CGEModal[]} destroyed instances
+   */
+  static destroyAll(root = document) {
+    const destroyed = destroyInstances(CGEModal.instances, root);
+    for (const [bound, listener] of Array.from(CGEModal._delegations.entries())) {
+      const inside = root === document || bound === root || (bound !== document && (root.contains(bound) || !bound.isConnected));
+      if (!inside) continue;
+      bound.removeEventListener('click', listener);
+      CGEModal._delegations.delete(bound);
+      delete bound._cgeModalGlobalBound;
+    }
+    return destroyed;
   }
 
   /**

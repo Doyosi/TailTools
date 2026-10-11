@@ -146,3 +146,7 @@ Use `zoom`, `maxZoom: 3`, `description` / `data-cge-description`, `toggleZoom()`
 Use zoom, maxZoom:3, description/data-cge-description, toggleZoom(), downloadCurrent(), init(selector) and .on() event subscriptions. close() waits for teardown, rapid reopening waits for close, and destroy cancels queued reopening and pending media rendering. Global listeners and focus/scroll ownership are released. animationDriver="none" disables portal animation; "css" uses opacity transitions; "tailwind-animations" uses fade classes; "auto" selects the latter only with has-tailwind-animations or window.__TAILWIND_ANIMATIONS__. Duration controls the portal transition. Media fade effects are separate. Tab stays inside the active Lightbox.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+Captions and descriptions are rendered as **text** by default (opt in with `captionHtml` / `data-cge-caption-html`), image URLs never pass through `innerHTML`, rapid opens keep a single portal and scroll lock, inline form fields keep their keys, toolbar glyphs have accessible names and reduced motion is honored. New: `captionHtml`, `CGELightbox.destroyAll(root)`, `CGELightbox.itemFromElement(el)` and typed `cge:lightbox:*` events. See [usage](usage.md#stability-fixes-october-2026).

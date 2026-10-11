@@ -222,3 +222,34 @@ CGEToast.show({
   actions: [{ label: 'Review workspace settings', class: 'cge-toast-btn-primary', onClick: toast => { console.log('Review'); toast.dismiss(); } }]
 });
 ```
+
+## Stability fixes (October 2026)
+
+### Server text vs. trusted markup
+
+```javascript
+// Laravel validation / API message: always text, even if it contains "<b>".
+CGEToast.error(response.message);
+
+// Developer-authored markup needs an explicit opt-in.
+CGEToast.show({ title: 'Deploy', message: 'Build <strong>#512</strong> is live', html: true, variant: 'success' });
+```
+
+### Blade flash with optional HTML
+
+```blade
+@if (session('status'))
+  {{-- Escaped by Blade and rendered as text by CGEToast --}}
+  <div data-cge-toast-flash data-cge-variant="success" data-cge-message="{{ session('status') }}"></div>
+@endif
+
+{{-- Trusted, developer-written markup only --}}
+<button data-cge-toast="Saved &lt;strong&gt;draft&lt;/strong&gt;" data-cge-toast-html>Save</button>
+```
+
+### Livewire / Turbo teardown
+
+```javascript
+document.addEventListener('turbo:before-render', () => CGEToast.destroyAll());
+document.addEventListener('turbo:load', () => CGEToast.init());
+```

@@ -83,3 +83,7 @@ Remote selections become native options and serialize through FormData. Native m
 The native select retains every remote/multiple value in FormData. Declarative async settings, stale-result guards, cancellation and scoped init are supported. The trigger is an HTMLDivElement combobox with sibling tag/clear button controls inside the layout, avoiding button-in-button markup; it has a label, aria-controls and aria-activedescendant. Native change and form reset refresh the UI. open/opened/close/closed all emit the declared detail object. Destroy restores original attributes and removes change/reset listeners.
 
 See [API](api.md) for the exact declaration and [installation](../installing.md) for verified package paths.
+
+## Stability fixes (October 2026)
+
+POST async searches now send Laravel CSRF headers (custom `asyncSource.headers` supported), remote `icon` values render as text/class names unless `asyncSource.iconHtml: true`, form reset refreshes after the browser resets the control, the trigger mirrors `aria-invalid` (`ui.triggerInvalid`) so CGEForm errors are visible, and `CGESelect.destroyAll(root)` was added. See [usage](usage.md#stability-fixes-october-2026).

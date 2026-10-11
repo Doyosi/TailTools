@@ -1,30 +1,4 @@
 {
-  "type": "module",
-  "scripts": {
-    "test": "node --test tests/*.test.mjs && npm run test:types",
-    "dev": "vite",
-    "build": "npm run build:lib && npm run build:demo",
-    "preview": "vite preview --outDir dist/demo",
-    "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.bundler.json",
-    "build:lib": "vite build --config vite.lib.config.ts",
-    "build:demo": "vite build",
-    "prepack": "npm run build:lib",
-    "test:package": "node tests/package-check.mjs"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
-    "vite": "^7.2.4"
-  },
-  "dependencies": {
-    "axios": "^1.20.0",
-    "tailwind-animations": "^1.0.2",
-    "tippy.js": "^6.3.7"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true
-  },
   "name": "tailtools",
   "version": "0.0.0",
   "private": true,
@@ -34,6 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/Doyosi/TailTools.git"
   },
+  "type": "module",
   "main": "./dist/tailtools.js",
   "module": "./dist/tailtools.js",
   "types": "./src/index.d.ts",
@@ -41,15 +16,16 @@
   "jsdelivr": "./dist/tailtools.umd.cjs",
   "sideEffects": [
     "**/*.css",
-    "./src/index.ts",
-    "./dist/tailtools.js",
+    "./src/auto.ts",
+    "./dist/auto.js",
     "./dist/tailtools.umd.cjs"
   ],
   "files": [
-    "dist/tailtools.js",
-    "dist/tailtools.umd.cjs",
-    "dist/tailtools.css",
+    "dist/*.js",
+    "dist/*.cjs",
+    "dist/*.css",
     "src/index.d.ts",
+    "src/auto.d.ts",
     "plugins",
     "styles.css",
     "docs",
@@ -61,6 +37,11 @@
       "types": "./src/index.d.ts",
       "import": "./dist/tailtools.js",
       "default": "./dist/tailtools.js"
+    },
+    "./auto": {
+      "types": "./src/auto.d.ts",
+      "import": "./dist/auto.js",
+      "default": "./dist/auto.js"
     },
     "./style.css": "./dist/tailtools.css",
     "./styles": "./styles.css",
@@ -289,6 +270,38 @@
       "types": "./plugins/CGEAccordion/CGEAccordion.d.ts",
       "import": "./plugins/CGEAccordion/CGEAccordion.js"
     }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs && npm run test:types",
+    "dev": "vite",
+    "build": "npm run build:lib && npm run build:demo",
+    "preview": "vite preview --outDir dist/demo",
+    "test:types": "tsc -p tests/types/tsconfig.json && tsc -p tests/types/tsconfig.bundler.json",
+    "build:lib": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build --config vite.lib.config.ts && vite build --config vite.umd.config.ts",
+    "build:demo": "vite build",
+    "prepack": "npm run build:lib",
+    "test:package": "node tests/package-check.mjs"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=4.3.0",
+    "tailwind-animations": ">=1.0.2"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    },
+    "tailwind-animations": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^7.2.4",
+    "tailwind-animations": "^1.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }
-

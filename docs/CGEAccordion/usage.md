@@ -91,14 +91,19 @@ acc.destroy();
 ```javascript
 import { CGEAccordion } from 'tailtools';
 
-// Auto-initialize all [data-cge-accordion] containers
-CGEAccordion.init();
+// Auto-initialize all [data-cge-accordion] containers; returns every instance (new and existing)
+const all = CGEAccordion.init();
 
-// Scope auto-initialization to a specific container
+// Scope auto-initialization to a specific container (safe to repeat after DOM updates:
+// detached instances are destroyed, Livewire-morphed ones are rebuilt)
 CGEAccordion.init(document.querySelector('#sidebar'));
 
-// Retrieve existing instance by element or selector
+// Retrieve existing instance by element or selector (null when unknown)
 const instance = CGEAccordion.get('#faq-accordion');
+
+// Destroy every accordion inside a region (or detached from the DOM)
+CGEAccordion.destroyAll(document.querySelector('#sidebar'));
+CGECollapse.destroyAll(document.querySelector('#sidebar'));
 ```
 
 ---
@@ -169,7 +174,7 @@ collapse.on('toggle', ({ isOpen }) => {
   console.log('Collapse toggled:', isOpen);
 });
 
-// Static initialization:
+// Static initialization (returns every collapse under root):
 CGECollapse.init();
 ```
 
@@ -179,6 +184,26 @@ Options resolve as defaults → data attributes → explicit JavaScript options.
 
 `keyboard: false` disables directional navigation; Enter/Space still activate non-button controls. Native buttons without a type become `type="button"` for form safety. Storage read/write failures are ignored. Use stable container IDs or an explicit `storageKey` to persist across page reloads.
 
-`CGECollapse.triggers` lists all controls for the panel; `trigger` remains the first control. `init(root)` includes a matching trigger root and skips missing targets. Direct construction with an unresolved target throws a clear error. Collapse accepts `data-cge-default-open`, `data-cge-duration`, `data-cge-storage` and `data-cge-storage-key` on the construction target; explicit JS options override them. Initial open markup includes `grid-rows-[1fr]` or `aria-expanded="true"`. Its duration, animation, storage and DOM restoration behave like Accordion. A newly inserted control can be bound by calling `CGECollapse.init(newControl)`.
+`CGECollapse.triggers` lists all controls for the panel; `trigger` remains the first control. `init(root)` includes a matching trigger root and skips missing targets. Direct construction with an unresolved target throws a clear error. Collapse accepts `data-cge-default-open`, `data-cge-duration`, `data-cge-storage` and `data-cge-storage-key` on the construction target; explicit JS options override them. Initial open markup includes `grid-rows-[1fr]` or `aria-expanded="true"`. Its duration, animation, storage and DOM restoration behave like Accordion. A newly inserted control can be bound by calling `CGECollapse.init(newControl)`. Collapses placed inside accordion bodies are initialized; only controls that are an accordion item's own trigger are skipped. `cge:collapse:open|close|toggle` is dispatched once on the panel and bubbles, so a document listener receives each transition exactly once.
 
 Lifecycle callbacks may destroy their instance. Opening a sibling stops if a close callback destroys the accordion; Collapse stops after callback-driven destroy and preserves the restored DOM.
+
+## Triggers with nested controls
+
+Clicks on a `button`, `a`, `input`, `select`, `textarea` or any `[data-cge-no-toggle]` element nested inside an accordion trigger (or a non-button Collapse trigger) keep their own behavior and do not toggle the item:
+
+```html
+<div data-cge-trigger tabindex="0" class="flex justify-between">
+  <span>Invoice #42</span>
+  <button type="button" onclick="editInvoice(42)">Edit</button>
+  <span data-cge-no-toggle title="Info">i</span>
+</div>
+```
+
+## Keyboard and motion
+
+Arrow Up/Down, Home and End move focus between enabled triggers; Enter/Space toggle non-button triggers. Key presses with Alt, Ctrl or Meta are ignored. With `prefers-reduced-motion: reduce` the stylesheet removes transitions, the optional `animation` class is not added and `scrollIntoView` jumps instead of scrolling smoothly.
+
+## Livewire, Turbo and dynamic DOM
+
+`tailtools/auto` calls `initTailTools()` on `livewire:navigated`, after Livewire commits and on `turbo:load`; `CGEAccordion.init()` / `CGECollapse.init()` then destroy detached instances (no leaked `hashchange` listeners) and rebuild instances whose attributes were reset by a morph. A rebuilt accordion resolves its open items again (hash → storage → `defaultOpen` → markup). Wrap groups in `wire:ignore` when the client-side open state must survive component updates.

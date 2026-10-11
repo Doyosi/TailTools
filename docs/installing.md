@@ -19,20 +19,39 @@ npm install /path/to/tailtools-0.0.0.tgz
 ## JavaScript / TypeScript
 
 ```javascript
-import TailTools, { CGEModal, CGESelect, CGEDataTable, CGEDataGrid, CGETabs, CGEAccordion, initTailTools } from 'tailtools';
-// Root import exposes globals and auto-initializes in the browser.
-initTailTools(document.querySelector('#new-content')); // after injecting a subtree
+// Zero-config entry: window.TailTools + CGE* globals, auto-init on DOM ready,
+// Livewire (commit hook, wire:navigate) and Turbo (turbo:load) re-initialization.
+import 'tailtools/auto';
 
-// Individual imports have no root auto-initialization side effect:
+// Side-effect-free root entry: nothing touches window until you call init.
+import TailTools, { CGEModal, CGESelect, initTailTools, destroyTailTools } from 'tailtools';
+initTailTools();                                        // whole document
+initTailTools(document.querySelector('#new-content'));  // after injecting a subtree
+destroyTailTools(document.querySelector('#old-content')); // before removing a subtree
+
+// Individual plugin imports are also side-effect free:
 import { CGEDropzone } from 'tailtools/plugins/CGEDropzone';
 import CGEAlert from 'tailtools/CGEAlert';
 import { CGEDataTable, CGEFilter, CGESort, CGEPagination, CGEResponsive } from 'tailtools/plugins/CGEDataTable';
-import { CGEDataGrid } from 'tailtools/plugins/CGEDataGrid';
 import { CGETabs } from 'tailtools/plugins/CGETabs';
 import { CGEAccordion, CGECollapse } from 'tailtools/plugins/CGEAccordion';
 ```
 
-Root/plugin declarations pass strict NodeNext and Bundler resolution with skipLibCheck disabled. Plugins require a DOM when used; importing the ESM package itself does not require a DOM.
+`initTailTools()` is idempotent. Each plugin's `init()` first destroys instances whose elements were detached (Livewire morph, Turbo, `innerHTML`) and then initializes new markup, so calling it after every DOM update is safe. Every plugin also exposes `static destroyAll(root)`.
+
+`tailtools/auto` options (set before the import):
+
+```javascript
+window.TailToolsConfig = { autoInit: true, livewire: true, turbo: true, globals: true };
+```
+
+### Livewire
+
+With `tailtools/auto`, plugins are re-initialized after each Livewire commit and after `wire:navigate`; instances whose elements Livewire replaced are destroyed and recreated. CGETabs, CGEAccordion and CGECollapse also rebuild when morphing strips the attributes they added. Widgets that generate their own DOM (CGESelect, CGEDropzone, CGEDataTable, CGEDataGrid) should be wrapped in `wire:ignore` so morphing does not overwrite it.
+
+Root/plugin declarations pass strict NodeNext and Bundler resolution with skipLibCheck disabled. Plugins require a DOM when used; importing any ESM entry does not require a DOM.
+
+TailTools has no runtime npm dependencies. `tailwindcss` (>= 4.3) and `tailwind-animations` are optional peer dependencies used by the raw stylesheet imports.
 
 ## Tailwind CSS v4 / Laravel Vite
 
@@ -51,11 +70,11 @@ Root/plugin declarations pass strict NodeNext and Bundler resolution with skipLi
 @source "../../node_modules/tailtools/plugins/CGEModal/*.js";
 ```
 
-Adjust @source relative to the CSS file. `import 'tailtools/style.css'` is the precompiled alternative, including this checkout's theme and preflight. Prefer the raw aggregate in an existing Tailwind app. Animation classes need the animation stylesheet; auto detection uses `has-tailwind-animations` on html or `window.__TAILWIND_ANIMATIONS__ = true`, otherwise CSS is the fallback.
+Adjust @source relative to the CSS file. `import 'tailtools/style.css'` is the precompiled alternative, including Tailwind preflight and only the utilities used by the plugins themselves (not your markup). Prefer the raw aggregate in an existing Tailwind app. Animation classes need the animation stylesheet; auto detection uses `has-tailwind-animations` on html or `window.__TAILWIND_ANIMATIONS__ = true`, otherwise CSS is the fallback.
 
 ```javascript
 // resources/js/app.js
-import { CGEForm } from 'tailtools';
+import 'tailtools/auto';
 ```
 
 ```blade
@@ -71,7 +90,7 @@ CGEForm and AJAX CGEActionButton send multipart PUT/PATCH/DELETE as POST plus _m
 
 ## Static script distribution
 
-Copy dist/tailtools.css and dist/tailtools.umd.cjs to static assets. Serve the UMD file as JavaScript; it can be renamed tailtools.umd.js for conventional static hosting.
+Copy dist/tailtools.css and dist/tailtools.umd.cjs to static assets. The UMD bundle is built from the auto entry: it exposes globals and initializes automatically. Serve the UMD file as JavaScript; it can be renamed tailtools.umd.js for conventional static hosting.
 
 ```html
 <link rel="stylesheet" href="/assets/tailtools.css">
@@ -83,6 +102,6 @@ The bundle exposes TailTools and individual CGE globals. Before a public release
 
 ## HTML contract
 
-Toast rich messages, Alert HTML/custom content, Select custom renderers and Lightbox captions/inline templates accept trusted HTML. Escape user-controlled text before passing it to these APIs or use their text fields/native labels. Existing rich rendering is preserved; the plugins do not provide a universal sanitizer.
+Text options (titles, messages, captions, file names, table cell values, data-cge-* attributes) are always rendered as text. HTML is an explicit opt-in: Toast `html: true`, Alert `html`, Lightbox rich captions, Select/DataTable/DataGrid custom renderers and formatters, Tabs AJAX `html` responses. Only pass trusted or sanitized HTML to those; the plugins do not provide a universal sanitizer (CGETabs accepts a `sanitize` hook).
 
 See [development](developing.md) and [tests](../tests/README.md).

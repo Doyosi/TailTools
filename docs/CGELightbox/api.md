@@ -42,6 +42,12 @@ export interface CGELightboxItem {
   description?: string;
 
   /**
+   * Render caption/description as trusted HTML for this item (overrides the `captionHtml` option).
+   * Declarative triggers opt in with `data-cge-caption-html`. Text is the default.
+   */
+  captionHtml?: boolean;
+
+  /**
    * Media type specifier. Auto-detected from URL if omitted.
    */
   type?: CGELightboxMediaType;
@@ -142,7 +148,13 @@ export interface CGELightboxOptions {
   backdropClose?: boolean;
 
   /**
-   * Transition animation driver.
+   * Render captions and descriptions as trusted HTML. Captions are plain text by default.
+   * @default false
+   */
+  captionHtml?: boolean;
+
+  /**
+   * Transition animation driver. `prefers-reduced-motion: reduce` always uses `'none'`.
    * @default 'auto'
    */
   animationDriver?: 'auto' | 'tailwind-animations' | 'css' | 'none';
@@ -297,10 +309,30 @@ export class CGELightbox {
   static close(): void;
 
   /**
-   * Binds declarative click triggers on DOM.
+   * Binds declarative click triggers on DOM and forgets idle instances whose triggers were removed.
    */
   static init(selector?: string): void;
+
+  /**
+   * Builds a media item from a declarative trigger element (attribute values are text).
+   */
+  static itemFromElement(element: HTMLElement): CGELightboxItem;
+
+  /**
+   * Destroys instances opened from triggers inside `root` (or detached triggers). Passing
+   * `document` destroys every instance and removes the trigger delegation.
+   */
+  static destroyAll(root?: Document | HTMLElement): CGELightbox[];
 }
 
 export default CGELightbox;
+
+declare global {
+  interface DocumentEventMap {
+    'cge:lightbox:open': CustomEvent<CGELightboxEventDetail>;
+    'cge:lightbox:change': CustomEvent<CGELightboxEventDetail>;
+    'cge:lightbox:zoom': CustomEvent<CGELightboxEventDetail>;
+    'cge:lightbox:close': CustomEvent<CGELightboxEventDetail>;
+  }
+}
 ```

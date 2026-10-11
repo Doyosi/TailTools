@@ -139,3 +139,12 @@ Delete confirmation uses `CGEAlert.confirm(title, message, options)`. Failed ind
 clear({ remote: true }) returns Promise<void>; await clear() to wait for server deletions. Each failed remote deletion keeps its file/card and emits error; new files added during a clear remain. clear({ remote: false }) detaches locally without deleting saved assets. Avatar replacement uses local detachment; invalid replacement preserves the current avatar. The backend owns final replacement/deletion of saved avatars. Concurrent upload/cancel slot accounting is bounded; destroy cancels uploads/deletes and suppresses late results. Existing rounded-xl and circular/avatar styling is preserved.
 
 Use the existing plugin radius/theme defaults. New markup may prefer rounded-sm; do not replace Dropzone rounded-xl or circular avatar defaults during maintenance. The canonical API is [CGEDropzone.d.ts](../../../../plugins/CGEDropzone/CGEDropzone.d.ts).
+
+## Stability fixes (October 2026)
+
+- Never build card markup from file data: names, extensions and errors are text nodes.
+- Instant mode never names/fills the native file input; server IDs (`id`/`path`/`data.id`/`data.path`) go into hidden `serverIdName` inputs (default `${paramName}_ids[]`, `false` disables). Laravel endpoints should return an `id`.
+- 422/419 messages are shown on the card; validation errors are not retryable; retries go through `_processQueue` (maxConcurrent, form mode).
+- `clickable` accepts a selector; `driver: 'fetch'` uploads with XHR (progress); `isUploading` is maintained; configured `axiosInstance` wins.
+- Avatar errors show under the avatar and a rejected upload restores the previous image. Keep the circular avatar and rounded-xl card styling.
+- Form reset clears new previews; `destroy()` restores the element; use `CGEDropzone.destroyAll(root)`.

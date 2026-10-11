@@ -34,7 +34,8 @@ Create the plugin folder `plugins/CGE<X>/` containing:
 
 ## Phase 4: Library Integration & Export
 - Expose the plugin in the main library entry point `src/index.ts`.
-- Register auto-initialization hook in `initTailTools()`.
+- Register auto-initialization hook in `initTailTools()` (the root entry stays side-effect free; `src/auto.ts` owns globals and auto-init).
+- Implement `static destroyAll(root = document)` and prune detached instances in `static init(root)`.
 
 ---
 

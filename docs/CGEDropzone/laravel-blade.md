@@ -167,3 +167,22 @@ class MediaController extends Controller
     }
 }
 ```
+
+## Stability fixes (October 2026)
+
+- Return an `id` (or `path`) from the upload endpoint, as in the controller above. In instant mode the dropzone adds `{paramName}_ids[]` hidden inputs, so the parent form receives IDs, not the files again:
+
+```php
+public function store(Request $request)
+{
+    $data = $request->validate([
+        'title' => ['required', 'string'],
+        'attachments_ids' => ['array'],
+        'attachments_ids.*' => ['string'],
+    ]);
+    // Attach previously uploaded media by ID...
+}
+```
+
+- Validation failures from `$request->validate()` (422) show the field message on the card; an expired session (419) shows Laravel's "CSRF token mismatch." message.
+- Avatar uploads that fail keep the current avatar and show the error under it.

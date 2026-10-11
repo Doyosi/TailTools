@@ -1,5 +1,6 @@
 import { Lifecycle } from '../shared/lifecycle.js';
-import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey } from '../shared/overlay.js';
+import { acquireOverlay, releaseOverlay, isTopOverlay, claimOverlayKey, claimFreeKey, trapTab } from '../shared/overlay.js';
+import { prefersReducedMotion, destroyInstances, pruneInstances } from '../shared/dom.js';
 /**
  * CGEDrawer - TailTools Plugin
  * High-performance, gesture-capable sliding drawer and off-canvas navigation plugin designed for Tailwind CSS v4.3+ and Laravel Blade.
@@ -22,6 +23,12 @@ export class CGEDrawer {
    * @private
    */
   static _delegationBound = false;
+
+  /**
+   * Document-level trigger listener (kept so destroyAll can remove it).
+   * @private
+   */
+  static _delegationListener = null;
 
   /**
    * Sizing presets mapping to Tailwind CSS utility classes.
@@ -138,11 +145,11 @@ export class CGEDrawer {
   _destroyed = false;
 
   constructor(target, options = {}) {
-    this.drawer = typeof target === 'string' ? document.querySelector(target) : target;
+    this.drawer = CGEDrawer.resolveTarget(target);
 
+    // A half-built instance would fail later with unrelated TypeErrors, so fail loudly here.
     if (!this.drawer) {
-      console.warn(`[CGEDrawer] Target element "${target}" not found.`);
-      return;
+      throw new Error(`[CGEDrawer] Target element "${target}" not found.`);
     }
 
     // Return existing instance if already attached
@@ -357,6 +364,9 @@ export class CGEDrawer {
     this._isMiniCollapsed = true;
     this.drawer.classList.remove('hidden');
     this.drawer.classList.add('cge-drawer-mini-rail', 'pointer-events-none');
+    // The collapsed rail is visible, non-modal navigation: keep it in the accessibility tree.
+    this.drawer.removeAttribute('aria-hidden');
+    this.drawer.removeAttribute('aria-modal');
     
     if (this.backdrop) {
       this.backdrop.classList.add('hidden');
@@ -365,7 +375,7 @@ export class CGEDrawer {
     if (this.dialog) {
       this.dialog.classList.add('pointer-events-auto', 'is-mini');
       const placementConfig = CGEDrawer.PLACEMENTS[this.options.placement] || CGEDrawer.PLACEMENTS.left;
-      this.dialog.classList.remove(placementConfig.closedClass);
+      this.dialog.classList.remove(placementConfig.closedClass, placementConfig.animOut, placementConfig.animIn);
       this.dialog.classList.add(placementConfig.openClass);
 
       // Replace size with mini width
@@ -406,7 +416,13 @@ export class CGEDrawer {
 
     // Keydown handler (Escape & Focus Trap)
     this._handleKeyDown = (e) => {
-      if (!this._isOpen || !claimOverlayKey(this, e)) return;
+      if (!this._isOpen) return;
+      if (this._isModal()) {
+        if (!claimOverlayKey(this, e)) return;
+      } else if (e.key !== 'Escape' || !claimFreeKey(e)) {
+        // Non-modal panels are not on the overlay stack; they only react to Escape when no modal is open.
+        return;
+      }
 
       if (e.key === 'Escape' && this.options.escapeClose) {
         e.preventDefault();
@@ -526,7 +542,7 @@ export class CGEDrawer {
    * @private
    */
   _handleBackdropClick(e) {
-    if (!isTopOverlay(this)) return;
+    if (!this._isModal() || !isTopOverlay(this)) return;
     this._emit('backdropClick', { drawer: this, event: e });
 
     if (this.options.backdropClose) {
@@ -541,7 +557,7 @@ export class CGEDrawer {
    * @private
    */
   _triggerDirectionalBounce() {
-    if (!this.dialog) return;
+    if (!this.dialog || prefersReducedMotion()) return;
 
     const placementConfig = CGEDrawer.PLACEMENTS[this.options.placement] || CGEDrawer.PLACEMENTS.left;
     const bounceClass = placementConfig.bounceClass;
@@ -564,26 +580,24 @@ export class CGEDrawer {
    * @private
    */
   _handleFocusTrap(e) {
-    const focusable = this._getFocusableElements();
-    if (focusable.length === 0) {
-      e.preventDefault();
-      return;
-    }
+    // Also pulls focus back when it escaped the drawer or when there is nothing focusable.
+    trapTab(this.dialog || this.drawer, e);
+  }
 
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+  /**
+   * Modal drawers (with a backdrop) join the shared overlay stack; non-modal panels do not.
+   * @private
+   */
+  _isModal() {
+    return Boolean(this.options.backdrop);
+  }
 
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
+  /**
+   * Effective animation duration (0 when the user prefers reduced motion).
+   * @private
+   */
+  _duration() {
+    return prefersReducedMotion() ? 0 : this.options.duration;
   }
 
   /**
@@ -615,7 +629,7 @@ export class CGEDrawer {
     if (this._pushElements.length === 0) return;
 
     const placement = this.options.placement;
-    const duration = this.options.duration;
+    const duration = this._duration();
     let shiftX = 0;
     let shiftY = 0;
 
@@ -645,12 +659,23 @@ export class CGEDrawer {
 
     this._isOpen = true;
     this._isAnimating = true;
+    const previousTrigger = this._triggerElement;
     this._triggerElement = trigger || document.activeElement;
 
-    this._emit('open', { drawer: this });
+    const openEvent = this._emit('open', { drawer: this });
     if (this._destroyed) return;
+    // `cge:drawer:open` is cancelable: preventDefault() keeps the drawer closed.
+    if (openEvent.defaultPrevented) {
+      this._isOpen = false;
+      this._isAnimating = false;
+      this._triggerElement = previousTrigger;
+      return;
+    }
 
-    acquireOverlay(this, this.drawer, false);
+    // Non-modal panels (backdrop: false) stay off the overlay stack so they never steal focus.
+    if (this._isModal()) acquireOverlay(this, this.drawer, false);
+    const duration = this._duration();
+    if (this.dialog) this.dialog.style.transitionDuration = `${duration}ms`;
 
     // 1. Lock document body scroll
     if (this.options.lockScroll && this.options.backdrop) {
@@ -682,6 +707,7 @@ export class CGEDrawer {
     // 4. Reveal drawer container
     this.drawer.classList.remove('hidden');
     this.drawer.setAttribute('aria-hidden', 'false');
+    if (this._isModal()) this.drawer.setAttribute('aria-modal', 'true');
 
     if (!this.options.backdrop) {
       this.drawer.classList.add('pointer-events-none');
@@ -721,7 +747,7 @@ export class CGEDrawer {
 
           this._emit('opened', { drawer: this });
           resolve();
-        }, this.options.duration);
+        }, duration);
       });
     });
   }
@@ -736,8 +762,16 @@ export class CGEDrawer {
     this._isOpen = false;
     this._isAnimating = true;
 
-    this._emit('close', { drawer: this });
+    const closeEvent = this._emit('close', { drawer: this });
     if (this._destroyed) return;
+    // `cge:drawer:close` is cancelable: preventDefault() keeps the drawer open.
+    if (closeEvent.defaultPrevented) {
+      this._isOpen = true;
+      this._isAnimating = false;
+      return;
+    }
+    const duration = this._duration();
+    if (this.dialog) this.dialog.style.transitionDuration = `${duration}ms`;
 
     // 1. Revert layout push
     this._applyLayoutPush(false);
@@ -765,6 +799,14 @@ export class CGEDrawer {
       }
 
       this._lifecycle.timeout(() => {
+        // Clean up animation classes first so mini mode can re-open the rail afterwards
+        if (this.dialog && driver === 'tailwind-animations') {
+          this.dialog.classList.remove(placementConfig.animOut, placementConfig.openClass);
+          this.dialog.classList.add(placementConfig.closedClass);
+        }
+
+        const focusWasInside = this.drawer.contains(document.activeElement);
+
         // Mini mode re-collapse vs Complete hide
         if (this.options.mini) {
           this._setupMiniMode();
@@ -778,19 +820,18 @@ export class CGEDrawer {
           this._unlockScroll();
         }
 
-        // Clean up animation classes
-        if (this.dialog && driver === 'tailwind-animations') {
-          this.dialog.classList.remove(placementConfig.animOut);
-          this.dialog.classList.add(placementConfig.closedClass);
-        }
-
         // Restore focus to original trigger element
-        releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
+        if (this._isModal()) {
+          releaseOverlay(this, this.options.restoreFocus ? this._triggerElement : null);
+        } else if (this.options.restoreFocus && focusWasInside && this._triggerElement?.isConnected
+          && typeof this._triggerElement.focus === 'function') {
+          this._triggerElement.focus();
+        }
 
         this._isAnimating = false;
         this._emit('closed', { drawer: this });
         resolve();
-      }, this.options.duration);
+      }, duration);
     });
   }
 
@@ -820,6 +861,7 @@ export class CGEDrawer {
    * @private
    */
   _resolveAnimationDriver() {
+    if (prefersReducedMotion()) return 'none';
     if (this.options.animationDriver === 'css') return 'css';
     if (this.options.animationDriver === 'tailwind-animations') return 'tailwind-animations';
     if (this.options.animationDriver === 'none') return 'none';
@@ -902,6 +944,7 @@ export class CGEDrawer {
     if (!this.drawer.isConnected) {
       document.dispatchEvent(customEvent);
     }
+    return customEvent;
   }
 
   /**
@@ -965,8 +1008,25 @@ export class CGEDrawer {
    * @returns {CGEDrawer | null}
    */
   static get(target) {
-    const el = typeof target === 'string' ? document.querySelector(target) : target;
-    return CGEDrawer.instances.get(el) || null;
+    const el = CGEDrawer.resolveTarget(target);
+    return (el && CGEDrawer.instances.get(el)) || null;
+  }
+
+  /**
+   * Resolves an element, a CSS selector (`#id`, `.class`, `[data-x]`) or a bare element ID
+   * (`"main-nav"` → `#main-nav`).
+   * @param {string | HTMLElement | null} target
+   * @returns {HTMLElement | null}
+   */
+  static resolveTarget(target) {
+    if (!target) return null;
+    if (typeof target !== 'string') return target instanceof Element ? target : null;
+    const value = target.trim();
+    if (/^[A-Za-z][\w-]*$/.test(value)) {
+      const byId = document.getElementById(value);
+      if (byId) return byId;
+    }
+    try { return document.querySelector(value); } catch { return null; }
   }
 
   /**
@@ -1006,16 +1066,26 @@ export class CGEDrawer {
    * @param {Document | HTMLElement} [root=document]
    */
   static init(root = document) {
+    // 0. Drop instances whose elements were removed (Livewire morph, Turbo) so they can be rebuilt.
+    pruneInstances(CGEDrawer.instances);
+
     // 1. Global event delegation for open / toggle triggers
     if (!CGEDrawer._delegationBound && typeof document !== 'undefined') {
-      document.addEventListener('click', (e) => {
+      const resolveTrigger = (button, attribute) => {
+        const target = button.getAttribute(attribute);
+        if (!target) return null;
+        const el = CGEDrawer.resolveTarget(target);
+        if (!el) console.warn(`[CGEDrawer] Target element "${target}" not found.`);
+        return el;
+      };
+      CGEDrawer._delegationListener = (e) => {
+        if (!(e.target instanceof Element)) return;
         // Toggle trigger
         const toggleBtn = e.target.closest('[data-cge-drawer-toggle]');
         if (toggleBtn) {
           e.preventDefault();
-          const target = toggleBtn.getAttribute('data-cge-drawer-toggle');
-          if (!target) return;
-          CGEDrawer.toggle(target.startsWith('#') ? target : `#${target}`, {}, toggleBtn);
+          const el = resolveTrigger(toggleBtn, 'data-cge-drawer-toggle');
+          if (el) CGEDrawer.toggle(el, {}, toggleBtn);
           return;
         }
 
@@ -1023,12 +1093,11 @@ export class CGEDrawer {
         const openBtn = e.target.closest('[data-cge-drawer-target]');
         if (openBtn) {
           e.preventDefault();
-          const target = openBtn.getAttribute('data-cge-drawer-target');
-          if (!target) return;
-          const instance = CGEDrawer.get(target.startsWith('#') ? target : `#${target}`) || new CGEDrawer(target.startsWith('#') ? target : `#${target}`);
-          if (instance) instance.open(openBtn);
+          const el = resolveTrigger(openBtn, 'data-cge-drawer-target');
+          if (el) (CGEDrawer.get(el) || new CGEDrawer(el)).open(openBtn);
         }
-      });
+      };
+      document.addEventListener('click', CGEDrawer._delegationListener);
 
       CGEDrawer._delegationBound = true;
     }
@@ -1040,6 +1109,22 @@ export class CGEDrawer {
         new CGEDrawer(el);
       }
     });
+  }
+
+  /**
+   * Destroys drawer instances inside `root` (or already detached). Passing `document`
+   * also removes the document-level trigger delegation.
+   * @param {Document | HTMLElement} [root=document]
+   * @returns {CGEDrawer[]} destroyed instances
+   */
+  static destroyAll(root = document) {
+    const destroyed = destroyInstances(CGEDrawer.instances, root);
+    if (root === document && CGEDrawer._delegationListener) {
+      document.removeEventListener('click', CGEDrawer._delegationListener);
+      CGEDrawer._delegationListener = null;
+      CGEDrawer._delegationBound = false;
+    }
+    return destroyed;
   }
 
   /**

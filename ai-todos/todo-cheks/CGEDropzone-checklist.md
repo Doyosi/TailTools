@@ -64,3 +64,16 @@
 - [x] Runtime ve declaration düzenlemesi
 - [x] Regresyon ve paket doğrulaması
 - [x] Doküman ve skill eşitlemesi
+
+## Stability fixes (October 2026)
+
+- [x] File data rendered as text
+- [x] Instant mode server IDs; file input untouched
+- [x] 422/419 messages on cards
+- [x] Configured `axiosInstance` wins
+- [x] Validation errors not retryable; retries queued
+- [x] `clickable` selector, `isUploading`, fetch driver documented
+- [x] Avatar error UI + revert
+- [x] Form reset + full destroy restoration
+- [x] `destroyAll(root)` + init pruning
+- [x] Docs, api.md, skill, Node + browser regressions
