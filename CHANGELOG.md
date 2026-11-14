@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/) and the project uses [Semantic Versioning](https://semver.org/) (while `0.x`, breaking changes bump the minor version).
 
+## [0.1.2] - 2026-11-14
+
+### Fixed
+- CGEDataTable/CGEDataGrid pagination info: translations that put `:total` before `:to` rendered broken text, because `:to` was replaced inside `:total` (`'toplam :total kayıttan :from-:to arası'` → `'toplam 7tal kayıttan 1-:to arası'`). `formatInfo()` / `getMetricsString()` and `CGEDataTable.t()` now replace placeholders in one pass with the longest name first (like Laravel), every occurrence is replaced and inserted values are not substituted again, so placeholders may appear in any order.
+
 ## [0.1.1] - 2026-10-11
 
 ### Fixed

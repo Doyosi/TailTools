@@ -158,6 +158,8 @@ CGEDataTable.setTranslations({
 new CGEDataTable('#cities', { locale: 'tr' });
 ```
 
+Placeholders (`:from`, `:to`, `:total`, `:count`) may appear in any order and more than once (0.1.2). They are replaced in one pass with the longest name first, like Laravel's `trans()`, so `:total` is never read as `:to` + `tal`. Before 0.1.2 a template with `:total` before `:to` (as above) rendered `180tal kayıttan 1 - :to …`.
+
 ## Data ownership and lifecycle
 
 - Give remote records a stable unique `id` (including zero); Table also accepts `_id`. Fallback IDs for local records stay attached to their records through filtering/sorting/paging. After `setData()` replaces a local dataset, selection resets. Remote selection IDs may persist across pages, while selected data getters return only records in the current response. With `serverSide: true`, rows without `id`/`data-cge-id` get page-scoped IDs (`p2_item_0`) so a selection never leaks to the same position on another page; a one-time console warning suggests adding real IDs.

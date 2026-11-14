@@ -2,9 +2,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fetchCollection } from '../plugins/shared/collection.js';
-import { readCollectionResponse } from '../plugins/shared/collection-core.js';
+import { readCollectionResponse, formatTemplate } from '../plugins/shared/collection-core.js';
 import { HttpError } from '../plugins/shared/http.js';
-import { CGEFilter, CGESort, CGEPagination, escapeHTML as tableEscape } from '../plugins/CGEDataTable/index.js';
+import { CGEDataTable, CGEFilter, CGESort, CGEPagination, escapeHTML as tableEscape } from '../plugins/CGEDataTable/index.js';
 import { escapeHTML as gridEscape } from '../plugins/CGEDataGrid/index.js';
 import { CGEFilter as GridFilter } from '../plugins/CGEDataGrid/modules/CGEFilter.js';
 import { CGESort as GridSort } from '../plugins/CGEDataGrid/modules/CGESort.js';
@@ -282,4 +282,28 @@ test('Collection axios prefers axiosInstance, nests params and wraps errors', as
   const failing = { request: async () => { const error = new Error('Request failed'); error.response = { status: 419, statusText: '', data: { message: 'CSRF token mismatch.' } }; throw error; } };
   await assert.rejects(fetchCollection({ url: '/users', driver: 'axios', axiosInstance: failing }, {}), error =>
     error instanceof HttpError && error.status === 419 && error.message === 'CSRF token mismatch.');
+});
+
+test('Pagination info placeholders work in any order (:total before :to)', () => {
+  for (const Pager of [CGEPagination, GridPagination]) {
+    const pager = new Pager({ total: 7, perPage: 10 });
+    assert.equal(pager.formatInfo('toplam :total bildirimden :from-:to arası'), 'toplam 7 bildirimden 1-7 arası');
+    assert.equal(pager.formatInfo(':to/:total (:from) :total'), '7/7 (1) 7');
+
+    const translated = new Pager({ total: 180, perPage: 15, translations: { info: ':total kayıttan :from - :to arası gösteriliyor' } });
+    assert.equal(translated.getMetricsString(), '180 kayıttan 1 - 15 arası gösteriliyor');
+  }
+});
+
+test('Translation placeholders replace in one pass, longest name first', () => {
+  assert.equal(formatTemplate(':to of :total, :totalden', { to: 5, total: 9 }), '5 of 9, 9den');
+  assert.equal(formatTemplate(':count :count', { count: 2 }), '2 2');
+  // Inserted values are neither re-scanned nor treated as replacement patterns.
+  assert.equal(formatTemplate(':a / :b', { a: ':b', b: '$&' }), ':b / $&');
+  assert.equal(formatTemplate('No :placeholders', {}), 'No :placeholders');
+
+  const table = { options: { translations: { range: 'toplam :total kayıttan :from-:to' } } };
+  assert.equal(CGEDataTable.prototype.t.call(table, 'range', { from: 1, to: 7, total: 7 }), 'toplam 7 kayıttan 1-7');
+  assert.equal(CGEDataTable.prototype.t.call(table, 'delete-selected-confirm', { count: 3 }),
+    'Are you sure you want to delete 3 selected records?');
 });

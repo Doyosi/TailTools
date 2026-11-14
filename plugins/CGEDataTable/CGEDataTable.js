@@ -1,5 +1,5 @@
 import { escapeHTML, initializeCollection, cancelCollectionWork, delayCollection, frameCollection, fetchCollection,
-  readCollectionResponse, resolveParamNames } from '../shared/collection.js';
+  readCollectionResponse, resolveParamNames, formatTemplate } from '../shared/collection.js';
 import { destroyInstances, pruneInstances } from '../shared/dom.js';
 /**
  * CGEDataTable - Modular High-Performance Data Grid Engine
@@ -1087,11 +1087,8 @@ export class CGEDataTable {
    * @returns {string}
    */
   t(key, replacements = {}) {
-    let str = this.options.translations[key] || CGEDataTable.defaults.translations[key] || key;
-    for (const [k, v] of Object.entries(replacements)) {
-      str = str.replace(`:${k}`, String(v));
-    }
-    return str;
+    const template = this.options.translations[key] || CGEDataTable.defaults.translations[key] || key;
+    return formatTemplate(template, replacements);
   }
 
   /**

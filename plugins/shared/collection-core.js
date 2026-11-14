@@ -5,6 +5,24 @@ export const isEmptyValue = value => value === null || value === undefined
   || (typeof value === 'string' && value.trim() === '')
   || (typeof value === 'number' && Number.isNaN(value));
 
+const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Replaces Laravel-style `:name` placeholders in a single pass, like Laravel's `strtr`:
+ * longer names win (`:total` is never read as `:to` + "tal"), every occurrence is replaced
+ * and inserted values are not scanned again, so translations may order placeholders freely.
+ * @param {string} template
+ * @param {Record<string, unknown>} [replacements={}]
+ * @returns {string}
+ */
+export function formatTemplate(template, replacements = {}) {
+  const text = String(template ?? '');
+  const names = Object.keys(replacements).filter(Boolean).sort((a, b) => b.length - a.length);
+  if (!names.length) return text;
+  const pattern = new RegExp(`:(${names.map(escapeRegExp).join('|')})`, 'g');
+  return text.replace(pattern, (match, name) => String(replacements[name]));
+}
+
 /** Filter values that mean "no filter": empty, 'all', [] (Blade "All" options). */
 export const isClearFilter = value => value === undefined || value === null || value === ''
   || value === 'all' || (Array.isArray(value) && value.length === 0);
