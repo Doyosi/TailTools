@@ -95,3 +95,4 @@
 - [x] `destroyAll`, pruning `init`, page-scoped fallback IDs, event aliases, `paramNames`, responsive `breakpoint`
 - [x] Types, api.md (exact declaration), usage/examples/README, SKILL.md
 - [x] Node tests (`tests/collection-fixes.test.mjs`) and browser scenarios (`tests/collection-regressions.js`) added; browser run pending
+- [x] 0.1.2: pagination `info` with `:total` before `:to` rendered `7tal … :to`; placeholders now replaced in one pass, longest name first (`formatTemplate` in `shared/collection-core.js`), with Node regressions

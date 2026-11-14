@@ -9,6 +9,8 @@
  * plugins/CGEDataGrid/modules/CGEPagination.js.
  */
 
+import { formatTemplate } from './collection-core.js';
+
 const toInt = (value, fallback = 0) => {
   const number = parseInt(value, 10);
   return Number.isNaN(number) ? fallback : number;
@@ -348,10 +350,7 @@ export class CGEPagination {
   formatInfo(template = null) {
     const key = this.totalKnown ? 'info' : 'info-simple';
     const tpl = template || this.options.translations?.[key] || DEFAULT_PAGINATION_TRANSLATIONS[key];
-    return tpl
-      .replace(':from', String(this.from))
-      .replace(':to', String(this.to))
-      .replace(':total', String(this.total));
+    return formatTemplate(tpl, { from: this.from, to: this.to, total: this.total });
   }
 
   /** Table alias of formatInfo. */

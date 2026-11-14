@@ -3,7 +3,7 @@
 import { laravelHeaders, resolveAxios, nestParams, appendQuery, HttpError, parseBody, hasHeader, isSafeMethod } from './http.js';
 
 export { escapeHTML } from './dom.js';
-export { readCollectionResponse, resolveParamNames } from './collection-core.js';
+export { readCollectionResponse, resolveParamNames, formatTemplate } from './collection-core.js';
 
 // Keep original node identities and their consumer listeners when restoring DOM.
 export function captureDOM(node) {
